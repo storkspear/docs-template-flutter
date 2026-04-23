@@ -26,6 +26,15 @@ marked.use({
         : (lang ? hljs.highlightAuto(text).value : text.replace(/&/g, '&amp;').replace(/</g, '&lt;'));
       const langLabel = lang ? `<div class="code-lang">${lang}</div>` : '';
       return `<div style="position:relative">${langLabel}<pre class="hljs"><code>${highlighted}</code></pre></div>`;
+    },
+    heading({ text, depth, raw }) {
+      const slug = raw
+        .replace(/`[^`]*`/g, m => m.slice(1, -1))
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}\s-]/gu, '')
+        .trim()
+        .replace(/\s+/g, '-');
+      return `<h${depth} id="${slug}">${text}</h${depth}>\n`;
     }
   }
 });
@@ -59,6 +68,17 @@ function extractDocFooter(contentEl) {
     wrapper.appendChild(el);
   });
   return wrapper.innerHTML;
+}
+
+function transformEmoji(html) {
+  return html
+    .replace(/✅/g, '<span class="si si-check"></span>')
+    .replace(/❌/g, '<span class="si si-cross"></span>')
+    .replace(/🔴/g, '<span class="si si-dot si-red"></span>')
+    .replace(/🟡/g, '<span class="si si-dot si-yellow"></span>')
+    .replace(/🟢/g, '<span class="si si-dot si-green"></span>')
+    .replace(/⚠️/g, '<span class="si si-warn"></span>')
+    .replace(/🚨/g, '<span class="si si-alert"></span>');
 }
 
 // .md 상대 경로 링크를 SPA 내부 라우팅으로 인터셉트
@@ -113,7 +133,7 @@ async function loadDoc(docPath) {
     let md = await res.text();
     md = md.replace(/```\n\[개발자 맥북\][\s\S]*?```/g, '\n%%LOCAL_DEV_DIAGRAM%%\n');
     md = md.replace(/```\n\[인터넷 사용자\][\s\S]*?```/g, '\n%%PROD_DIAGRAM%%\n');
-    let html = marked.parse(md);
+    let html = transformEmoji(marked.parse(md));
     html = html.replace(/<p>%%LOCAL_DEV_DIAGRAM%%<\/p>/g, DIAGRAMS['LOCAL_DEV']);
     html = html.replace(/<p>%%PROD_DIAGRAM%%<\/p>/g, DIAGRAMS['PROD']);
 

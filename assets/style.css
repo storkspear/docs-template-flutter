@@ -354,6 +354,17 @@ body.sidebar-collapsed .sidebar-open-btn { display: flex; }
   border: 1px solid #e5e7eb;
 }
 
+/* 파일/링크 배지 — 바이올렛 틴트로 값 배지와 구분 */
+.post-body a > code {
+  background: #ede9fe;
+  color: #5b21b6;
+  border-color: #c4b5fd;
+}
+.post-body a:hover > code {
+  background: #ddd6fe;
+  border-color: #a78bfa;
+}
+
 /* Code block */
 .post-body pre {
   margin: 20px 0;
@@ -661,3 +672,94 @@ body.sidebar-collapsed .sidebar-open-btn { display: flex; }
   .aws-diagram, .mermaid { overflow-x: auto; }
   .ldev-stage { overflow-x: auto; width: 100%; }
 }
+
+/* ── Styled icons (emoji replacements) ── */
+.si {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  vertical-align: middle;
+  margin: 0 1px;
+  position: relative;
+}
+
+/* ✅ Check */
+.si-check {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+.si-check::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 4px; height: 7px;
+  border-right: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: translate(-50%, -62%) rotate(45deg);
+}
+
+/* ❌ Cross */
+.si-cross {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #ef4444;
+}
+.si-cross::before,
+.si-cross::after {
+  content: '';
+  display: block;
+  position: absolute;
+  width: 8px; height: 1.8px;
+  background: #fff;
+  border-radius: 1px;
+  top: 50%; left: 50%;
+}
+.si-cross::before { transform: translate(-50%, -50%) rotate(45deg); }
+.si-cross::after  { transform: translate(-50%, -50%) rotate(-45deg); }
+
+/* ⚠️ Warn */
+.si-warn {
+  width: 17px; height: 15px;
+  background: #fbbf24;
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+}
+.si-warn::before {
+  content: '!';
+  position: absolute;
+  bottom: 1px;
+  font-size: 9px;
+  font-weight: 800;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  line-height: 1;
+}
+
+/* 🚨 Alert */
+.si-alert {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 2px solid #fca5a5;
+}
+.si-alert::before {
+  content: '!';
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+}
+
+/* 🔴🟡🟢 Status dots */
+.si-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+.si-red    { background: #ef4444; box-shadow: 0 0 0 2.5px rgba(239, 68, 68, .18); }
+.si-yellow { background: #f59e0b; box-shadow: 0 0 0 2.5px rgba(245, 158, 11, .18); }
+.si-green  { background: #22c55e; box-shadow: 0 0 0 2.5px rgba(34, 197, 94, .18); }
