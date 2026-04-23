@@ -60,6 +60,14 @@ body {
 }
 body.sidebar-collapsed .sidebar-close-btn { display: none; }
 
+/* Open button icon toggle — chevron on desktop, hamburger on mobile */
+.sidebar-open-btn .icon-chevron { display: block; }
+.sidebar-open-btn .icon-menu { display: none; }
+@media (max-width: 768px) {
+  .sidebar-open-btn .icon-chevron { display: none; }
+  .sidebar-open-btn .icon-menu { display: block; }
+}
+
 /* ── Sidebar Open Button (bookmark tab on left screen edge) ── */
 .sidebar-open-btn {
   position: fixed;
