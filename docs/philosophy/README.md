@@ -100,6 +100,7 @@
 | "결정 내릴 때 어떤 기준으로 판단?" | [`ADR-019: 솔로 친화적 운영`](./adr-019-solo-friendly.md) |
 | "보안은 뭐부터 지켜야 하나?" | [`ADR-020: 이중 난독화 + SSL 핀닝 + Keychain`](./adr-020-security-hardening.md) |
 | "같은 템플릿으로 여러 유형의 앱을 만들 수 있나?" | [`ADR-021: Multi-Recipe 구성`](./adr-021-multi-recipe.md) |
+| "정적 분석 룰셋은 어디까지 엄격하게?" | [`ADR-022: very_good_analysis + 큐레이션`](./adr-022-very-good-analysis.md) |
 
 ### ADR 카드의 읽는 법
 
@@ -191,6 +192,7 @@ ADR-004 (YAML ↔ Dart 수동 동기화 + CI 검증)
 - [`ADR-019 · 솔로 친화적 운영 (Debug 폴백 · 관리형 서비스 선호)`](./adr-019-solo-friendly.md)
 - [`ADR-020 · 이중 난독화 + SSL 핀닝 + Keychain 정책`](./adr-020-security-hardening.md)
 - [`ADR-021 · Multi-Recipe 구성 (local-only / local-notifier / backend-auth)`](./adr-021-multi-recipe.md)
+- [`ADR-022 · very_good_analysis 도입 + 컨텍스트 기반 큐레이션`](./adr-022-very-good-analysis.md)
 
 ---
 

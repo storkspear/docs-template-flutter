@@ -196,6 +196,11 @@
           "path": "philosophy/adr-021-multi-recipe.md",
           "title": "ADR-021 · Multi-Recipe",
           "desc": "local-only / local-notifier / backend-auth 3개 recipe"
+        },
+        {
+          "path": "philosophy/adr-022-very-good-analysis.md",
+          "title": "ADR-022 · very_good_analysis",
+          "desc": "100+ 룰 도입 + 16개 disable 큐레이션 (앱 컨텍스트 적합도)"
         }
       ]
     },

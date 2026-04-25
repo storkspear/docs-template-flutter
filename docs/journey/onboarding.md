@@ -56,7 +56,7 @@ cd <your-app>
 # → git config core.hooksPath .githooks
 ```
 
-commit-msg · pre-push 훅이 자동 적용돼요.
+commit-msg · pre-commit · pre-push 훅이 자동 적용돼요.
 
 ### 4. 템플릿 remote 등록 (선택, cherry-pick 전파용)
 
