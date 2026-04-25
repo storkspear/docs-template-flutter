@@ -21,7 +21,8 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main]   # main을 target으로 하는 PR만
+  workflow_dispatch:   # 수동 실행 (gh workflow run ci.yml)
 
 jobs:
   analyze-and-test:
@@ -31,17 +32,20 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: '3.32.8'
+          cache: true
       - run: flutter pub get
-      - run: dart format --set-exit-if-changed .
+      - run: dart format --output=none --set-exit-if-changed lib/ test/
       - run: flutter analyze
-      - run: dart run tool/configure_app.dart --audit
-      - run: flutter test --reporter=expanded --coverage
+      - run: flutter test --reporter=expanded
 
   build-android:
     needs: [analyze-and-test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
       - uses: subosito/flutter-action@v2
       - run: flutter pub get
       - run: flutter build apk --debug
@@ -64,10 +68,14 @@ jobs:
 
 ### 핵심 검증
 
-- **`dart format --set-exit-if-changed`** — 포매팅 강제
-- **`flutter analyze`** — 정적 분석 (analysis_options.yaml)
-- **`dart run tool/configure_app.dart --audit`** — Kit 조합 정합성 ([`ADR-004`](../philosophy/adr-004-manual-sync-ci-audit.md))
-- **`flutter test --coverage`** — 커버리지 수집
+- **`dart format --set-exit-if-changed lib/ test/`** — 포매팅 강제 (lib/test 한정)
+- **`flutter analyze`** — 정적 분석 ([`very_good_analysis`](https://pub.dev/packages/very_good_analysis) 룰셋 + 큐레이션, [`ADR-022`](../philosophy/adr-022-very-good-analysis.md))
+- **`flutter test`** — 단위 · 위젯 · 통합 · golden · fingerprint 테스트
+
+### CI에 없지만 로컬 권장
+
+- **`dart run tool/configure_app.dart --audit`** — Kit 조합 정합성 ([`ADR-004`](../philosophy/adr-004-manual-sync-ci-audit.md)). 커밋 전 수동.
+- **`./scripts/coverage.sh`** — 커버리지 측정 + HTML 리포트 (CI 게이트 아님, 월 1회 권장).
 
 ---
 
@@ -134,7 +142,8 @@ updates:
 
 훅 내용:
 - **commit-msg**: Conventional Commits 포맷 검증 (`feat:`, `fix:`, `chore:` 등)
-- **pre-push**: `flutter analyze` + `flutter test` (옵션)
+- **pre-commit**: `dart format` 체크 (빠름, 1초 내) — 포맷 누락 시 commit 차단
+- **pre-push**: `dart format` 재확인 + `flutter analyze` (느린 검사는 push 직전에)
 
 ---
 

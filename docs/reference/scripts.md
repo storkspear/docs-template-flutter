@@ -11,6 +11,7 @@
 | `setup.sh` | git hooks 활성화 | clone 직후 1회 |
 | `rename-app.sh` | 앱 이름 · Bundle ID 일괄 치환 | 파생 레포 생성 시 |
 | `regenerate-assets.sh` | 런처 아이콘 + 스플래시 재생성 | 아이콘 · 스플래시 변경 후 |
+| `coverage.sh` | 테스트 커버리지 측정 + HTML 리포트 | 월 1회 정기 점검 |
 | `generate-upload-keystore.sh` | Android 업로드 keystore 생성 | 첫 Android 배포 전 |
 | `batch-backup-keystores.sh` | 여러 앱 keystore 백업 | 정기 운영 |
 | `upload-secrets-to-github.sh` | keystore · 자격증명 GHA Secrets 업로드 | 첫 배포 전 · 키 갱신 시 |
@@ -25,11 +26,42 @@
 git config core.hooksPath .githooks
 ```
 
-**1회 실행**. `.githooks/commit-msg` · `.githooks/pre-push` 자동 적용.
+**1회 실행**. `.githooks/commit-msg` · `.githooks/pre-commit` · `.githooks/pre-push` 자동 적용.
 
 ```bash
 ./scripts/setup.sh
 ```
+
+---
+
+## coverage.sh
+
+### 용도
+
+`flutter test --coverage` 실행 + `lcov` 설치 시 HTML 리포트 자동 생성 + 브라우저 오픈.
+**CI 게이트가 아닌 수동 측정 도구** — 한 달에 한 번 정도 돌려서 "테스트가 안 닿는 코드 영역" 가시화.
+
+### 사용법
+
+```bash
+./scripts/coverage.sh             # 측정 + HTML 리포트 + 브라우저 오픈
+./scripts/coverage.sh --no-open   # 측정만 (CI/원격 환경)
+```
+
+### 의존성
+
+- `lcov` (선택) — 미설치 시 lcov.info 생성 + 단순 라인 요약만 출력
+  - macOS: `brew install lcov`
+  - Ubuntu: `sudo apt install lcov`
+
+### 산출물
+
+- `coverage/lcov.info` — 원본 커버리지 데이터 (`.gitignore` 처리됨)
+- `coverage/html/` — HTML 리포트 (lcov 설치 시)
+
+### 게이트가 아닌 이유
+
+솔로 운영 컨텍스트에서 임계값 자동 차단보다 **시각화 + 정기 점검** 이 ROI 좋다고 판단. 자세한 트레이드오프는 별도 ADR 없음 (단순 도구라 결정 가벼움).
 
 ---
 
