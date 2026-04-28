@@ -1,7 +1,5 @@
 # Riverpod_MVVM
 
-**ADR-005** — Riverpod + MVVM (StateNotifier + ConsumerWidget)
-
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `flutter_riverpod ^2.6.1` 사용, `lib/common/providers.dart` (105줄) 중앙 DI, ViewModel 3개 (`login` / `password_reset` / `verify_email`) 파일럿.
 
 ## 결론부터

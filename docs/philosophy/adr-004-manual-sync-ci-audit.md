@@ -1,7 +1,5 @@
 # Manual_Sync
 
-**ADR-004** — `app_kits.yaml` ↔ `main.dart` 수동 동기화 + CI 검증
-
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `tool/configure_app.dart` (233줄) 가 양쪽 파일을 검증. `--audit` 플래그로 CI 에서 실수 차단.
 
 ## 결론부터

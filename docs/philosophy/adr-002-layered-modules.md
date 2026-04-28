@@ -1,7 +1,5 @@
 # Layered_Modules
 
-**ADR-002** — 3계층 모듈 구조 (core / kits / common / features)
-
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `lib/` 하위 4개 최상위 폴더 (`core/` · `kits/` · `common/` · `features/`). `core/` 44 파일, `kits/` 13개 Kit 65 파일.
 
 ## 결론부터

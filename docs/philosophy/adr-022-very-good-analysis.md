@@ -1,7 +1,5 @@
 # Very_Good_Analysis
 
-**ADR-022** — very_good_analysis 도입 + 컨텍스트 기반 큐레이션
-
 **Status**: Accepted. 2026-04-25 기준 유효.
 
 ## 결론부터

@@ -1,7 +1,5 @@
 # Palette_Registry
 
-**ADR-015** — 팔레트 런타임 교체 (AppPalette + Registry)
-
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `lib/core/theme/app_palette.dart` (81줄, 추상 + DefaultPalette) + `app_palette_registry.dart` (70줄, 중앙 레지스트리 + ValueNotifier). Material 3 `ColorScheme.fromSeed` 기반.
 
 ## 결론부터

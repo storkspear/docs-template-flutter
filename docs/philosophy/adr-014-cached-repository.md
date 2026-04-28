@@ -1,7 +1,5 @@
 # Cached_Repository
 
-**ADR-014** — 정책 기반 캐싱 (CachedRepository)
-
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `lib/core/cache/cached_repository.dart` (151줄) 가 5가지 정책 지원. 기본 저장소는 `MemoryCacheStore` — fork 후 `DriftCacheStore` 등으로 교체 가능.
 
 ## 결론부터

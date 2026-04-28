@@ -70,22 +70,22 @@
         {
           "path": "philosophy/adr-001-template-cherry-pick.md",
           "title": "Template_Cherry",
-          "desc": "GitHub Template Repository + 수동 cherry-pick 전파"
+          "desc": "ADR-001: GitHub Template Repository + 수동 cherry-pick 전파"
         },
         {
           "path": "philosophy/adr-002-layered-modules.md",
           "title": "Layered_Modules",
-          "desc": "core / kits / common / features 의존 방향"
+          "desc": "ADR-002: core / kits / common / features 의존 방향"
         },
         {
           "path": "philosophy/adr-003-featurekit-registry.md",
           "title": "FeatureKit_Registry",
-          "desc": "AppKit 계약 + 동적 레지스트리 + 런타임 조립"
+          "desc": "ADR-003: AppKit 계약 + 동적 레지스트리 + 런타임 조립"
         },
         {
           "path": "philosophy/adr-004-manual-sync-ci-audit.md",
           "title": "Manual_Sync",
-          "desc": "수동 동기화 + configure_app.dart --audit CI 검증"
+          "desc": "ADR-004: 수동 동기화 + configure_app.dart --audit CI 검증"
         }
       ]
     },
@@ -95,22 +95,22 @@
         {
           "path": "philosophy/adr-005-riverpod-mvvm.md",
           "title": "Riverpod_MVVM",
-          "desc": "StateNotifier + ConsumerWidget + autoDispose"
+          "desc": "ADR-005: StateNotifier + ConsumerWidget + autoDispose"
         },
         {
           "path": "philosophy/adr-006-debug-fallback.md",
           "title": "Debug_Fallback",
-          "desc": "인터페이스 기반 서비스 교체 + Debug 구현체"
+          "desc": "ADR-006: 인터페이스 기반 서비스 교체 + Debug 구현체"
         },
         {
           "path": "philosophy/adr-007-late-binding.md",
           "title": "Late_Binding",
-          "desc": "ApiClient ↔ AuthService 순환 의존 해결"
+          "desc": "ADR-007: ApiClient ↔ AuthService 순환 의존 해결"
         },
         {
           "path": "philosophy/adr-008-boot-step.md",
           "title": "Boot_Step",
-          "desc": "부팅 단계 추상화 + SplashController"
+          "desc": "ADR-008: 부팅 단계 추상화 + SplashController"
         }
       ]
     },
@@ -120,22 +120,22 @@
         {
           "path": "philosophy/adr-009-backend-contract.md",
           "title": "Backend_Contract",
-          "desc": "{data,error} · PageResponse · ErrorCode 1:1 매핑"
+          "desc": "ADR-009: {data,error} · PageResponse · ErrorCode 1:1 매핑"
         },
         {
           "path": "philosophy/adr-010-queued-interceptor.md",
           "title": "Queued_Interceptor",
-          "desc": "QueuedInterceptor + 무한루프 방지 + signOut 위임"
+          "desc": "ADR-010: QueuedInterceptor + 무한루프 방지 + signOut 위임"
         },
         {
           "path": "philosophy/adr-011-interceptor-chain.md",
           "title": "Interceptor_Chain",
-          "desc": "Auth / Error / Logging 3층 순서와 책임"
+          "desc": "ADR-011: Auth / Error / Logging 3층 순서와 책임"
         },
         {
           "path": "philosophy/adr-012-per-app-user.md",
           "title": "Per_App_User",
-          "desc": "JWT appSlug 클레임 + URL 경로 검증"
+          "desc": "ADR-012: JWT appSlug 클레임 + URL 경로 검증"
         }
       ]
     },
@@ -145,12 +145,12 @@
         {
           "path": "philosophy/adr-013-token-atomic-storage.md",
           "title": "Token_Atomic_Storage",
-          "desc": "SecureStorage · repairIfPartial · 반쪽 상태 복구"
+          "desc": "ADR-013: SecureStorage · repairIfPartial · 반쪽 상태 복구"
         },
         {
           "path": "philosophy/adr-014-cached-repository.md",
           "title": "Cached_Repository",
-          "desc": "5 정책 (cacheFirst / networkFirst / SWR 등)"
+          "desc": "ADR-014: 5 정책 (cacheFirst / networkFirst / SWR 등)"
         }
       ]
     },
@@ -160,22 +160,22 @@
         {
           "path": "philosophy/adr-015-palette-registry.md",
           "title": "Palette_Registry",
-          "desc": "AppPalette + Registry · Material 3 fromSeed · 런타임 교체"
+          "desc": "ADR-015: AppPalette + Registry · Material 3 fromSeed · 런타임 교체"
         },
         {
           "path": "philosophy/adr-016-i18n-from-start.md",
           "title": "I18n_FromStart",
-          "desc": "ARB · gen_l10n · ViewModel 은 code, Screen 은 번역"
+          "desc": "ADR-016: ARB · gen_l10n · ViewModel 은 code, Screen 은 번역"
         },
         {
           "path": "philosophy/adr-017-loading-ux.md",
           "title": "Loading_UX",
-          "desc": "Skeleton / Pull-to-refresh / 버튼 스피너 / TopProgressBar"
+          "desc": "ADR-017: Skeleton / Pull-to-refresh / 버튼 스피너 / TopProgressBar"
         },
         {
           "path": "philosophy/adr-018-redirect-priority.md",
           "title": "Redirect_Priority",
-          "desc": "redirectPriority + 안정 정렬 + 첫 non-null"
+          "desc": "ADR-018: redirectPriority + 안정 정렬 + 첫 non-null"
         }
       ]
     },
@@ -185,22 +185,22 @@
         {
           "path": "philosophy/adr-019-solo-friendly.md",
           "title": "Solo_Friendly",
-          "desc": "모든 결정의 상위 기준 · 비목표 명시"
+          "desc": "ADR-019: 모든 결정의 상위 기준 · 비목표 명시"
         },
         {
           "path": "philosophy/adr-020-security-hardening.md",
           "title": "Security_Hardening",
-          "desc": "R8 + Dart obfuscate + Cleartext 차단 + Keychain + SSL pin"
+          "desc": "ADR-020: R8 + Dart obfuscate + Cleartext 차단 + Keychain + SSL pin"
         },
         {
           "path": "philosophy/adr-021-multi-recipe.md",
           "title": "Multi_Recipe",
-          "desc": "local-only / local-notifier / backend-auth 3개 recipe"
+          "desc": "ADR-021: local-only / local-notifier / backend-auth 3개 recipe"
         },
         {
           "path": "philosophy/adr-022-very-good-analysis.md",
           "title": "Very_Good_Analysis",
-          "desc": "100+ 룰 도입 + 16개 disable 큐레이션 (앱 컨텍스트 적합도)"
+          "desc": "ADR-022: 100+ 룰 도입 + 16개 disable 큐레이션 (앱 컨텍스트 적합도)"
         }
       ]
     },

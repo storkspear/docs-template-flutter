@@ -58,19 +58,17 @@
 7. **관련 사례 (Prior Art)** — 업계 레퍼런스 4~5개 외부 링크.
 8. **Code References** — 실제 파일 · 라인 링크. GitHub URL 사용. 마지막에 `**관련 ADR**:` 블록.
 
-### 파일 헤더 (h1 + ADR 메타 + Status 줄)
+### 파일 헤더 (h1 + Status 줄)
 
 ```markdown
 # Short_Title
-
-**ADR-NNN** — 풀 제목 한 줄
 
 **Status**: Accepted/Deprecated/Superseded. 현재 유효. YYYY-MM-DD 기준 현황 한 줄.
 ```
 
 - **h1**: 짧은 식별자 — `Title_Case_Underscore` (예: `Template_Cherry`, `Late_Binding`). 사이드바 / 탭 제목이 길어지지 않도록 한 두 단어로.
-- **ADR 메타 라인**: h1 바로 아래 한 줄 — `**ADR-NNN** — 풀 제목` (em dash ` — ` 구분자). 검색·인덱스가 ADR 번호로도 잡히도록.
-- **Status 줄**: 메타 라인 다음 한 줄 띄고. 날짜 · 현재 유효성 · 주요 구현 위치 한 줄 언급.
+- **Status 줄**: h1 다음 한 줄 띄고. 날짜 · 현재 유효성 · 주요 구현 위치 한 줄 언급.
+- **ADR 번호 + 풀 제목**: 본문에 박지 않고 docs viewer manifest 의 desc 필드에 `ADR-NNN: 풀 제목` 형태로 사이드바 소제목으로 노출.
 
 ### 선택 섹션
 

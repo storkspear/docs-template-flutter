@@ -1,7 +1,5 @@
 # Multi_Recipe
 
-**ADR-021** — Multi-Recipe 구성 (local-only / local-notifier / backend-auth)
-
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `recipes/` 폴더에 3개 YAML 파일 (`local-only-tracker.yaml` · `local-notifier-app.yaml` · `backend-auth-app.yaml`). 파생 레포가 복사 → `app_kits.yaml` 로 덮어쓰기.
 
 ## 결론부터

@@ -1,7 +1,5 @@
 # Per_App_User
 
-**ADR-012** — 앱별 독립 유저 + JWT `appSlug` 클레임
-
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 JWT 에 `appSlug` 클레임 포함. 짝이 되는 [`template-spring`](https://github.com/storkspear/template-spring) 의 `AppSlugVerificationFilter` 와 일대일 대응.
 
 ## 결론부터

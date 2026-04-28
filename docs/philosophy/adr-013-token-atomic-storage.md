@@ -1,7 +1,5 @@
 # Token_Atomic_Storage
 
-**ADR-013** — 토큰 저장 원자성 + SecureStorage vs SharedPreferences
-
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `lib/core/storage/token_storage.dart` (73줄) 가 `saveTokens` 원자 저장 + `repairIfPartial` 복구 담당. iOS Keychain: `first_unlock_this_device`, Android: EncryptedSharedPreferences.
 
 ## 결론부터

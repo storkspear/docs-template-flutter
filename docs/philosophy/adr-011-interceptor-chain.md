@@ -1,7 +1,5 @@
 # Interceptor_Chain
 
-**ADR-011** — 3층 인터셉터 체인 (Auth / Error / Logging)
-
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `lib/kits/backend_api_kit/interceptors/` 하위 3개 파일 (`auth_interceptor.dart` · `error_interceptor.dart` · `logging_interceptor.dart`). `ApiClient` 생성자에서 이 순서로 설치.
 
 ## 결론부터

@@ -1,7 +1,5 @@
 # Loading_UX
 
-**ADR-017** — 4가지 로딩 UX 패턴
-
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `lib/core/widgets/` 에 `SkeletonLoading` · `TopProgressBar` · `LoadingView` · `PrimaryButton` (스피너 내장) 등 로딩 관련 위젯. `skeletonizer` 패키지 기반.
 
 ## 결론부터
