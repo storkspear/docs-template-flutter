@@ -402,7 +402,10 @@ function buildSidebar(manifest) {
 }
 
 async function init() {
-  const res = await fetch('docs/manifest.json');
+  // cache-buster: manifest 변경이 즉시 반영되도록 매 요청 unique URL.
+  const res = await fetch(`docs/manifest.json?t=${Date.now()}`, {
+    cache: 'no-store',
+  });
   const manifest = await res.json();
   buildSidebar(manifest);
 
