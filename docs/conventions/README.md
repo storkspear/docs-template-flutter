@@ -14,6 +14,7 @@
 | [`viewmodel-mvvm.md`](./viewmodel-mvvm.md) | `StateNotifier + ConsumerWidget` 패턴 | [`ADR-005`](../philosophy/adr-005-riverpod-mvvm.md) |
 | [`error-handling.md`](./error-handling.md) | `ApiException` · `safeErrorCode` · 인터셉터 흐름 | [`ADR-009`](../philosophy/adr-009-backend-contract.md) · [`ADR-010`](../philosophy/adr-010-queued-interceptor.md) · [`ADR-011`](../philosophy/adr-011-interceptor-chain.md) |
 | [`loading-ux.md`](./loading-ux.md) | 4가지 로딩 패턴 적용 | [`ADR-017`](../philosophy/adr-017-loading-ux.md) |
+| [`theme-tokens.md`](./theme-tokens.md) | 색·간격·타이포·아이콘 토큰 출처 규칙 | [`ADR-015`](../philosophy/adr-015-palette-registry.md) |
 | [`i18n.md`](./i18n.md) | ARB + gen_l10n 워크플로우 | [`ADR-016`](../philosophy/adr-016-i18n-from-start.md) |
 
 > **테스트 규약**은 별도 섹션. [`Testing Strategy`](../testing/testing-strategy.md) · [`Contract Testing`](../testing/contract-testing.md) 참조.

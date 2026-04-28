@@ -375,7 +375,7 @@ final client = ref.read(apiClientProvider);
 ## 추가 리소스
 
 - [`FAQ`](./dogfood-faq.md) — 자주 묻는 질문
-- [Conventions](../conventions/) — 코딩 규약
+- [`Conventions`](../conventions/) — 코딩 규약
 - [`Features 인덱스`](../features/README.md) — Kit 별 체크리스트
 
 막혔는데 해결 안 되면 GitHub Issue 에 등록 — 같은 함정이 다음 파생 레포에선 이 문서에 추가되도록.

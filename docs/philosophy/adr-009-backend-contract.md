@@ -1,4 +1,6 @@
-# ADR-009 · 백엔드 응답 1:1 계약 (`{data, error}` + PageResponse)
+# Backend_Contract
+
+**ADR-009** — 백엔드 응답 1:1 계약 (`{data, error}` + PageResponse)
 
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `lib/kits/backend_api_kit/api_response.dart` + `api_exception.dart` + `error_code.dart` 3개 파일로 구현. 짝이 되는 백엔드 [`template-spring`](https://github.com/storkspear/template-spring) 의 `common-web` 모듈과 스키마가 동일.
 

@@ -1,4 +1,6 @@
-# ADR-006 · 인터페이스 기반 서비스 교체 + Debug 폴백
+# Debug_Fallback
+
+**ADR-006** — 인터페이스 기반 서비스 교체 + Debug 폴백
 
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `AnalyticsService`, `CrashService`, `NotificationService` 3개 인터페이스에 `Debug*` 폴백 제공. 실제 구현체는 `observability_kit`, `notifications_kit` 가 Provider override 로 교체.
 

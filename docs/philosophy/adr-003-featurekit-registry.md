@@ -1,4 +1,6 @@
-# ADR-003 · FeatureKit 동적 레지스트리
+# FeatureKit_Registry
+
+**ADR-003** — FeatureKit 동적 레지스트리
 
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `lib/core/kits/app_kit.dart` (55줄 계약) + `lib/core/kits/app_kits.dart` (178줄 레지스트리) + 13개 Kit 구현.
 

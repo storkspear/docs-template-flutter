@@ -1,4 +1,6 @@
-# ADR-016 · i18n 처음부터 (ARB + gen_l10n)
+# I18n_FromStart
+
+**ADR-016** — i18n 처음부터 (ARB + gen_l10n)
 
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `l10n.yaml` 설정 + `lib/core/i18n/app_ko.arb` (템플릿) + `app_en.arb` + `flutter gen-l10n` 자동 생성 `app_localizations.dart`. 모든 사용자 가시 문자열은 ARB 에 선언.
 

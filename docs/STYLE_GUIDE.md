@@ -58,16 +58,19 @@
 7. **관련 사례 (Prior Art)** — 업계 레퍼런스 4~5개 외부 링크.
 8. **Code References** — 실제 파일 · 라인 링크. GitHub URL 사용. 마지막에 `**관련 ADR**:` 블록.
 
-### 파일 헤더 (h1 + Status 줄)
+### 파일 헤더 (h1 + ADR 메타 + Status 줄)
 
 ```markdown
-# ADR-NNN · 제목 한 줄
+# Short_Title
+
+**ADR-NNN** — 풀 제목 한 줄
 
 **Status**: Accepted/Deprecated/Superseded. 현재 유효. YYYY-MM-DD 기준 현황 한 줄.
 ```
 
-- h1 제목 포맷: `ADR-NNN · 제목` (중점 ` · ` 구분자)
-- Status 줄은 **파일 상단 고정**. 날짜 · 현재 유효성 · 주요 구현 위치 한 줄 언급.
+- **h1**: 짧은 식별자 — `Title_Case_Underscore` (예: `Template_Cherry`, `Late_Binding`). 사이드바 / 탭 제목이 길어지지 않도록 한 두 단어로.
+- **ADR 메타 라인**: h1 바로 아래 한 줄 — `**ADR-NNN** — 풀 제목` (em dash ` — ` 구분자). 검색·인덱스가 ADR 번호로도 잡히도록.
+- **Status 줄**: 메타 라인 다음 한 줄 띄고. 날짜 · 현재 유효성 · 주요 구현 위치 한 줄 언급.
 
 ### 선택 섹션
 
@@ -200,9 +203,25 @@ abstract class AppKit {
 
 ### 내부 링크는 **상대 경로**
 
-- 같은 디렉토리: `[`ADR-005`](./adr-005-riverpod-mvvm.md)` ← ADR 파일에서 다른 ADR 참조
-- 상위 경로: `[`testing`](../../testing/testing-strategy.md)` ← `journey/philosophy/` 에서 `docs/testing/` 참조
+- 같은 디렉토리: `` [`ADR-005`](./adr-005-riverpod-mvvm.md) `` ← ADR 파일에서 다른 ADR 참조
+- 상위 경로: `` [`testing`](../../testing/testing-strategy.md) `` ← `journey/philosophy/` 에서 `docs/testing/` 참조
 - 절대 경로 · 전체 docs-viewer URL 금지 (레포 이름 바뀌면 깨짐)
+
+### 링크 텍스트는 백틱
+
+내부 문서 / ADR / 파일 / 클래스 / 게터 참조의 링크 텍스트는 **백틱으로 감싸요**. 외부 권위 링크 (공식 문서, 블로그) 는 일반 텍스트 그대로.
+
+```markdown
+✅ [`ADR-005`](./adr-005-riverpod-mvvm.md)
+✅ [`lib/core/kits/app_kit.dart`](https://github.com/.../app_kit.dart)
+✅ [`AppKits.install`](#)
+✅ [Material Design 3](https://m3.material.io/)            ← 외부 권위 = 평범
+
+❌ [ADR-005](./adr-005-riverpod-mvvm.md)                   ← 내부인데 평범
+❌ [`Material Design 3`](https://m3.material.io/)          ← 외부인데 백틱
+```
+
+근거: 링크 텍스트가 monospace 로 시각적 강조되어 본문에서 두드러져요. docs viewer 의 사이드바 / 검색 결과에서도 식별성이 좋아요. 외부 권위 (디자인 시스템 · 표준 문서) 는 자연어로 표기해 코드 식별자와 시각적으로 구분.
 
 ### Code References 섹션의 외부 링크
 
@@ -217,7 +236,7 @@ Code References 는 파일 위치를 **GitHub 절대 URL** 로 적어요 (뷰어
 ### 앵커 링크
 
 ```markdown
-[제약 2](./philosophy/README.md#제약-2--시간이-가장-희소한-자원)
+[`제약 2`](./philosophy/README.md#제약-2--시간이-가장-희소한-자원)
 ```
 
 - 한글 제목의 앵커는 **한글 그대로** + 특수문자는 `-` 로 치환 + 공백도 `-`
@@ -227,12 +246,12 @@ Code References 는 파일 위치를 **GitHub 절대 URL** 로 적어요 (뷰어
 
 **첫 언급 시** — 번호 + 제목 + 링크:
 ```markdown
-[ADR-005 · Riverpod + MVVM](./adr-005-riverpod-mvvm.md)
+[`ADR-005 · Riverpod + MVVM`](./adr-005-riverpod-mvvm.md)
 ```
 
 **재언급 시** — 번호만 + 링크:
 ```markdown
-[ADR-005](./adr-005-riverpod-mvvm.md)
+[`ADR-005`](./adr-005-riverpod-mvvm.md)
 ```
 
 ### "관련 ADR" 섹션 위치
@@ -241,8 +260,8 @@ Code References 마지막에 `**관련 ADR**:` 블록으로 수렴:
 
 ```markdown
 **관련 ADR**:
-- [ADR-003 · FeatureKit 동적 레지스트리](./adr-003-featurekit-registry.md) — Kit 의 providerOverrides 가 맞물림
-- [ADR-007 · Late Binding](./adr-007-late-binding.md) — 순환 의존 해결
+- [`ADR-003 · FeatureKit 동적 레지스트리`](./adr-003-featurekit-registry.md) — Kit 의 providerOverrides 가 맞물림
+- [`ADR-007 · Late Binding`](./adr-007-late-binding.md) — 순환 의존 해결
 ```
 
 각 링크 뒤에 `—` + 한 줄 설명 필수.

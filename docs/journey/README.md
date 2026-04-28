@@ -184,10 +184,10 @@ git push --tags
 | 모듈 구조 상세 | [`architecture.md`](./architecture.md) | core / kits / common / features 의존 그래프 |
 | AppKit 계약 전체 | [`FeatureKit Contract`](../architecture/featurekit-contract.md) | `AppKit` 인터페이스 명세 |
 | 부팅 시퀀스 | [`Boot Sequence`](../architecture/boot-sequence.md) | Sentry → AppConfig → Kits → Splash |
-| 코딩 규약 | [Conventions](../conventions/) | 네이밍 · MVVM · 에러 · 로딩 · 테스트 |
-| Kit 개별 사용법 | [Features](../features/) | 13개 Kit 별 상세 문서 |
-| API 계약 (백엔드 쌍) | [API Contract](../api-contract/) | 응답 스키마 · 에러 코드 · JWT |
-| 배포 / CI/CD / 보안 | [Infra](../infra/) | Fastlane · GHA · 난독화 |
+| 코딩 규약 | [`Conventions`](../conventions/) | 네이밍 · MVVM · 에러 · 로딩 · 테스트 |
+| Kit 개별 사용법 | [`Features`](../features/) | 13개 Kit 별 상세 문서 |
+| API 계약 (백엔드 쌍) | [`API Contract`](../api-contract/) | 응답 스키마 · 에러 코드 · JWT |
+| 배포 / CI/CD / 보안 | [`Infra`](../infra/) | Fastlane · GHA · 난독화 |
 | 테스트 전략 | [`Testing Strategy`](../testing/testing-strategy.md) | resetForTest · Provider override |
 | 스크립트 사용법 | [`Scripts`](../reference/scripts.md) | `scripts/*.sh` 전체 |
 | Recipe 선택 기준 | [`Recipes`](../reference/recipes.md) | local-only / notifier / backend-auth |
