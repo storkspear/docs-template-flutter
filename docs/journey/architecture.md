@@ -1,6 +1,6 @@
 # Architecture — 한눈 요약
 
-파생 레포 개발자가 **10분 안에 전체 구조** 를 파악할 수 있게 쓴 개요. 깊이 들어가려면 [Architecture](../architecture/) · [`ADR`](../philosophy/README.md) 참조.
+파생 레포 개발자가 **10분 안에 전체 구조** 를 파악할 수 있게 쓴 개요. 깊이 들어가려면 [`Architecture`](../architecture/) · [`ADR`](../philosophy/README.md) 참조.
 
 ---
 

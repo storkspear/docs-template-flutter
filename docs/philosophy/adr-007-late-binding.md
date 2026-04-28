@@ -1,4 +1,6 @@
-# ADR-007 · Late Binding 으로 순환 의존 해결
+# Late_Binding
+
+**ADR-007** — Late Binding 으로 순환 의존 해결
 
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `lib/common/providers.dart` 의 `apiClientProvider` ↔ `authServiceProvider` 쌍에 적용. `onTokenRefresh` 콜백 주입 방식.
 

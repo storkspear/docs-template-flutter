@@ -1,4 +1,6 @@
-# ADR-010 · QueuedInterceptor 로 401 자동 갱신
+# Queued_Interceptor
+
+**ADR-010** — QueuedInterceptor 로 401 자동 갱신
 
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `lib/kits/backend_api_kit/interceptors/auth_interceptor.dart` (73줄) 에서 `QueuedInterceptor` 사용. 동시 401 · 무한루프 · refresh 실패 시나리오를 모두 다뤄요.
 

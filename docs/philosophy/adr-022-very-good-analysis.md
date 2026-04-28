@@ -1,4 +1,6 @@
-# ADR-022 · very_good_analysis 도입 + 컨텍스트 기반 큐레이션
+# Very_Good_Analysis
+
+**ADR-022** — very_good_analysis 도입 + 컨텍스트 기반 큐레이션
 
 **Status**: Accepted. 2026-04-25 기준 유효.
 
@@ -164,16 +166,16 @@ analyzer:
 - [`lib/kits/backend_api_kit/api_client.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/api_client.dart) — 타입 캐스트 명시 (`as Map<String, dynamic>`)
 
 **관련 ADR**:
-- [ADR-019 · 솔로 친화적 운영](./adr-019-solo-friendly.md) — "솔로 감당 가능" 기준의 상위 ADR. 이 ADR은 그 구체 사례.
-- [ADR-004 · YAML ↔ Dart 수동 동기화 + CI 검증](./adr-004-manual-sync-ci-audit.md) — `configure_app.dart --audit` 와 함께 자동 강제의 두 축.
+- [`ADR-019 · 솔로 친화적 운영`](./adr-019-solo-friendly.md) — "솔로 감당 가능" 기준의 상위 ADR. 이 ADR은 그 구체 사례.
+- [`ADR-004 · YAML ↔ Dart 수동 동기화 + CI 검증`](./adr-004-manual-sync-ci-audit.md) — `configure_app.dart --audit` 와 함께 자동 강제의 두 축.
 
 ---
 
 ## 📖 책 목차 — Journey 6단계 (운영 & 배포)
 
-[Developer Journey](../journey/README.md) 의 **6단계 — 운영** 보강. [ADR-019 · 솔로 친화적 운영](./adr-019-solo-friendly.md) 의 구체 사례 — "솔로가 감당 가능한 코드 품질 자동 강제는 어디까지?" 의 답.
+[`Developer Journey`](../journey/README.md) 의 **6단계 — 운영** 보강. [`ADR-019 · 솔로 친화적 운영`](./adr-019-solo-friendly.md) 의 구체 사례 — "솔로가 감당 가능한 코드 품질 자동 강제는 어디까지?" 의 답.
 
 | 방향 | 문서 | 한 줄 |
 |---|---|---|
-| ← 이전 | [ADR-021 · Multi-Recipe](./adr-021-multi-recipe.md) | 동일 테마 (운영 & 배포) |
+| ← 이전 | [`ADR-021 · Multi-Recipe`](./adr-021-multi-recipe.md) | 동일 테마 (운영 & 배포) |
 | → 다음 | (없음, 최신 ADR) | |

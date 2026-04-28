@@ -214,7 +214,7 @@ ADR-004 (YAML ↔ Dart 수동 동기화 + CI 검증)
 
 - [`Architecture 한눈 요약`](../journey/architecture.md) — 실제 구조의 상세 레퍼런스
 - [`FeatureKit Contract`](../architecture/featurekit-contract.md) — AppKit 인터페이스 전체 명세
-- [Conventions](../conventions/) — 코딩 규약
+- [`Conventions`](../conventions/) — 코딩 규약
 - [`STYLE_GUIDE`](../STYLE_GUIDE.md) — 문서 작성 스타일 가이드
 
 ---
@@ -229,4 +229,4 @@ ADR-004 (YAML ↔ Dart 수동 동기화 + CI 검증)
 | → 다음 | [`Architecture 한눈 요약`](../journey/architecture.md) | 같은 1단계, 모듈 구조 한눈 요약 |
 
 **막혔을 때**: [`도그푸딩 함정`](../journey/dogfood-pitfalls.md) / [`FAQ`](../journey/dogfood-faq.md)  
-**왜 이렇게?**: 이 문서가 "왜" 의 본진이에요. 더 깊은 인프라 결정은 [Infra](../infra/) 에 있어요.
+**왜 이렇게?**: 이 문서가 "왜" 의 본진이에요. 더 깊은 인프라 결정은 [`Infra`](../infra/) 에 있어요.

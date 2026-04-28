@@ -1,4 +1,6 @@
-# ADR-018 · Kit 별 라우팅 우선순위 (`redirectPriority`)
+# Redirect_Priority
+
+**ADR-018** — Kit 별 라우팅 우선순위 (`redirectPriority`)
 
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `lib/core/kits/app_kit.dart` 의 `redirectPriority` + `lib/core/kits/app_kits.dart` 의 안정 정렬 + `lib/common/router/app_router.dart` 의 합성 로직.
 
