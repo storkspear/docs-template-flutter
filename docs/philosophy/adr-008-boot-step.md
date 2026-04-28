@@ -1,7 +1,5 @@
 # Boot_Step
 
-**ADR-008** — 부팅 단계 추상화 (BootStep + SplashController)
-
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `lib/common/splash/boot_step.dart` (7줄 계약), `lib/common/splash/splash_controller.dart` (39줄) + 각 Kit 이 기여하는 BootStep (`AuthCheckStep` 등).
 
 ## 결론부터

@@ -1,7 +1,5 @@
 # Security_Hardening
 
-**ADR-020** — 이중 난독화 + SSL 핀닝 + Keychain 정책
-
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 Android R8 난독화 (`android/app/build.gradle.kts` · `proguard-rules.pro`) + Dart `--obfuscate --split-debug-info` + Sentry 심볼 업로드 + iOS Keychain `first_unlock_this_device` + SSL pinning opt-in (`lib/kits/backend_api_kit/ssl_pinning.dart`).
 
 ## 결론부터

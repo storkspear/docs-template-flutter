@@ -1,7 +1,5 @@
 # Template_Cherry
 
-**ADR-001** — GitHub Template Repository 패턴 + cherry-pick 전파
-
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 레포가 GitHub Template Repository 로 표시됨. 파생 레포와의 공통 코드 동기화는 수동 cherry-pick.
 
 ## 결론부터
