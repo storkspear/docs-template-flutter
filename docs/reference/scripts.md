@@ -82,13 +82,17 @@ git config core.hooksPath .githooks
 
 ### 변경 범위
 
-- `pubspec.yaml` 의 `name:` → `<slug>`
-- `android/app/build.gradle.kts` 의 `applicationId` → `<bundle_id>`
-- `ios/Runner/Info.plist` 의 `CFBundleIdentifier` → `<bundle_id>`
-- Android Kotlin 파일의 package 선언
-- iOS Swift 파일의 import
-- `app_kits.yaml` 의 `app.slug` · `app.name`
-- import 경로 (`package:template` → `package:<slug>`)
+- `pubspec.yaml` 의 `name:` → `<APP_NAME>` (slug 의 `-` 를 `_` 로 변환)
+- `lib/main.dart` 의 `AppConfig.init(appSlug: ...)` → `<slug>`
+- `android/app/build.gradle.kts` 의 `namespace` · `applicationId` → `<bundle_id>`
+- `android/app/src/main/AndroidManifest.xml` 의 `android:label` → `<DisplayName>`
+- Android Kotlin 파일의 `package` 선언 + 디렉토리 이동
+- `ios/Runner.xcodeproj/project.pbxproj` 의 `PRODUCT_BUNDLE_IDENTIFIER` → `<bundle_id>`
+  (`Info.plist` 의 `CFBundleIdentifier` 는 `$(PRODUCT_BUNDLE_IDENTIFIER)` 변수 참조라 자동 반영. iOS Swift 파일은 건드리지 않음.)
+- `ios/Runner/Info.plist` 의 `CFBundleDisplayName` · `CFBundleName`
+- `app_kits.yaml` 의 `app.name` · `app.slug`
+- `android/fastlane/Appfile` 의 `package_name` → `<bundle_id>`
+- import 경로 (`package:app_template/...` → `package:<APP_NAME>/...`, lib/ + test/ 일괄)
 
 ### 주의
 

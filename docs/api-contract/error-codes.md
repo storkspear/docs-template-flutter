@@ -1,134 +1,168 @@
 # Error Codes
 
-서버 · 클라이언트 간 **ErrorCode enum 1:1 매핑**. 문자열 값이 양쪽에서 완전 동일.
+서버(template-spring) ↔ 클라이언트(template-flutter) 간 **ErrorCode 1:1 매핑**. 양쪽이 동일한 prefix 형식(`CMN_*`, `ATH_*`)을 공유해요.
+
+> **Source of Truth**: Spring 측이 선언하고 Flutter 가 매핑. 변경 시 양쪽 동시 갱신 필수 — `lib/kits/backend_api_kit/error_code.dart` docstring 의 동기화 의무 참조.
+>
+> Spring 정의 위치:
+> - `template-spring/common/common-web/.../exception/CommonError.java` (CMN_*)
+> - `template-spring/core/core-auth-api/.../exception/AuthError.java` (ATH_*)
 
 ---
 
 ## 전체 코드
 
-### 일반
+### 공통 — `CMN_*` (CommonError)
 
-| Code | HTTP | 설명 |
-|------|------|------|
-| `VALIDATION_ERROR` | 400 | 요청 검증 실패. `details.fields` 참조 |
-| `NOT_FOUND` | 404 | 리소스 없음 |
-| `CONFLICT` | 409 | 상태 충돌 (예: 중복 등록) |
-| `INTERNAL_ERROR` | 500 | 서버 내부 오류 |
+도메인에 속하지 않는 범용 에러. JWT access token 관련도 여기에 포함 (common-security 가 core-auth-api 에 의존할 수 없는 모듈 구조 때문).
 
-### 인증 · 인가
+| Code | HTTP | Dart 상수 | 설명 |
+|------|------|---------|------|
+| `CMN_001` | 422 | `ErrorCode.validationError` | 입력값 검증 실패 (Bean Validation 외 비즈니스 검증) |
+| `CMN_002` | 404 | `ErrorCode.notFound` | 리소스 없음. `details.resource`/`details.id` 권장 |
+| `CMN_003` | 409 | `ErrorCode.conflict` | 리소스 충돌 (중복 등록 등) |
+| `CMN_004` | 401 | `ErrorCode.unauthorized` | 인증 정보 없음 |
+| `CMN_005` | 403 | `ErrorCode.forbidden` | 권한 없음 |
+| `CMN_006` | 500 | `ErrorCode.internalError` | 서버 내부 오류. 상세는 서버 로그에만 |
+| `CMN_007` | 401 | `ErrorCode.accessTokenExpired` | **JWT access token 만료** → refresh 시도 트리거 |
+| `CMN_008` | 401 | `ErrorCode.accessTokenInvalid` | JWT access token 무효 (서명 불일치/형식 오류) |
+| `CMN_429` | 429 | `ErrorCode.rateLimitExceeded` | Rate limit 초과. `Retry-After` 헤더 + `details.limit/window` |
 
-| Code | HTTP | 설명 |
-|------|------|------|
-| `UNAUTHORIZED` | 401 | 인증 필요 · 유효하지 않은 토큰 |
-| `FORBIDDEN` | 403 | 권한 없음 |
-| `TOKEN_EXPIRED` | 401 | Access token 만료 → refresh 필요 |
-| `INVALID_TOKEN` | 401 | 토큰 변조 · 서명 불일치 |
-| `INVALID_CREDENTIALS` | 401 | 로그인 실패 (이메일/비번 오류) |
-| `EMAIL_NOT_VERIFIED` | 403 | 이메일 인증 미완료 |
-| `EMAIL_ALREADY_EXISTS` | 409 | 가입 시 이메일 중복 |
+### 인증 도메인 — `ATH_*` (AuthError)
 
-### 외부 서비스
+이메일/소셜 로그인, refresh/reset/verification 토큰 관련.
 
-| Code | HTTP | 설명 |
-|------|------|------|
-| `EMAIL_DELIVERY_FAILED` | 503 | 이메일 발송 실패 (SES · Resend 등) |
-| `PUSH_DELIVERY_FAILED` | 503 | 푸시 발송 실패 (FCM · APNs) |
-| `SOCIAL_AUTH_FAILED` | 401 | 소셜 로그인 실패 (Google · Apple) |
+| Code | HTTP | Dart 상수 | 설명 |
+|------|------|---------|------|
+| `ATH_001` | 401 | `ErrorCode.invalidCredentials` | 이메일/비밀번호 불일치 (열거 방지 — 어느 쪽 틀렸는지 구분 X) |
+| `ATH_002` | 401 | `ErrorCode.refreshTokenExpired` | **refresh / reset / verification 토큰 만료** → signOut + 재로그인 |
+| `ATH_003` | 401 | `ErrorCode.refreshTokenInvalid` | refresh / reset / verification 토큰 무효 (revoked, replay 감지 등) |
+| `ATH_004` | 401 | `ErrorCode.socialAuthFailed` | Apple/Google/Kakao/Naver 소셜 검증 실패. `details.provider` 권장 |
+| `ATH_005` | 401 | `ErrorCode.emailNotVerified` | 이메일 인증 미완료 유저 |
+| `ATH_006` | 503 | `ErrorCode.emailDeliveryFailed` | 이메일 발송 실패 (Resend API 장애 등) |
+
+> **CMN_007 vs ATH_002 의 차이가 핵심**:
+> - `CMN_007` = access token 만료 → 자동 refresh 시도 후 성공 가능
+> - `ATH_002` = refresh token 만료 → 더 이상 갱신 불가, signOut 필요
+> Flutter 측 `ApiException.isAccessTokenExpired` 와 `isRefreshTokenExpired` getter 가 분리된 이유예요.
 
 ### 클라이언트 로컬
 
-백엔드가 내려준 코드가 아닌, 클라이언트 자체 생성 코드.
+백엔드가 내려준 코드가 아닌, Flutter 측이 자체 생성하는 코드. `ApiException` factory 가 발행해요.
 
-| Code | 설명 |
-|------|------|
-| `NETWORK_ERROR` | 네트워크 연결 실패 |
-| `TIMEOUT` | 요청 · 응답 타임아웃 |
-| `UNKNOWN_ERROR` | 알 수 없는 에러 (fallback) |
+| Code | 발생 | 설명 |
+|------|------|------|
+| `NETWORK_ERROR` | `ApiException.network()` | 네트워크 연결 실패 (`SocketException`, `connectionError`) |
+| `TIMEOUT` | `ApiException.timeout()` | 요청/응답 타임아웃 |
+| `UNKNOWN_ERROR` | `ApiException.unknown()` | 알 수 없는 에러 (fallback) |
 
-그리고 각 ViewModel 별 `fallbackCode`:
-- `LOGIN_FAILED`, `SIGNUP_FAILED`, `FETCH_FAILED`, `SAVE_FAILED`, `DELETE_FAILED` 등
+### ViewModel fallback codes
+
+ViewModel 의 `safeErrorCode(e, fallbackCode: '...')` 호출 시 사용하는 도메인-친화 코드. 백엔드 응답이 아닌 UI 단의 그룹핑.
+
+- `LOGIN_FAILED` (login_view_model.dart)
+- `SIGNUP_FAILED`
+- `PASSWORD_RESET_FAILED` (password_reset_view_model.dart)
+- 도메인별 fallback 은 파생 레포에서 추가 (예: `EXPENSE_SAVE_FAILED`)
 
 ---
 
-## Dart 상수
+## Dart 매핑 (실제 코드)
 
 ```dart
 // lib/kits/backend_api_kit/error_code.dart
 class ErrorCode {
-  static const validationError = 'VALIDATION_ERROR';
-  static const notFound = 'NOT_FOUND';
-  // ...
+  // 공통 (CMN_*)
+  static const validationError = 'CMN_001';
+  static const notFound = 'CMN_002';
+  static const conflict = 'CMN_003';
+  static const unauthorized = 'CMN_004';
+  static const forbidden = 'CMN_005';
+  static const internalError = 'CMN_006';
+  static const accessTokenExpired = 'CMN_007';
+  static const accessTokenInvalid = 'CMN_008';
+  static const rateLimitExceeded = 'CMN_429';
+
+  // 인증 (ATH_*)
+  static const invalidCredentials = 'ATH_001';
+  static const refreshTokenExpired = 'ATH_002';
+  static const refreshTokenInvalid = 'ATH_003';
+  static const socialAuthFailed = 'ATH_004';
+  static const emailNotVerified = 'ATH_005';
+  static const emailDeliveryFailed = 'ATH_006';
 }
 ```
 
-### 사용
+### 사용 패턴
+
+**1) ViewModel 에서 분기 처리**
 
 ```dart
-if (state.errorCode == ErrorCode.invalidCredentials) {
-  // 로그인 실패 UI
-}
-
-// 또는 ApiException getter
-if (e is ApiException && e.isTokenExpired) {
-  // refresh 로직
-}
-```
-
----
-
-## i18n 매핑
-
-각 code 를 Screen 에서 번역:
-
-```dart
-// lib/core/i18n/app_ko.arb
-{
-  "errorInvalidCredentials": "이메일 또는 비밀번호가 올바르지 않습니다",
-  "errorTokenExpired": "세션이 만료되었어요. 다시 로그인해주세요",
-  "errorEmailAlreadyExists": "이미 사용 중인 이메일이에요",
-  "errorNetwork": "네트워크 연결을 확인해주세요",
-  "errorTimeout": "응답이 너무 느려요. 잠시 후 다시 시도해주세요",
-  "errorUnknown": "알 수 없는 오류가 발생했어요"
+try {
+  await authService.signInWithEmail(...);
+} on ApiException catch (e) {
+  if (e.isInvalidCredentials) {
+    // 이메일/비밀번호 오류 — 사용자 안내
+  } else if (e.isAccessTokenExpired) {
+    // 자동 refresh 트리거 (보통 인터셉터에서 처리)
+  } else if (e.isRefreshTokenExpired || e.isRefreshTokenInvalid) {
+    // signOut + 재로그인 화면 이동
+  }
 }
 ```
 
-Screen:
+**2) 화면에서 i18n 메시지 매핑**
+
+`lib/kits/backend_api_kit/api_exception.dart` 의 `safeErrorCode(e)` 로 안전하게 코드 추출 후 ARB 키와 매핑.
+
 ```dart
 String _localizedError(BuildContext context, String code) {
   final s = S.of(context);
   switch (code) {
-    case ErrorCode.invalidCredentials: return s.errorInvalidCredentials;
-    case ErrorCode.tokenExpired: return s.errorTokenExpired;
-    case ErrorCode.emailAlreadyExists: return s.errorEmailAlreadyExists;
-    case 'NETWORK_ERROR': return s.errorNetwork;
-    case 'TIMEOUT': return s.errorTimeout;
-    default: return s.errorUnknown;
+    case ErrorCode.invalidCredentials:
+      return s.errorInvalidCredentials;
+    case ErrorCode.accessTokenExpired:
+    case ErrorCode.refreshTokenExpired:
+      return s.errorSessionExpired;
+    case 'NETWORK_ERROR':
+      return s.errorNetworkUnavailable;
+    case 'TIMEOUT':
+      return s.errorTimeout;
+    default:
+      return s.errorUnknown;
   }
 }
 ```
+
+> 위 ARB 키들은 예시예요. 실제 `lib/core/i18n/app_ko.arb` / `app_en.arb` 에 정의된 키와 일치시키세요. 새 키 추가 시 `flutter gen-l10n` 실행 필수.
 
 ---
 
 ## 새 ErrorCode 추가 워크플로우
 
-1. **백엔드**: `common-web/.../ErrorCode.java` 에 enum 추가
-2. **프론트**: `lib/kits/backend_api_kit/error_code.dart` 에 상수 추가
-3. **i18n**: `app_ko.arb` · `app_en.arb` 에 번역 추가 → `flutter gen-l10n`
-4. **Screen**: `_localizedError` switch 에 case 추가
-5. **테스트**: 해당 상황 시나리오 테스트 추가
+1. **Spring**: 도메인에 따라 `CommonError.java` (범용) 또는 `XxxError.java` (도메인별 — auth/user/device 등) 에 enum 추가. code 형식 `<3자약어>_<번호>` (예: `EXP_001` for expense 도메인).
+2. **Flutter**: `lib/kits/backend_api_kit/error_code.dart` 에 상수 추가. **이 파일 docstring 에 명시된 동기화 의무 준수**.
+3. **i18n**: `lib/core/i18n/app_ko.arb` + `app_en.arb` 양쪽에 새 키 추가 → `flutter gen-l10n`.
+4. **Screen**: `_localizedError` (또는 동등 함수) switch 에 case 추가.
+5. **테스트**: `test/kits/backend_api_kit/api_exception_test.dart` 에 새 코드 boolean helper 추가하면 그 테스트도 갱신.
+6. **양쪽 동시 PR**: Spring 과 Flutter 의 변경은 같은 sprint 안에 배포 — 한쪽만 먼저 나가면 분기 처리 fail.
 
 ---
 
 ## 주의사항
 
-- **문자열 오타 주의**: Dart · Java 둘 다 `UPPER_SNAKE_CASE` 정확히 일치해야.
-- **HTTP 상태 코드와 무관할 수 있음**: 예를 들어 `TOKEN_EXPIRED` 는 401 로 주지만, 비즈니스 로직에선 code 로만 분기.
-- **details 활용**: validation 에러는 `details.fields: {email: "이메일 형식 오류"}` 같이 필드별 메시지 제공.
+- **prefix 일관성**: code 는 항상 `<도메인약어>_<번호>` 형식. 예외 없음.
+- **HTTP 상태 코드와 별개**: 같은 401 안에서도 `CMN_004` vs `CMN_007` vs `ATH_002` 가 의미가 달라요. 분기는 code 로만.
+- **details 활용**: validation 에러는 `details.field` (단일) 또는 `details.fields` (다중) 로 필드명 전달. Spring `GlobalExceptionHandler` 가 자동 첨부.
+- **열거 공격 방지**: `ATH_001` 은 의도적으로 "이메일/비밀번호" 둘 중 무엇이 틀렸는지 구분하지 않아요.
+- **소셜 로그인 details**: `ATH_004` 는 `details.provider: "kakao"` 처럼 provider 정보 포함 권장.
 
 ---
 
 ## 관련 문서
 
-- [`ADR-009 · 백엔드 계약`](../philosophy/adr-009-backend-contract.md)
-- [`Error Handling`](../conventions/error-handling.md)
-- [`response-schema.md`](./response-schema.md)
+- [`ADR-009 · 백엔드 계약`](../philosophy/adr-009-backend-contract.md) — `{data, error}` 설계 의사결정
+- [`Error Handling`](../conventions/error-handling.md) — Flutter 측 ApiException 처리 패턴
+- [`response-schema.md`](./response-schema.md) — `{data, error}` 응답 envelope
+- [`auth-flow.md`](./auth-flow.md) — 인증 흐름에서 에러 코드 사용
+- [`integrations/sentry.md`](../integrations/sentry.md) — 에러 → Sentry 연동

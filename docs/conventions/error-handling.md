@@ -43,9 +43,15 @@ class ApiException implements Exception {
   factory ApiException.timeout() => ...;
   factory ApiException.unknown([String? message]) => ...;
 
-  bool get isTokenExpired => code == 'TOKEN_EXPIRED';
-  bool get isUnauthorized => code == 'UNAUTHORIZED' || statusCode == 401;
-  bool get isValidationError => code == 'VALIDATION_ERROR';
+  bool get isAccessTokenExpired => code == 'CMN_007';
+  bool get isAccessTokenInvalid => code == 'CMN_008';
+  bool get isRefreshTokenExpired => code == 'ATH_002';
+  bool get isRefreshTokenInvalid => code == 'ATH_003';
+  bool get isInvalidCredentials => code == 'ATH_001';
+  bool get isUnauthorized =>
+      code == 'CMN_004' || code == 'CMN_007' || code == 'CMN_008' ||
+      statusCode == 401;
+  bool get isValidationError => code == 'CMN_001';
 }
 ```
 
@@ -53,7 +59,7 @@ class ApiException implements Exception {
 
 | 상황 | factory | code |
 |------|---------|------|
-| 서버가 `{error: {...}}` 로 응답 | `fromApiError` | 서버 제공 (예: `INVALID_CREDENTIALS`) |
+| 서버가 `{error: {...}}` 로 응답 | `fromApiError` | 서버 제공 (예: `ATH_001`, `CMN_007`) |
 | 네트워크 연결 실패 | `network` | `NETWORK_ERROR` |
 | 타임아웃 | `timeout` | `TIMEOUT` |
 | 알 수 없는 에러 | `unknown` | `UNKNOWN_ERROR` |
@@ -110,16 +116,25 @@ Future<void> signInWithEmail(String email, String password) async {
 
 ## ErrorCode 상수
 
-서버 `ErrorCode` enum 과 **문자열 동일** 하게 관리. 자세한 건 [`ADR-009`](../philosophy/adr-009-backend-contract.md).
+서버 (Spring `CommonError` / `AuthError`) 와 **prefix 형식 (`CMN_*` / `ATH_*`) 으로 매핑**. 전체 목록 + 동기화 의무는 [`api-contract/error-codes.md`](../api-contract/error-codes.md), 설계 결정은 [`ADR-009`](../philosophy/adr-009-backend-contract.md).
 
 ```dart
 // lib/kits/backend_api_kit/error_code.dart 발췌
 class ErrorCode {
-  static const validationError = 'VALIDATION_ERROR';
-  static const unauthorized = 'UNAUTHORIZED';
-  static const tokenExpired = 'TOKEN_EXPIRED';
-  static const invalidCredentials = 'INVALID_CREDENTIALS';
-  static const emailAlreadyExists = 'EMAIL_ALREADY_EXISTS';
+  // 공통 (CMN_*)
+  static const validationError = 'CMN_001';
+  static const notFound = 'CMN_002';
+  static const conflict = 'CMN_003';
+  static const unauthorized = 'CMN_004';
+  static const accessTokenExpired = 'CMN_007';
+  static const accessTokenInvalid = 'CMN_008';
+
+  // 인증 (ATH_*)
+  static const invalidCredentials = 'ATH_001';
+  static const refreshTokenExpired = 'ATH_002';
+  static const refreshTokenInvalid = 'ATH_003';
+  static const socialAuthFailed = 'ATH_004';
+  static const emailNotVerified = 'ATH_005';
   // ...
 }
 ```
@@ -145,11 +160,15 @@ ViewModel 은 code 만, Screen 이 번역. [`ADR-016 · i18n 처음부터`](../p
 String _localizedError(BuildContext context, String code) {
   final s = S.of(context);
   switch (code) {
-    case ErrorCode.invalidCredentials: return s.errorInvalidCredentials;
-    case ErrorCode.tokenExpired: return s.errorTokenExpired;
-    case ErrorCode.emailAlreadyExists: return s.errorEmailAlreadyExists;
+    case ErrorCode.invalidCredentials:    // ATH_001
+      return s.errorInvalidCredentials;
+    case ErrorCode.accessTokenExpired:    // CMN_007
+    case ErrorCode.refreshTokenExpired:   // ATH_002
+      return s.errorSessionExpired;
+    case ErrorCode.conflict:              // CMN_003 (이메일 중복 등은 details.field 로 구분)
+      return s.errorConflict;
     case 'LOGIN_FAILED': return s.errorLoginFailed;
-    case 'NETWORK_ERROR': return s.errorNetwork;
+    case 'NETWORK_ERROR': return s.errorNetworkUnavailable;
     case 'TIMEOUT': return s.errorTimeout;
     default: return s.errorUnknown;
   }
@@ -238,10 +257,9 @@ _dio.interceptors.addAll([
 
 ```dart
 // ApiClient 의 API
-await api.postRaw<AuthTokens>(
-  '/auth/login',
-  body: {'email': email, 'password': password},
-  fromData: AuthTokens.fromJson,
+await api.postRaw(
+  ApiEndpoints.emailSignIn,  // '/api/apps/{slug}/auth/email/signin'
+  data: {'email': email, 'password': password, 'appSlug': appSlug},
 );
 // → 내부적으로 RequestOptions.extra['skipAuth'] = true
 // → AuthInterceptor 가 감지 → 토큰 첨부 건너뜀

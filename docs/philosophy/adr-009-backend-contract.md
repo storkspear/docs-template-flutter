@@ -117,7 +117,7 @@ class ApiError {
 { "data": { "id": 42, "name": "..." }, "error": null }
 
 // 실패
-{ "data": null, "error": { "code": "INVALID_CREDENTIALS", "message": "...", "details": {...} } }
+{ "data": null, "error": { "code": "ATH_001", "message": "...", "details": {...} } }
 ```
 
 `data` 와 `error` 는 **항상 상호 배타적**. 이 불변량이 `isSuccess` / `isError` getter 의 근거예요.
@@ -168,31 +168,34 @@ class PageResponse<T> {
 
 Spring Boot 의 `Page<T>` 가 직렬화될 때의 포맷을 그대로 따라요.
 
-### ErrorCode — enum 1:1 매핑
+### ErrorCode — enum 1:1 매핑 (prefix 형식)
+
+> **변경 이력**: 초기 결정 시점엔 `VALIDATION_ERROR` 같은 raw UPPER_SNAKE 형식이었으나, Spring 측 도메인 분리 (`CommonError` / `AuthError` / `UserError` 등) 와 함께 prefix 형식 (`CMN_*`, `ATH_*`) 으로 진화했어요. 본 ADR 은 결정의 본질 (1:1 매핑) 을 기록하고, 현재 코드 상태는 아래 발췌가 정확.
 
 ```dart
-// lib/kits/backend_api_kit/error_code.dart 전체
+// lib/kits/backend_api_kit/error_code.dart 발췌
 class ErrorCode {
-  static const validationError = 'VALIDATION_ERROR';
-  static const notFound = 'NOT_FOUND';
-  static const conflict = 'CONFLICT';
-  static const internalError = 'INTERNAL_ERROR';
+  // 공통 (Spring CommonError → CMN_*)
+  static const validationError = 'CMN_001';
+  static const notFound = 'CMN_002';
+  static const conflict = 'CMN_003';
+  static const unauthorized = 'CMN_004';
+  static const forbidden = 'CMN_005';
+  static const internalError = 'CMN_006';
+  static const accessTokenExpired = 'CMN_007';
+  static const accessTokenInvalid = 'CMN_008';
 
-  static const unauthorized = 'UNAUTHORIZED';
-  static const forbidden = 'FORBIDDEN';
-  static const tokenExpired = 'TOKEN_EXPIRED';
-  static const invalidToken = 'INVALID_TOKEN';
-  static const invalidCredentials = 'INVALID_CREDENTIALS';
-  static const emailNotVerified = 'EMAIL_NOT_VERIFIED';
-  static const emailAlreadyExists = 'EMAIL_ALREADY_EXISTS';
-
-  static const emailDeliveryFailed = 'EMAIL_DELIVERY_FAILED';
-  static const pushDeliveryFailed = 'PUSH_DELIVERY_FAILED';
-  static const socialAuthFailed = 'SOCIAL_AUTH_FAILED';
+  // 인증 도메인 (Spring AuthError → ATH_*)
+  static const invalidCredentials = 'ATH_001';
+  static const refreshTokenExpired = 'ATH_002';
+  static const refreshTokenInvalid = 'ATH_003';
+  static const socialAuthFailed = 'ATH_004';
+  static const emailNotVerified = 'ATH_005';
+  static const emailDeliveryFailed = 'ATH_006';
 }
 ```
 
-이 값들은 **template-spring 의 `ErrorCode` enum 과 문자열이 동일** 해요. 서버에 새 에러가 추가되면 양쪽 레포에 같은 이름으로 넣어야 해요.
+이 값들은 **template-spring 의 `CommonError` / `AuthError` enum 의 `getCode()` 반환값과 1:1 매핑** 돼요. 전체 매핑 + 동기화 의무는 [`api-contract/error-codes.md`](../api-contract/error-codes.md) 참조.
 
 ### ApiException + safeErrorCode / safeErrorMessage
 
@@ -211,8 +214,12 @@ class ApiException implements Exception {
   factory ApiException.timeout() => ...;
   factory ApiException.unknown([String? message]) => ...;
 
-  bool get isTokenExpired => code == 'TOKEN_EXPIRED';
-  bool get isUnauthorized => code == 'UNAUTHORIZED' || statusCode == 401;
+  bool get isAccessTokenExpired => code == 'CMN_007';   // refresh 시도 트리거
+  bool get isRefreshTokenExpired => code == 'ATH_002';  // signOut 트리거
+  bool get isInvalidCredentials => code == 'ATH_001';
+  bool get isUnauthorized =>
+      code == 'CMN_004' || code == 'CMN_007' || code == 'CMN_008' ||
+      statusCode == 401;
 }
 
 /// UI 에 안전한 에러 코드. ApiException 이면 서버 code, 아니면 fallback.
@@ -236,7 +243,7 @@ Dart 에는 JSON 라이브러리 수준의 런타임 타입 정보가 없어서,
 클라이언트 취향에 맞춰 `meta` 필드로 래핑할까 했지만, Spring 의 기본 포맷과 어긋나면 백엔드가 직접 커스텀 직렬화기를 만들어야 해요. 서버에 쓸데없는 코드를 늘리지 않기 위해 Spring 표준을 그대로 따랐어요.
 
 **포인트 4 — `ErrorCode` 는 enum 이 아니라 static const String**  
-Dart enum 을 쓰면 `ErrorCode.invalidCredentials.name` 같은 방식이 가능하지만, 서버 문자열이 `SCREAMING_SNAKE_CASE` 라 `name` 과 불일치해요. 그래서 `static const invalidCredentials = 'INVALID_CREDENTIALS'` 로 평범한 문자열 상수를 택했어요. switch 대신 `if (e.code == ErrorCode.invalidCredentials)` 패턴.
+Dart enum 을 쓰면 `ErrorCode.invalidCredentials.name` 같은 방식이 가능하지만, 서버가 prefix 형식 (`ATH_001`, `CMN_007` 등) 을 쓰므로 enum name 과 1:1 매핑이 안 돼요. 그래서 `static const invalidCredentials = 'ATH_001'` 로 평범한 문자열 상수를 택했어요. switch 대신 `if (e.code == ErrorCode.invalidCredentials)` 패턴.
 
 ## 이 선택이 가져온 것
 

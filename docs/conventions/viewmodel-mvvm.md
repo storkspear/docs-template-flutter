@@ -197,8 +197,8 @@ class LoginScreen extends ConsumerWidget {
     final s = S.of(context);
     switch (code) {
       case 'LOGIN_FAILED': return s.loginFailed;
-      case 'INVALID_CREDENTIALS': return s.invalidCredentials;
-      case 'NETWORK_ERROR': return s.errorNetwork;
+      case 'ATH_001': return s.invalidCredentials;          // ErrorCode.invalidCredentials
+      case 'NETWORK_ERROR': return s.errorNetworkUnavailable;
       default: return s.errorUnknown;
     }
   }
@@ -234,18 +234,19 @@ class AuthService {
        _authState = authState;
 
   Future<void> signInWithEmail({required String email, required String password}) async {
-    final response = await _apiClient.post<AuthTokens>(
-      '/auth/login',
-      body: {'email': email, 'password': password},
-      fromData: AuthTokens.fromJson,
+    // 실제 구현은 lib/kits/auth_kit/auth_service.dart 참조 — 여기는 패턴 예시
+    final response = await _apiClient.postRaw(
+      ApiEndpoints.emailSignIn,  // '/api/apps/{slug}/auth/email/signin'
+      data: {'email': email, 'password': password, 'appSlug': AppConfig.instance.appSlug},
     );
-    final tokens = response.data!;
+    // Spring AuthResponse 구조: { user, tokens: { accessToken, refreshToken } }
+    final data = response.data as Map<String, dynamic>;
+    final tokens = (data['tokens'] as Map<String, dynamic>?) ?? data;
     await _tokenStorage.saveTokens(
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
+      accessToken: tokens['accessToken'] as String,
+      refreshToken: tokens['refreshToken'] as String,
     );
-    final user = await fetchCurrentUser();
-    _authState.emit(AuthState.authenticated(user));
+    _authState.emit(AuthState.authenticated(/* CurrentUser.fromJwt */));
   }
 
   // ...
@@ -280,7 +281,7 @@ LoginViewModel.signInWithEmail()
   ↓
 _ref.read(authServiceProvider).signInWithEmail(email, password)
   ↓
-AuthService → ApiClient.post('/auth/login', ...) → JWT 토큰 저장 → authState.emit(authenticated)
+AuthService → ApiClient.postRaw(ApiEndpoints.emailSignIn, ...) → JWT 토큰 저장 → authState.emit(authenticated)
   ↓ (authState 변화 → go_router refreshListenable 트리거 → /home 으로 이동)
   ↓
 LoginViewModel 로 복귀 → state = copyWith(isLoading: false)
@@ -288,9 +289,9 @@ LoginViewModel 로 복귀 → state = copyWith(isLoading: false)
 
 에러 시:
 ```
-AuthService 가 ApiException(code: 'INVALID_CREDENTIALS') throw
+AuthService 가 ApiException(code: 'ATH_001') throw  ← Spring AuthError.INVALID_CREDENTIALS
   ↓
-LoginViewModel catch → state = copyWith(errorCode: 'INVALID_CREDENTIALS', errorMessage: '...')
+LoginViewModel catch → state = copyWith(errorCode: 'ATH_001', errorMessage: '...')
   ↓ UI 리빌드 → ErrorBanner 표시 + 스피너 해제
 ```
 

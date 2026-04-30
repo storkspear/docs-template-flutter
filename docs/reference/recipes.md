@@ -1,6 +1,6 @@
 # Recipes
 
-`recipes/` 에 제공되는 **3개 샘플 앱 구성**. 파생 레포가 복사 → `app_kits.yaml` 로 덮어쓰기. 상세 근거는 [`ADR-021 · Multi-Recipe`](../philosophy/adr-021-multi-recipe.md).
+`recipes/` 에 제공되는 **4개 샘플 앱 구성**. 파생 레포가 복사 → `app_kits.yaml` 로 덮어쓰기. 상세 근거는 [`ADR-021 · Multi-Recipe`](../philosophy/adr-021-multi-recipe.md).
 
 ---
 
@@ -10,7 +10,8 @@
 |------|--------|
 | 서버 없이 완전 로컬 | `local-only-tracker` |
 | 서버 없고 알림 · 타이머 중심 | `local-notifier-app` |
-| 서버 있고 로그인 필요 | `backend-auth-app` |
+| 서버 있고 단순 인증 (이메일/Apple/Google) | `backend-auth-app` |
+| 한국 시장 + 카카오/네이버 포함 4-provider 인증 | `social-auth-app` |
 | 위 어느 것도 아님 | 가까운 것 복사 + 커스터마이징 |
 
 ---
@@ -132,6 +133,53 @@ kits:
 ### 대표 사례
 
 - SNS 마이크로 · 협업 도구 · 대시보드 · 메신저
+
+---
+
+## 4. social-auth-app
+
+한국 시장 타겟 — 카카오 · 네이버 포함 4-provider 소셜 로그인 앱.
+
+```yaml
+# recipes/social-auth-app.yaml
+app:
+  name: Social Login App
+  slug: social_app
+  environment: prod
+  palette_class: DefaultPalette
+
+kits:
+  backend_api_kit: {}
+  auth_kit:
+    providers:
+      - email
+      - google
+      - apple
+      - kakao
+      - naver
+  notifications_kit: {}
+  device_info_kit: {}
+  update_kit: {}
+  observability_kit: {}
+```
+
+### 활성 Kit (6개)
+
+- `backend_api_kit` · `auth_kit` (4-provider) — 한국 시장 표준
+- `notifications_kit` · `device_info_kit` — FCM + device 등록
+- `update_kit` · `observability_kit` — 강제 업데이트 + Sentry/PostHog
+
+### 전제
+
+- [`template-spring`](https://github.com/storkspear/template-spring) 쌍 운영 + 4-provider OAuth 등록
+- **Kakao**: 네이티브 앱 키 발급 + `KakaoSdk.init` 호출 (`lib/main.dart` 자리표시 참조)
+- **Naver**: Client ID / Secret / URL scheme 발급 + `FlutterNaverLogin.initSdk` 호출
+- iOS `Info.plist` + `AndroidManifest.xml` 의 OAuth 자리표시 채우기 (`lib/kits/auth_kit/README.md` "Native 플랫폼 셋업" 섹션)
+- `.env.example` 의 `KAKAO_NATIVE_KEY` / `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` 채우기
+
+### 대표 사례
+
+- 한국 시장 SNS · 커머스 · 콘텐츠 앱 (카카오/네이버 로그인 사용자 비중 큼)
 
 ---
 

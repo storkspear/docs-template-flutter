@@ -56,7 +56,7 @@ final request = SearchRequest.builder()
 
 final response = await api.post<PageResponse<Expense>>(
   '/expenses/search',
-  body: request.toJson(),
+  data: request.toJson(),
   fromData: (data) => PageResponse.fromJson(data, Expense.fromJson),
 );
 ```

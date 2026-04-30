@@ -168,7 +168,7 @@ class ItemRepository {
   Future<PageResponse<Item>> list({int page = 0}) async {
     final res = await _api.get<PageResponse<Item>>(
       '/items',
-      query: {'page': page, 'size': 20},
+      queryParameters: {'page': page, 'size': 20},
       fromData: (data) => PageResponse.fromJson(data, Item.fromJson),
     );
     return res.data!;
@@ -177,7 +177,7 @@ class ItemRepository {
   Future<Item> create(String title, String? description) async {
     final res = await _api.post<Item>(
       '/items',
-      body: {'title': title, 'description': description},
+      data: {'title': title, 'description': description},
       fromData: Item.fromJson,
     );
     return res.data!;

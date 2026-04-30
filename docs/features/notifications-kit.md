@@ -40,8 +40,9 @@ await AppKits.install([
 | `DebugNotificationService` | 기본 구현. 콘솔 출력만 |
 | `LocalNotificationService` | `flutter_local_notifications` 기반 실제 구현 |
 | `FcmNotificationService` | FCM 푸시 + 로컬 알림 통합 (선택) |
-| `DeviceRegistration` | 백엔드에 FCM 토큰 등록 |
 | `ScheduledAlertService` | 예약 알림 도메인 헬퍼 |
+
+> 백엔드에 FCM 토큰 등록하는 `DeviceRegistration` 클래스는 [`backend_api_kit`](./backend-api-kit.md) 으로 이동했어요. 로컬 전용 알림 앱이 BackendApiKit 없이 NotificationsKit 만 쓸 수 있도록 도메인 분리.
 
 ---
 
@@ -113,7 +114,7 @@ FirebaseMessaging.onMessage.listen((RemoteMessage message) {
 
 - [`lib/kits/notifications_kit/notification_service.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/notifications_kit/notification_service.dart) — 추상 + Debug
 - [`lib/kits/notifications_kit/scheduled_alert_service.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/notifications_kit/scheduled_alert_service.dart)
-- [`lib/kits/notifications_kit/device_registration.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/notifications_kit/device_registration.dart)
+- [`lib/kits/backend_api_kit/device_registration.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/device_registration.dart) — push token 백엔드 등록 (이 kit 에서 backend_api_kit 으로 이동)
 
 ---
 

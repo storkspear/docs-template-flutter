@@ -24,7 +24,28 @@
 | [`permissions_kit`](./permissions-kit.md) | 런타임 권한 요청 + 설정 유도 | 없음 | +0.5MB |
 | [`device_info_kit`](./device-info-kit.md) | 앱 버전 + 기기 정보 | 없음 | +0.3MB |
 
-**크기 영향** 은 대략 추정. 실제는 플랫폼 · 빌드 설정에 따라 다름. 미활성 Kit 은 tree-shaking 으로 최종 바이너리에서 제거.
+**크기 영향** 은 대략 추정. 실제는 플랫폼 · 빌드 설정에 따라 다름.
+
+> ⚠️ **Tree-shaking 은 Dart 코드만 제거해요**. 미활성 Kit 의 Dart 코드는 빌드에서 빠지지만, **네이티브 플러그인(.aar / CocoaPods)은 `pubspec.yaml` 에 선언되어 있는 한 APK/IPA 에 항상 포함**돼요. 사이즈를 진짜 줄이려면 비활성 Kit 의 패키지를 `pubspec.yaml` 에서도 제거하세요. (예시: 31MB APK 측정 중 `sqlite3_flutter_libs`/`sentry-android-ndk` 등이 ABI 별로 ~5MB 차지)
+
+---
+
+## Core 모듈 목록 (10개)
+
+`lib/core/` 의 항상 포함되는 기반 모듈이에요. Kit 활성화와 무관하게 모든 앱이 사용해요.
+
+| 모듈 | 역할 | 주요 진입점 |
+|------|------|------------|
+| `analytics` | 크래시·이벤트 인터페이스 (Debug 폴백 포함) | `CrashService`, `AnalyticsService` |
+| `cache` | 메모리 + SharedPrefs 2단 캐시 + stale-while-revalidate | `CachedRepository` |
+| `config` | 앱 슬러그·baseUrl·환경 등 런타임 설정 | `AppConfig` |
+| `i18n` | gen_l10n + ARB (ko / en) | `AppLocalizations` |
+| `kits` | AppKit 계약 + 부트 단계 + 의존성 검증 | `AppKit`, `BootStep`, `AppKits` |
+| `review` | In-app 리뷰 트리거 (signal 5회 + 60일 쿨다운 + 연 3회) | `ReviewTrigger` |
+| `storage` | Secure / Prefs / Token 3종 저장소 | `TokenStorage`, `PrefsStorage` |
+| `theme` | 디자인 토큰 (Palette·Typeface Registry) | `AppPalette`, `AppTypeface` |
+| `utils` | 폼 검증·디바운스·날짜 유틸 | `FormValidators`, `Debouncer` |
+| `widgets` | 공통 위젯 (버튼·시트·스켈레톤·약관 동의) | `TermsAgreementText` 등 |
 
 ---
 

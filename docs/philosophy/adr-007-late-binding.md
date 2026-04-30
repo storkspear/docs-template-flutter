@@ -30,8 +30,8 @@ final authServiceProvider = Provider<AuthService>((ref) {
 
 왜 서로 필요한지 실제 시나리오를 보면.
 
-- `AuthService.signIn(email, password)` 는 `ApiClient.post('/auth/login', ...)` 를 호출해요.
-- `ApiClient` 가 `/api/users/me` 같은 요청 중 **401** 을 받으면 `TOKEN_EXPIRED` 에러. 이때 **자동으로 refresh** 해서 요청을 재시도해야 해요. refresh 는 `AuthService.refreshToken()` 의 책임.
+- `AuthService.signInWithEmail(email, password)` 는 `ApiClient.postRaw(ApiEndpoints.emailSignIn, ...)` 를 호출해요 (실제 path: `/api/apps/{slug}/auth/email/signin`).
+- `ApiClient` 가 `/api/apps/{slug}/users/me` 같은 요청 중 **401** 을 받으면 `CMN_007` (access token 만료) 또는 `CMN_004` (인증 정보 없음). access token 만료면 **자동으로 refresh** 해서 요청을 재시도해야 해요. refresh 는 `AuthService.refreshToken()` 의 책임.
 
 이 둘을 어떻게든 엮어야 해요. 힘들이 부딪혀요.
 
