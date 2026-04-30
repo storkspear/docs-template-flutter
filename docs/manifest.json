@@ -335,6 +335,56 @@
       ]
     },
     {
+      "name": "Integrations",
+      "files": [
+        {
+          "path": "integrations/README.md",
+          "title": "Overview",
+          "desc": "외부 서비스 통합 가이드 인덱스"
+        },
+        {
+          "path": "integrations/sentry.md",
+          "title": "Sentry",
+          "desc": "DSN 발급 → 주입 → 크래시 수신 검증"
+        },
+        {
+          "path": "integrations/posthog.md",
+          "title": "PostHog",
+          "desc": "API Key 발급 → 화면 자동 추적 검증"
+        },
+        {
+          "path": "integrations/fcm.md",
+          "title": "FCM",
+          "desc": "Firebase 셋업 → DeviceRegistration → 푸시 검증"
+        },
+        {
+          "path": "integrations/analytics.md",
+          "title": "Analytics 선택",
+          "desc": "PostHog vs Mixpanel · Amplitude · Firebase 비교"
+        },
+        {
+          "path": "integrations/deployment-android.md",
+          "title": "Play Console",
+          "desc": "앱 등록 + Service Account + GHA Secrets"
+        },
+        {
+          "path": "integrations/security.md",
+          "title": "Security 체크리스트",
+          "desc": "출시 전 보안 점검 + SSL pinning"
+        },
+        {
+          "path": "integrations/google-apple-auth.md",
+          "title": "Google / Apple",
+          "desc": "Google Cloud + Apple Developer 콘솔 → 키 발급 → 검증"
+        },
+        {
+          "path": "integrations/kakao-naver-auth.md",
+          "title": "Kakao / Naver",
+          "desc": "한국 시장 소셜 로그인 (Kakao + Naver Developers)"
+        }
+      ]
+    },
+    {
       "name": "Infra",
       "files": [
         {
@@ -373,6 +423,21 @@
           "desc": "컨벤션 인덱스 + 우선순위 + 자동화"
         },
         {
+          "path": "conventions/architecture.md",
+          "title": "Architecture",
+          "desc": "MVVM 패턴 · 모듈 의존 방향 · 새 화면 step-by-step"
+        },
+        {
+          "path": "conventions/kits.md",
+          "title": "Kits",
+          "desc": "FeatureKit 작성 · 제거 · yaml↔dart 동기화"
+        },
+        {
+          "path": "conventions/api-contract.md",
+          "title": "API Contract",
+          "desc": "백엔드 1:1 계약 한눈 요약 (response/error/auth/search)"
+        },
+        {
           "path": "conventions/naming.md",
           "title": "Naming",
           "desc": "파일 · 클래스 · Provider · i18n 키 명명"
@@ -386,6 +451,11 @@
           "path": "conventions/error-handling.md",
           "title": "Error Handling",
           "desc": "ApiException · safeErrorCode · 인터셉터 순서"
+        },
+        {
+          "path": "conventions/figma-handoff.md",
+          "title": "Figma Handoff",
+          "desc": "Figma 디자인 토큰 → AppPalette/AppTypeface 매핑"
         },
         {
           "path": "conventions/loading-ux.md",

@@ -82,11 +82,16 @@ git fetch template
 
 변경되는 곳:
 - `pubspec.yaml` 의 `name:`
-- `android/app/build.gradle.kts` 의 `applicationId`
-- `ios/Runner/Info.plist` 의 `CFBundleIdentifier`
-- Android Kotlin · iOS Swift 파일의 패키지
-- `app_kits.yaml` 의 `app.slug` · `app.name`
-- import 경로 (`package:template` → `package:<slug>`)
+- `lib/main.dart` 의 `AppConfig.init(appSlug: ...)`
+- `android/app/build.gradle.kts` 의 `namespace` · `applicationId`
+- `android/app/src/main/AndroidManifest.xml` 의 `android:label`
+- Android Kotlin 파일의 `package` 선언 + 디렉토리 이동
+- `ios/Runner.xcodeproj/project.pbxproj` 의 `PRODUCT_BUNDLE_IDENTIFIER`
+  (Info.plist 의 `CFBundleIdentifier` 는 `$(PRODUCT_BUNDLE_IDENTIFIER)` 변수 참조라 자동 반영)
+- `ios/Runner/Info.plist` 의 `CFBundleDisplayName` · `CFBundleName`
+- `app_kits.yaml` 의 `app.name` · `app.slug`
+- `android/fastlane/Appfile` 의 `package_name`
+- import 경로 (`package:app_template/...` → `package:<APP_NAME>/...`, lib/ + test/ 일괄)
 
 ### 커밋
 

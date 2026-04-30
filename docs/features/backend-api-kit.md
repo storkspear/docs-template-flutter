@@ -45,15 +45,16 @@ AppConfig.init(
 
 | 항목 | 설명 |
 |------|------|
-| `ApiClient` | Dio 래퍼. `get` · `post` · `postRaw` · `delete` |
+| `ApiClient` | Dio 래퍼. `get` · `post` · `put` · `patch` · `delete` · `postRaw` · `search` |
 | `AuthInterceptor` | Authorization 자동 첨부 + 401 refresh ([`ADR-010`](../philosophy/adr-010-queued-interceptor.md)) |
 | `ErrorInterceptor` | `DioException` → `ApiException` 변환 |
 | `LoggingInterceptor` | Debug 빌드 콘솔 로깅 |
 | `ApiResponse<T>` · `PageResponse<T>` | 응답 래퍼 |
 | `ApiException` | 표준 예외 + `safeErrorCode` · `safeErrorMessage` |
-| `ErrorCode` 상수 | 서버 enum 1:1 매핑 |
+| `ErrorCode` 상수 | 서버 enum 1:1 매핑 (Spring `CommonError` CMN_*, `AuthError` ATH_*) |
 | `SearchRequest` · `SearchRequestBuilder` | 검색 · 페이지네이션 DSL |
 | `SslPinning` | opt-in SHA-256 핀 검증 |
+| `DeviceRegistration` · `DeviceInfo` | push token 백엔드 등록 (`/devices` 호출 래퍼) — 이전엔 notifications_kit 에 있었음 |
 
 ---
 
@@ -72,25 +73,24 @@ final user = response.data!;  // User 타입
 // POST
 final created = await api.post<Expense>(
   '/expenses',
-  body: expense.toJson(),
+  data: expense.toJson(),
   fromData: Expense.fromJson,
 );
 
 // 페이지네이션
 final page = await api.get<PageResponse<Expense>>(
   '/expenses',
-  query: {'page': 0, 'size': 20},
+  queryParameters: {'page': 0, 'size': 20},
   fromData: (data) => PageResponse.fromJson(data, Expense.fromJson),
 );
 page.data!.hasNextPage  // bool
 
-// 인증 우회 (로그인 · 가입 · 비번 찾기)
-await api.postRaw<AuthTokens>(
-  '/auth/login',
-  body: {'email': email, 'password': password},
-  fromData: AuthTokens.fromJson,
+// 인증 우회 (로그인 · 가입 · 비번 찾기 — Authorization 헤더 미부착)
+await api.postRaw(
+  ApiEndpoints.emailSignIn,  // '/api/apps/{slug}/auth/email/signin'
+  data: {'email': email, 'password': password, 'appSlug': appSlug},
 );
-// → skipAuth: true 자동 설정
+// → AuthInterceptor 가 SKIP_AUTH 옵션 인식, refresh 시도 안 함
 ```
 
 ### SearchRequestBuilder
@@ -105,7 +105,7 @@ final request = SearchRequest.builder()
 
 final results = await api.post<PageResponse<Expense>>(
   '/expenses/search',
-  body: request.toJson(),
+  data: request.toJson(),
   fromData: (data) => PageResponse.fromJson(data, Expense.fromJson),
 );
 ```
@@ -130,7 +130,7 @@ class ExpenseRepository {
   Future<PageResponse<Expense>> list({int page = 0}) async {
     final res = await _api.get<PageResponse<Expense>>(
       '/expenses',
-      query: {'page': page, 'size': 20},
+      queryParameters: {'page': page, 'size': 20},
       fromData: (data) => PageResponse.fromJson(data, Expense.fromJson),
     );
     return res.data!;

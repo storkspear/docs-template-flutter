@@ -80,12 +80,12 @@ void main() {
 
     test('error state set on failure', () async {
       when(mockAuth.signInWithEmail(...))
-        .thenThrow(const ApiException(code: 'INVALID_CREDENTIALS', message: '...'));
+        .thenThrow(const ApiException(code: 'ATH_001', message: '...'));
 
       await container.read(loginViewModelProvider.notifier)
         .signInWithEmail('x@y.com', 'wrong');
 
-      expect(container.read(loginViewModelProvider).errorCode, 'INVALID_CREDENTIALS');
+      expect(container.read(loginViewModelProvider).errorCode, 'ATH_001');
     });
   });
 }

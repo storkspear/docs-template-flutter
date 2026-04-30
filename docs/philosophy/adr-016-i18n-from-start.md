@@ -188,7 +188,7 @@ if (state.errorCode != null) {
 String _localizedError(BuildContext context, String code) {
   switch (code) {
     case 'LOGIN_FAILED': return S.of(context).loginFailed;
-    case 'INVALID_CREDENTIALS': return S.of(context).invalidCredentials;
+    case 'ATH_001': return S.of(context).invalidCredentials;  // ErrorCode.invalidCredentials
     // ...
     default: return S.of(context).unknownError;
   }

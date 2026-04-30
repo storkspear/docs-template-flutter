@@ -66,7 +66,7 @@ Google · Apple 은 통합을 지향해요 (Google 계정 하나로 Gmail · Dri
 
 ### 백엔드 구조 (template-spring 참조)
 
-- **URL 규약**: 모든 인증 요청이 `/api/apps/{appSlug}/...` 경로. 예: `/api/apps/habit-tracker/auth/login` · `/api/apps/habit-tracker/users/me`
+- **URL 규약**: 모든 인증 요청이 `/api/apps/{appSlug}/...` 경로. 예: `/api/apps/habit-tracker/auth/email/signin` · `/api/apps/habit-tracker/users/me`
 - **JWT 클레임**: `{ sub: userId, appSlug: "habit-tracker", exp: ..., iat: ... }`
 - **필터**: `AppSlugVerificationFilter` 가 URL 의 `{appSlug}` 와 JWT 의 `appSlug` 불일치 시 **401 응답**
 - **DB**: schema 분리로 `habit_tracker.users` · `expense_diary.users` 독립

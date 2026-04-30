@@ -24,7 +24,7 @@
 {
   "data": null,
   "error": {
-    "code": "INVALID_CREDENTIALS",
+    "code": "ATH_001",
     "message": "이메일 또는 비밀번호가 올바르지 않습니다",
     "details": {
       "field": "email"
@@ -32,6 +32,8 @@
   }
 }
 ```
+
+> 코드는 `<도메인약어>_<번호>` prefix 형식을 사용해요 (`CMN_*` = 공통, `ATH_*` = 인증). 전체 매핑은 [`error-codes.md`](./error-codes.md) 참조.
 
 ### 규칙
 
@@ -107,7 +109,7 @@ class PageResponse<T> {
 ```dart
 final page = await api.get<PageResponse<Expense>>(
   '/expenses',
-  query: {'page': 0, 'size': 20},
+  queryParameters: {'page': 0, 'size': 20},
   fromData: (data) => PageResponse.fromJson(data, Expense.fromJson),
 );
 
