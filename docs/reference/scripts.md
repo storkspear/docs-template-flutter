@@ -157,8 +157,8 @@ git config core.hooksPath .githooks
 - `android/app/build.gradle.kts` 의 `namespace` · `applicationId` → `<bundle_id>`
 - `android/app/src/main/AndroidManifest.xml` 의 `android:label` → `<DisplayName>`
 - Android Kotlin 파일의 `package` 선언 + 디렉토리 이동
-- `ios/Runner.xcodeproj/project.pbxproj` 의 `PRODUCT_BUNDLE_IDENTIFIER` → `<bundle_id>`
-  (`Info.plist` 의 `CFBundleIdentifier` 는 `$(PRODUCT_BUNDLE_IDENTIFIER)` 변수 참조라 자동 반영. iOS Swift 파일은 건드리지 않음.)
+- iOS Bundle ID — `ios/Flutter/AppEnv-{dev,prod}.xcconfig` 의 `BUNDLE_ID_BASE` → `<bundle_id>`
+  (`PRODUCT_BUNDLE_IDENTIFIER` 는 `$(BUNDLE_ID_BASE)$(BUNDLE_ID_SUFFIX)` 로 변수화돼 pbxproj 엔 직접 박혀있지 않아요. `Info.plist` 의 `CFBundleIdentifier` 도 `$(PRODUCT_BUNDLE_IDENTIFIER)` 변수 참조라 자동 반영. iOS Swift 파일은 건드리지 않음.)
 - `ios/Runner/Info.plist` 의 `CFBundleDisplayName` · `CFBundleName`
 - `app_kits.yaml` 의 `app.name` · `app.slug`
 - `android/fastlane/Appfile` 의 `package_name` → `<bundle_id>`

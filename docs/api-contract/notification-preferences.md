@@ -4,7 +4,7 @@
 
 Flutter 측 호출은 [`lib/kits/backend_api_kit/notification_preferences.dart`](../../lib/kits/backend_api_kit/notification_preferences.dart) 의 `NotificationPreferences` 클래스가 담당.
 
-> **백엔드 노출 방식**: 짝 백엔드의 `NotificationPreferenceController` 는 **scaffolding 패턴** — `BillingAutoConfiguration` 이 자동 등록하지 않고, 각 파생 앱이 `new-app.sh` 로 복사해서 활성화해요. 즉 **template 단계에선 endpoint 가 동작하지 않으며**, 파생 레포에서 활성화한 후에 Flutter 호출이 실효화돼요.
+> **백엔드 노출 방식**: 짝 백엔드의 `NotificationPreferenceController` 는 `BillingAutoConfiguration` 이 `@Import` 로 **자동 등록**해요 (`{appSlug}` path variable 라우팅이라 per-app heredoc 불필요). 즉 **template 단계에서도 endpoint 가 동작**하고, Flutter 호출이 바로 실효화돼요.
 
 ---
 

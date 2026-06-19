@@ -31,25 +31,27 @@
 ### 1. 업로드 키스토어 생성
 
 ```bash
-./scripts/generate-upload-keystore.sh
+./scripts/generate-upload-keystore.sh <app-slug>
 ```
 
-생성 파일: `android/app/upload-keystore.jks` (커밋 금지)
+생성물은 `~/Documents/keystores-pending/<app-slug>/` 에 임시 저장돼요 (키스토어 + `passwords.txt`, 커밋 금지)
 
 ### 2. 키스토어 · Play Console 자격 증명 GitHub Secrets 등록
 
 ```bash
-./scripts/upload-secrets-to-github.sh
+./scripts/upload-secrets-to-github.sh <app-slug>
 ```
 
+이 스크립트는 `~/Documents/keystores-pending/<app-slug>/` 의 키스토어·비번을 읽어 **`ANDROID_*` 4종만 자동 업로드**해요. 나머지는 스크립트가 출력하는 안내대로 `gh secret set` 으로 직접 등록하세요:
+
 필요한 GitHub Secrets:
-- `ANDROID_KEYSTORE_BASE64` — 업로드 키스토어 (base64 인코딩)
-- `ANDROID_KEYSTORE_PASSWORD`
-- `ANDROID_KEY_PASSWORD`
-- `ANDROID_KEY_ALIAS`
-- `PLAY_STORE_JSON_KEY` — Play Console 서비스 계정 JSON
-- `SENTRY_AUTH_TOKEN` — 심볼 업로드
-- `SENTRY_ORG` · `SENTRY_PROJECT`
+- `ANDROID_KEYSTORE_BASE64` — 업로드 키스토어 (base64 인코딩) — *스크립트 자동*
+- `ANDROID_KEYSTORE_PASSWORD` — *스크립트 자동*
+- `ANDROID_KEY_PASSWORD` — *스크립트 자동*
+- `ANDROID_KEY_ALIAS` — *스크립트 자동*
+- `PLAY_STORE_JSON_KEY` — Play Console 서비스 계정 JSON — *수동*
+- `SENTRY_AUTH_TOKEN` — 심볼 업로드 — *수동*
+- `SENTRY_ORG` · `SENTRY_PROJECT` — *수동*
 
 ### 3. Play Console 설정
 
@@ -199,7 +201,8 @@ Play Console 앱 패키지명과 Android `applicationId` 가 달라야. 새 앱 
 
 ## 파생 레포 체크리스트
 
-- [ ] `scripts/rename-app.sh <slug> com.<org>.<slug>` 실행 완료
+- [ ] `<repo> local init <slug> com.<org>.<slug>` 실행 완료 (rename + .env + pub get)
+- [ ] `<repo> prod init` 으로 Firebase prod project + Android 앱 등록 + SHA-1 추가 + google-services.json 다운
 - [ ] Play Console 앱 생성 + Play App Signing 활성화
 - [ ] 서비스 계정 · JSON 키 발급 + Android Publisher 권한
 - [ ] `generate-upload-keystore.sh` 로 keystore 생성

@@ -82,9 +82,13 @@ iOS TestFlight 수동 배포            (fastlane beta 또는 Xcode Archive)
 Play Console 의 API 업로드는 **해당 앱이 이미 존재** 해야 가능. 최초 1회는 수동:
 
 ```bash
-flutter build appbundle --release --dart-define=SENTRY_DSN=... --dart-define=POSTHOG_KEY=...
-# → build/app/outputs/bundle/release/app-release.aab
+flutter build appbundle --release --flavor prod \
+  --dart-define=SENTRY_DSN=$(grep SENTRY_DSN .env.prod | cut -d= -f2) \
+  --dart-define=POSTHOG_KEY=$(grep POSTHOG_KEY .env.prod | cut -d= -f2)
+# → build/app/outputs/bundle/prodRelease/app-prod-release.aab
 ```
+
+`--flavor prod` 가 필수예요 — Android productFlavors { dev, prod } 가 도입돼서 default flavor 가 없으면 빌드 실패. `--flavor dev` 는 `.dev` suffix Bundle ID 라 Play Console 의 prod 앱과 별도. dev 빌드는 Internal app sharing 용으로만 사용 권장.
 
 Play Console 에서 이 AAB 수동 업로드 → 내부 테스트 track 릴리스.
 

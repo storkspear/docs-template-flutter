@@ -85,10 +85,10 @@ await authService.signInWithNaver(accessToken: naverAccessToken);
 
 // 비번 재설정 요청 / 확정
 await authService.requestPasswordReset(email: 'x@y.com');
-await authService.confirmPasswordReset(email: 'x@y.com', code: '123456', newPassword: 'new');
+await authService.confirmPasswordReset(token: 'token-from-email', newPassword: 'new');
 
 // 이메일 인증 / 재발송
-await authService.verifyEmail(code: 'token-from-email');
+await authService.verifyEmail(token: 'token-from-email');
 await authService.resendEmailVerification();
 
 // 로그아웃 — 클라단 동작 (백엔드 endpoint 없음)

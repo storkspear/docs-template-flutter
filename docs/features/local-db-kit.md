@@ -9,7 +9,7 @@
 - **Drift**: SQLite 를 Dart ORM 으로 다룸. 타입 안전 쿼리
 - **코드 생성**: `build_runner` 로 DAO · 테이블 클래스 자동 생성
 - **마이그레이션**: `DbMigrationStep` (BootStep) 이 버전 업 시 자동 실행
-- **지문 테스트**: 스키마 변경 자동 감지 (`migration_fingerprint_test.dart`)
+- **마이그레이션 step**: `DbMigrationStep` (BootStep) 으로 버전업 처리 (Drift schema fingerprint 테스트는 템플릿 미포함 — 파생 레포가 필요 시 추가)
 - **플랫폼**: sqlite3_flutter_libs 로 Android · iOS · macOS · Windows · Linux 지원
 
 ---
@@ -130,16 +130,11 @@ class ExpenseRepository {
 
 ---
 
-## 마이그레이션 지문 테스트
+## 마이그레이션
 
-스키마 변경 시 **지문 테스트가 자동 감지**. CI 에서 깨지면 의도적 변경인지 확인 후 갱신.
+스키마 변경 시 `schemaVersion` 올리고 `onUpgrade` 마이그레이션을 작성하세요 (파생 레포의 `AppDatabase` 에 정의).
 
-```bash
-# 지문 갱신
-dart run test:test test/migration_fingerprint/ -u
-```
-
-> ⚠️ 스키마 변경 시 `schemaVersion` 올리고 `onUpgrade` 작성 + 지문 갱신 필수. 이 중 하나라도 빼먹으면 앱 크래시.
+> ⚠️ 템플릿엔 Drift schema fingerprint 테스트가 **없어요**. 스키마 회귀를 자동 감지하고 싶으면 파생 레포에서 `drift_dev schema dump` 기반 테스트를 직접 추가하세요. (`test/migration_fingerprint/` 의 기존 파일들은 Drift 가 아니라 recipe 재구성 회귀 테스트라 `flutter test` 로 돌아가요 — `test` 패키지/`-u` 갱신 메커니즘은 없어요.)
 
 ---
 

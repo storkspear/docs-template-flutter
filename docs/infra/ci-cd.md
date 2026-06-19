@@ -71,7 +71,7 @@ jobs:
 - **`dart format --set-exit-if-changed lib/ test/`** — 포매팅 강제 (lib/test 한정)
 - **`dart run tool/configure_app.dart --audit`** — Kit 조합 정합성 ([`ADR-004`](../philosophy/adr-004-manual-sync-ci-audit.md)). `app_kits.yaml` 의 미존재 kit · `kit_manifest.requires` 미충족 · `auth_kit.providers` 의 unknown 이름을 PR 머지 전에 차단해요.
 - **`flutter analyze`** — 정적 분석 ([`very_good_analysis`](https://pub.dev/packages/very_good_analysis) 룰셋 + 큐레이션, [`ADR-022`](../philosophy/adr-022-very-good-analysis.md))
-- **`flutter test`** — 단위 · 위젯 · 통합 · golden · fingerprint 테스트
+- **`flutter test`** — 단위 · 위젯 · 통합 · fingerprint(recipe 재구성) 테스트 (golden 테스트는 현재 없음)
 
 ### CI 게이트 아님 (로컬 권장)
 
@@ -110,7 +110,7 @@ jobs:
 ## Dependabot
 
 ```yaml
-# .github/dependabot.yml (실제 설정 — pub + github-actions 두 ecosystem)
+# .github/dependabot.yml (권장 설정 — 현재 템플릿엔 미포함. 아래를 추가하면 적용)
 version: 2
 updates:
   - package-ecosystem: pub
@@ -128,7 +128,7 @@ updates:
 
 > Gradle 의존성 (`/android/app`) 은 현재 미포함 — Android native 라이브러리 교체 빈도가 낮아 수동 관리. 필요하면 `package-ecosystem: gradle` 블록 추가.
 
-주 1회 PR 자동 생성. 테스트 통과하면 머지 (major 버전은 주의).
+추가하면 주 1회 PR 자동 생성. 테스트 통과하면 머지 (major 버전은 주의).
 
 ---
 
@@ -142,7 +142,7 @@ updates:
 ```
 
 훅 내용:
-- **commit-msg**: Conventional Commits 포맷 검증 (`feat:`, `fix:`, `chore:` 등)
+- **commit-msg**: `Co-Authored-By: Claude` 트레일러 차단 (AI 공동저자 표기 금지). ⚠️ Conventional Commits 포맷 자동 검증은 **하지 않아요** — 컨벤션 준수는 작성자 책임.
 - **pre-commit**: `dart format` 체크 (빠름, 1초 내) — 포맷 누락 시 commit 차단
 - **pre-push**: `dart format` 재확인 + `flutter analyze` (느린 검사는 push 직전에)
 
@@ -174,7 +174,7 @@ updates:
 ```bash
 # 분석 · 테스트
 flutter pub get
-dart format --set-exit-if-changed .
+dart format --output=none --set-exit-if-changed lib/ test/
 flutter analyze
 dart run tool/configure_app.dart --audit
 flutter test

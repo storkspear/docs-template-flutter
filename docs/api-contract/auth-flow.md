@@ -60,7 +60,7 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
    │                                                │
    │                       AppSlugVerificationFilter│
    │                         URL slug ↔ JWT slug 비교│
-   │                         (불일치 시 CMN_004)     │
+   │                  (불일치 시 403 / CMN_005)     │
    │                                                │
    │ 200 OK                                         │
    │ { "data": { "id", "email", ... }, "error": null} │
@@ -176,7 +176,7 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
 
 **짝 백엔드 DTO**: `TotpLoginRequest{ twoFactorToken, code }`. `code` 는 6자리 TOTP 또는 8자리 backup code 모두 허용 (백엔드가 자동 분기).
 
-**TOTP 등록 (Setup)**: `/2fa/setup` / `/2fa/verify-setup` / `/2fa/disable` endpoint 도 백엔드에 존재하나, **앱 내 TOTP 등록 화면 구현은 파생 레포 책임** (template 단계에선 1단계+2단계 로그인 흐름만 표준 제공).
+**TOTP 등록 (Setup)**: 서버엔 `AuthPort.setupTotp` / `verifyAndEnableTotp` / `disableTotp` **서비스 메서드만 있고 HTTP 엔드포인트(컨트롤러 매핑)는 아직 노출돼 있지 않아요** — 표준 제공은 `/2fa/login` 2단계 로그인 흐름까지예요. TOTP 등록 화면 + 엔드포인트 노출은 파생 레포 책임.
 
 ---
 
@@ -232,7 +232,7 @@ authState.emit(unauthenticated) → /login 라우터로 리다이렉트
   "email": "user@example.com",    // 추가 클레임
   "appSlug": "habit-tracker",     // 앱 식별자
   "role": "user",                 // "user" | "admin" (기본 "user")
-  "iss": "template-spring",       // issuer
+  "iss": "app-factory-dev",       // issuer (JWT_ISSUER 환경변수 — 환경별 상이)
   "iat": 1714000000,              // issued at
   "exp": 1714000900               // expires (+15분)
 }
@@ -260,7 +260,7 @@ authState.emit(unauthenticated) → /login 라우터로 리다이렉트
 2. JWT payload.appSlug 추출
 3. 비교
    - 일치 → 계속 처리
-   - 불일치 → 401
+   - 불일치 → 403 (CMN_005 FORBIDDEN)
 4. JWT 없으면 → 기존 Spring Security 필터로 처리 (로그인 · 가입 등은 skipAuth)
 ```
 

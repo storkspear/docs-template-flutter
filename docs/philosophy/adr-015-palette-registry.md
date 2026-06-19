@@ -137,28 +137,27 @@ AppPaletteRegistry.install(MyAppPalette());  // ← 이 한 줄만
 ### MaterialApp 구독 (template 내부)
 
 ```dart
-// lib/app.dart 맥락
-class App extends ConsumerWidget {
+// lib/app.dart 맥락 (App 은 ConsumerStatefulWidget)
+class _AppState extends ConsumerState<App> {
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ValueListenableBuilder<AppPalette?>(
-      valueListenable: AppPaletteRegistry.currentValue,
-      builder: (context, palette, _) {
-        if (palette == null) return const SizedBox();  // 설치 전
-        return MaterialApp.router(
-          theme: ThemeData.from(colorScheme: palette.lightScheme()),
-          darkTheme: palette.supportsDarkMode
-              ? ThemeData.from(colorScheme: palette.darkScheme())
-              : null,
-          routerConfig: _router.router,
-        );
-      },
+  Widget build(BuildContext context) {
+    // 팔레트 / 타이페이스 둘 중 하나라도 교체되면 MaterialApp 자체를 리빌드.
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        AppPaletteRegistry.listenable,
+        AppTypefaceRegistry.listenable,
+      ]),
+      builder: (context, _) => MaterialApp.router(
+        theme: AppTheme.light(),       // 내부에서 AppPaletteRegistry.current.lightScheme() 사용
+        darkTheme: AppTheme.dark(),
+        routerConfig: _appRouter.router,
+      ),
     );
   }
 }
 ```
 
-팔레트 변경 시 `ValueListenableBuilder` 가 자동 리빌드.
+팔레트 / 타이페이스 변경 시 `AnimatedBuilder`(`Listenable.merge`) 가 자동 리빌드.
 
 ### 설계 선택 포인트
 
@@ -172,7 +171,7 @@ success / warning / info / error 는 **Material 3 가 자동 생성하지 않아
 `registerable / use` 기반이라 `id` 는 안정적 문자열. `'my-app-light'` · `'my-app-dark'` 같이 소문자 하이픈. URL / DB 값과 호환.
 
 **포인트 4 — `ValueNotifier` 로 리빌드 트리거**  
-Riverpod 의 Provider 는 `AppPaletteRegistry` 자체의 상태가 아니라 "팔레트 교체 이벤트" 를 위해 쓰기엔 과해요. `ValueNotifier` 가 충분. MaterialApp 이 `ValueListenableBuilder` 로 구독.
+Riverpod 의 Provider 는 `AppPaletteRegistry` 자체의 상태가 아니라 "팔레트 교체 이벤트" 를 위해 쓰기엔 과해요. `ValueNotifier` 가 충분. MaterialApp 은 `AppPaletteRegistry.listenable` 을 `AnimatedBuilder`(타이페이스와 `Listenable.merge`) 로 구독.
 
 **포인트 5 — `install` vs `register + use` 분리**  
 단일 팔레트만 쓰는 앱은 `install(MyAppPalette())` 로 끝. 복수 팔레트 쓰는 앱 (테마 선택 화면 있는 앱) 은 `register(A); register(B); use(A.id);` 로 세밀 제어. 두 API 제공.
@@ -209,7 +208,7 @@ Material 2 시절엔 `primary`, `primaryLight`, `primaryDark`, `accent`, ... 개
 
 ### 교훈 2 — 런타임 교체는 `ValueNotifier` 로 충분
 
-Riverpod Provider 로 팔레트를 감싸볼까 고민했어요. 하지만 **팔레트는 앱 전체에서 딱 하나** 라 Provider 트리 전체를 재구성하는 건 과해요. `ValueNotifier` + `ValueListenableBuilder` 가 가볍고 Flutter 공식 API — 외부 의존 없음.
+Riverpod Provider 로 팔레트를 감싸볼까 고민했어요. 하지만 **팔레트는 앱 전체에서 딱 하나** 라 Provider 트리 전체를 재구성하는 건 과해요. `ValueNotifier` + `Listenable` 구독(`AnimatedBuilder`) 이 가볍고 Flutter 공식 API — 외부 의존 없음.
 
 **교훈**: "글로벌 단일 상태 교체" 는 Provider 아닌 `ValueNotifier` 가 낫습니다. Provider 는 다양한 타입의 DI 에 쓰는 게 맞음.
 
@@ -238,7 +237,7 @@ Riverpod Provider 로 팔레트를 감싸볼까 고민했어요. 하지만 **팔
 - [`lib/core/theme/app_typography.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/theme/app_typography.dart)
 
 **통합 지점**
-- [`lib/app.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/app.dart) — MaterialApp 이 `ValueListenableBuilder` 로 구독
+- [`lib/app.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/app.dart) — MaterialApp 이 `AnimatedBuilder`(`Listenable.merge([palette, typeface])`) 로 구독
 - [`lib/main.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/main.dart) — `AppPaletteRegistry.install(DefaultPalette())` 호출
 
 **테스트**
