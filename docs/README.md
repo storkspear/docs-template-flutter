@@ -121,15 +121,20 @@
 # 1. Use this template → 새 레포 생성 후 클론
 git clone git@github.com:<org>/<your-app>.git && cd <your-app>
 
-# 2. 앱 이름 / 번들 ID 변경
-./scripts/rename-app.sh <slug> com.<org>.<slug>
+# 2. factory CLI 등록 + rename + .env + pub get 한 번에
+./factory install
+<repo> local init <slug> com.<org>.<slug>
 
-# 3. 의존성 설치 + 구성 검증
-flutter pub get
+# 3. 구성 검증
 dart run tool/configure_app.dart
 
-# 4. 실행
-flutter run
+# 4. 실행 — mock 자동 폴백 (백엔드/Firebase 없이 시연 가능)
+<repo> local start
+
+# 4-b. 실 OAuth 까지 검증할 때 (Firebase 자동화)
+firebase login
+<repo> dev init      # Firebase dev project + iOS/Android 앱 + plist/json
+<repo> dev start
 ```
 
-상세 단계는 [`Build First App`](./journey/build-first-app.md) 를 참고해주세요.
+상세 단계는 [`Build First App`](./journey/build-first-app.md) 와 [`Onboarding`](./journey/onboarding.md) 참고.

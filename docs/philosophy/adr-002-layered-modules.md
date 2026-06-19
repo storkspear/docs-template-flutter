@@ -79,7 +79,7 @@ features  →  common  →  kits  →  core
    (Kit 간 직접 import 금지 — provider 로만 접근)
 ```
 
-- `core/` 는 **어디에도 의존하지 않음**. Flutter SDK + 외부 패키지만.
+- `core/` 는 (한 곳 예외를 빼면) **어디에도 의존하지 않음** — Flutter SDK + 외부 패키지만. 예외: `core/kits/` 가 `common/splash/boot_step.dart` 를 import (BootStep 계약 파일 위치 정리 전까지의 잔재 — `core/kits/` 로 이관 검토 중).
 - `kits/` 는 **`core/` 에만** 의존. 다른 kits 를 직접 import 하면 규약 위반.
 - `common/` 은 `core/` + `kits/` 에 의존. DI · 라우팅 · 스플래시처럼 **여러 Kit 을 조립** 하는 지점.
 - `features/` 는 모든 레이어에 의존 가능. 하지만 **템플릿 원본은 스텁만** (ADR-001).

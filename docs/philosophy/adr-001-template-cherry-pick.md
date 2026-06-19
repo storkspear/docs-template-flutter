@@ -70,8 +70,8 @@
 이 스크립트가 바꾸는 곳:
 - `pubspec.yaml` 의 `name:`
 - `android/app/build.gradle.kts` 의 `applicationId`
-- `ios/Runner/Info.plist` 의 `CFBundleIdentifier`
-- Kotlin · Swift 파일의 패키지 선언
+- iOS Bundle ID — `ios/Flutter/AppEnv-{dev,prod}.xcconfig` 의 `BUNDLE_ID_BASE` (Info.plist 의 `CFBundleIdentifier` 는 `$(PRODUCT_BUNDLE_IDENTIFIER)` 변수 참조라 자동 반영)
+- Kotlin `MainActivity` 의 패키지 선언 + Android Fastlane `Appfile` 의 `package_name`
 
 ### 3. 템플릿 → 파생 전파 (cherry-pick)
 

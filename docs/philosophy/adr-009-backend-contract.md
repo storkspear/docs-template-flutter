@@ -191,7 +191,7 @@ class ErrorCode {
   static const refreshTokenInvalid = 'ATH_003';
   static const socialAuthFailed = 'ATH_004';
   static const emailNotVerified = 'ATH_005';
-  static const emailDeliveryFailed = 'ATH_006';
+  static const emailDeliveryFailed = 'EMAIL_001'; // 서버 EmailError
 }
 ```
 
@@ -260,7 +260,7 @@ Dart enum 을 쓰면 `ErrorCode.invalidCredentials.name` 같은 방식이 가능
 - **두 레포 수동 동기화**: 에러 코드 추가 · 스키마 변경 시 양쪽 파일을 사람이 맞춰야 해요. 자동화 없음. 단기 실수 위험.
 - **`ApiResponse` 의 nullable 혼란**: `data` 는 nullable, `error` 도 nullable 이라 **논리적으로 4가지 조합** (둘 다 있음 / 둘 다 없음 등) 이 컴파일러 입장에선 가능해 보여요. 불변량은 설계 문서에만 명시됨. 방어적 체크가 관용적으로 들어가요.
 - **generic parsing 의 cold start 감각**: 매 DTO 에 `fromJson` · `fromItem` 콜백 넘기는 관용이 처음엔 번잡하게 느껴져요. `freezed` 에 익숙한 개발자가 특히 그래요.
-- **팀이 커지면 재고 필요**: 백엔드팀이 분리되는 순간 이 수준의 결합은 깨져요. 그때는 ADR-003 (mapper 층 도입) 으로 돌아가야 해요.
+- **팀이 커지면 재고 필요**: 백엔드팀이 분리되는 순간 이 수준의 결합은 깨져요. 그때는 mapper 층(DTO ↔ 도메인 분리) 도입을 재고해야 해요.
 
 ## 교훈
 

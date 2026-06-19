@@ -206,6 +206,92 @@ dart run tool/configure_app.dart
 
 ---
 
+## 환경 분리 인프라 (dev/prod flavor)
+
+derived repo 출시 운영을 위해 **iOS Build Configuration 6 + Android productFlavors + xcconfig 변수 계층** 으로 dev/prod 환경을 분리해요. Crashlytics/Analytics 데이터 격리 + 동일 디바이스에 dev/prod 공존 설치 가능.
+
+### Bundle ID 결정 흐름
+
+```
+사용자 입력 (rename-app.sh):  com.hexator.budgetbook
+                  ↓
+ios/Flutter/AppEnv-{dev,prod}.xcconfig:
+  BUNDLE_ID_BASE = com.hexator.budgetbook       ← 양쪽 동일
+  BUNDLE_ID_SUFFIX = .dev                       ← dev 만
+  (prod 는 빈 값)
+                  ↓
+ios/Runner.xcodeproj 의 PRODUCT_BUNDLE_IDENTIFIER:
+  $(BUNDLE_ID_BASE)$(BUNDLE_ID_SUFFIX)
+                  ↓
+빌드 시 flavor 별 자동 결정:
+  flutter build --flavor dev   → com.hexator.budgetbook.dev
+  flutter build --flavor prod  → com.hexator.budgetbook
+```
+
+Android 도 동일 원리 — `android/app/build.gradle.kts` 의 `productFlavors { dev { applicationIdSuffix = ".dev" } / prod {} }`.
+
+### iOS Build Configuration / Scheme 구조
+
+```
+Build Configurations (6):
+  Debug-dev / Release-dev / Profile-dev
+  Debug-prod / Release-prod / Profile-prod
+
+Schemes (2 — flutter --flavor 인자가 직접 매칭):
+  dev   → Run=Debug-dev, Archive=Release-dev, Profile=Profile-dev
+  prod  → Run=Debug-prod, Archive=Release-prod, Profile=Profile-prod
+
+xcconfig 계층:
+  Debug-dev.xcconfig
+    #include? "Pods-Runner.debug-dev.xcconfig"   (CocoaPods 자동 생성)
+    #include "Generated.xcconfig"                (Flutter tooling 생성)
+    #include "AppEnv-dev.xcconfig"               (env 분기 변수)
+    
+  AppEnv-dev.xcconfig (committed — placeholder 값만):
+    BUNDLE_ID_BASE / BUNDLE_ID_SUFFIX / APP_ENV / DISPLAY_NAME_SUFFIX
+    GID_CLIENT_ID =                              ← 빈 default
+    GID_REVERSED_CLIENT_ID =
+    #include? "AppEnv-secrets-dev.xcconfig"      ← optional include (gitignored)
+    
+  AppEnv-secrets-dev.xcconfig (gitignored — link-oauth 생성):
+    GID_CLIENT_ID = 127883306802-...             ← 실 OAuth Client ID
+    GID_REVERSED_CLIENT_ID = com.googleusercontent.apps.127883306802-...
+```
+
+### Info.plist 변수 substitution
+
+```
+ios/Runner/Info.plist (committed):
+  CFBundleIdentifier  = $(PRODUCT_BUNDLE_IDENTIFIER)
+  GIDClientID         = $(GID_CLIENT_ID)                ← AppEnv-secrets-<env>.xcconfig 값
+  CFBundleURLSchemes  = $(GID_REVERSED_CLIENT_ID)
+```
+
+Xcode 가 빌드 시점에 `$(VAR)` placeholder 를 (Build Config 의 xcconfig 체인에서 해결된) 실 값으로 치환. flavor 충돌 없이 dev/prod 빌드가 각자 맞는 OAuth/Bundle ID 를 가짐.
+
+### 빌드 시 GoogleService-Info.plist 선택
+
+`ios/Runner.xcodeproj` 의 Build Phase Run Script 가 `$CONFIGURATION` 검사 (`*-dev` / `*-prod`) 후 `ios/Runner/GoogleService-Info-<env>.plist` → `GoogleService-Info.plist` 자동 카피. Firebase SDK 가 번들에서 읽음.
+
+### 운영 흐름
+
+```bash
+# 1회 셋업
+<repo> dev init        # Firebase dev project + 앱 등록 + plist/json 다운로드 + secrets xcconfig 생성
+<repo> prod init       # 동일 흐름의 prod 버전
+
+# 매번 빌드/실행
+<repo> dev start       # com.<...>.dev Bundle ID, dev Firebase, dev plist
+<repo> prod start      # com.<...> Bundle ID, prod Firebase, prod plist
+
+# Secrets 만 재발급 (OAuth Client ID 갱신 등)
+<repo> dev link-oauth          # GoogleService-Info-dev.plist → AppEnv-secrets-dev.xcconfig 재작성
+<repo> dev link-oauth --check  # 현재 주입 상태 확인
+<repo> dev link-oauth --unlink # secrets 파일 삭제
+```
+
+---
+
 ## 기술 스택
 
 | 영역 | 기술 |

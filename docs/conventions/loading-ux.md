@@ -10,7 +10,7 @@
 |------|------|------|
 | **첫 진입** (목록 · 상세 처음 로딩) | Skeleton | `SkeletonLoading` |
 | **새로고침** (이미 데이터 있음) | Pull-to-refresh | `RefreshIndicator` |
-| **버튼 액션** (로그인 · 저장) | 버튼 스피너 + IgnorePointer | `PrimaryButton(loading: true)` |
+| **버튼 액션** (로그인 · 저장) | 버튼 스피너 (액션 중 비활성) | `PrimaryButton(isLoading: true)` |
 | **백그라운드** (동기화 · 업로드) | TopProgressBar | `TopProgressBar` |
 
 **금지**:
@@ -118,21 +118,21 @@ class ExpenseListViewModel extends StateNotifier<ExpenseListState> {
 
 ## 3. 버튼 스피너 — 버튼 액션
 
-로그인 · 저장 · 제출 같은 CTA 버튼. `PrimaryButton(loading: state.isLoading)` 만.
+로그인 · 저장 · 제출 같은 CTA 버튼. `PrimaryButton(isLoading: state.isLoading)` 만.
 
 ```dart
 PrimaryButton(
-  label: S.of(context).save,
-  loading: state.isLoading,            // ← state 구독
+  text: S.of(context).save,
+  isLoading: state.isLoading,          // ← state 구독
   onPressed: () => vm.save(),          // ← action 호출
 )
 ```
 
 ### PrimaryButton 내부 동작
 
-- `loading: true` 일 때:
-  - label 대신 스피너 표시
-  - `IgnorePointer` 적용 → 중복 탭 방지
+- `isLoading: true` 일 때:
+  - text 대신 스피너 표시 (`CircularProgressIndicator.adaptive`)
+  - `onPressed: null` 로 비활성화 → 중복 탭 방지
   - 버튼 크기 불변 → 레이아웃 안 흔들림
 
 ### 여러 버튼이 있는 화면
@@ -141,8 +141,8 @@ PrimaryButton(
 Column(
   children: [
     PrimaryButton(
-      label: s.submit,
-      loading: state.isSubmitting,
+      text: s.submit,
+      isLoading: state.isSubmitting,
       onPressed: vm.submit,
     ),
     TextButton(
@@ -163,34 +163,32 @@ Column(
 
 ## 4. TopProgressBar — 백그라운드
 
-사용자가 명시적으로 기다리지 않는 작업 (동기화 · 업로드). AppBar 하단의 얇은 progress.
+사용자가 명시적으로 기다리지 않는 작업 (동기화 · 업로드). 화면 최상단(status bar 바로 아래)의 얇은 progress. Scaffold 를 `child` 로 감싸는 오버레이라 사용자 인터랙션은 막지 않아요.
 
 ```dart
-Scaffold(
-  appBar: AppBar(
-    title: Text(s.home),
-    bottom: TopProgressBar(
-      visible: state.isSyncing,
-      value: state.syncProgress,  // 0.0 ~ 1.0 or null (indeterminate)
-    ),
+TopProgressBar(
+  isLoading: state.isSyncing,
+  child: Scaffold(
+    appBar: AppBar(title: Text(s.home)),
+    body: ...,
   ),
-  body: ...,
 )
 ```
 
-### 3가지 모드
+### 동작
 
-| 모드 | value | 용도 |
-|------|-------|------|
-| 퍼센트 | `0.0 ~ 1.0` | 업로드 · 다운로드 진행률 |
-| Indeterminate | `null` | 동기화 (진행률 모름) |
-| 숨김 | `visible: false` | 완료 또는 대기 |
+| `isLoading` | 표시 |
+|------|------|
+| `true` | 최상단에 indeterminate `LinearProgressIndicator` |
+| `false` | 숨김 (child 만 렌더) |
+
+> 퍼센트(진행률) 모드는 기본 위젯이 지원하지 않아요 — `isLoading` bool 뿐. 색상만 `color` 로 커스터마이즈 가능.
 
 ### 규칙
 
-- **AppBar bottom 에 둠** — 다른 위치 (Scaffold footer 등) 금지
+- **Scaffold 를 `child` 로 감싼다** — AppBar.bottom 이 아니라 화면 전체를 감싸는 오버레이
 - **사용자 액션 차단 안 함** — 앱 계속 사용 가능
-- **완료 시 자동 숨김** — `visible: false` 로 전환
+- **완료 시 자동 숨김** — `isLoading: false` 로 전환
 
 ---
 
@@ -206,7 +204,7 @@ Widget _body() {
   if (state.items.isEmpty) {
     return EmptyView(
       icon: Icons.receipt_long,
-      message: s.emptyExpenses,
+      title: s.emptyExpenses,
       action: TextButton(
         onPressed: vm.addFirst,
         child: Text(s.addFirstExpense),
@@ -255,7 +253,7 @@ Stack(children: [
 ```
 
 "앱 멈춤" UX. 대신:
-- 버튼 액션이면 → `PrimaryButton(loading: true)`
+- 버튼 액션이면 → `PrimaryButton(isLoading: true)`
 - 데이터 로딩이면 → `SkeletonLoading(enabled: true)`
 
 ### ❌ 별도 스켈레톤 위젯
@@ -281,21 +279,21 @@ Row(children: [
 ])
 ```
 
-버튼 크기가 왔다갔다. 대신 `PrimaryButton(loading: true)` 내부 통합.
+버튼 크기가 왔다갔다. 대신 `PrimaryButton(isLoading: true)` 내부 통합.
 
-### ❌ TopProgressBar 를 AppBar 외 위치
+### ❌ TopProgressBar 를 child 없이 body 안에 배치
 
 ```dart
-// 금지
+// 금지 — TopProgressBar 는 Scaffold 를 child 로 감싸는 오버레이
 Scaffold(
   body: Column(children: [
-    if (isSyncing) TopProgressBar(),  // ← body 안에 두지 말기
+    if (isSyncing) const LinearProgressIndicator(),
     Expanded(child: ...),
   ]),
 )
 ```
 
-레이아웃 일관성. 반드시 `AppBar.bottom`.
+대신 Scaffold 전체를 감싸세요: `TopProgressBar(isLoading: ..., child: Scaffold(...))`.
 
 ---
 

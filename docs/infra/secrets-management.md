@@ -86,8 +86,9 @@ Repository → Settings → Secrets and variables → Actions → New repository
 또는 스크립트로 일괄 업로드:
 
 ```bash
-./scripts/upload-secrets-to-github.sh
-# → .env 읽어서 gh secret set 으로 일괄
+./scripts/upload-secrets-to-github.sh <app-slug>
+# → ~/Documents/keystores-pending/<app-slug>/ 의 키스토어 + passwords.txt 를 읽어
+#   ANDROID_KEYSTORE_* 4종을 gh secret set. (Play/Sentry secret 은 수동 등록 안내 출력)
 ```
 
 ### 워크플로우에서 참조

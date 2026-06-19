@@ -176,9 +176,9 @@ static const _storage = FlutterSecureStorage(
 ```dart
 // lib/kits/backend_api_kit/ssl_pinning_env.dart 발췌
 class SslPinningEnv {
-  static const String _pins = String.fromEnvironment('SSL_PINS', defaultValue: '');
-  static List<String> get sha256Pins => _pins.isEmpty ? [] : _pins.split(',');
-  static bool get isEnabled => sha256Pins.isNotEmpty;
+  static const String _rawPins = String.fromEnvironment('SSL_PINS');
+  static List<String> get pins => parsePins(_rawPins);
+  static bool get isEnabled => pins.isNotEmpty;
 }
 ```
 

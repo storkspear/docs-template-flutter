@@ -1,10 +1,10 @@
 # Manual_Sync
 
-**Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 line 수 갱신. `tool/configure_app.dart` (270줄) 가 양쪽 파일을 검증. `--audit` 플래그로 CI 에서 실수 차단.
+**Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 line 수 갱신. `tool/configure_app.dart` 가 `app_kits.yaml` 의 kit 선언 + 의존성(requires)을 `kit_manifest.yaml` 과 대조 검증. `--audit` 플래그로 CI 에서 차단. (단, `app_kits.yaml` ↔ `main.dart` 줄 단위 일치 자체는 아직 자동 검증 안 함 — main.dart 마커 치환은 향후 확장 예정.)
 
 ## 결론부터
 
-**Kit 활성화는 두 곳에 선언해야 해요** — `app_kits.yaml` (선언적 진실) 과 `lib/main.dart` 의 `AppKits.install([...])` (실제 코드). 자동화로 두 곳을 동기화하는 대신, **양쪽을 수동으로 맞추고 CI 에서 불일치를 차단** 하는 방식을 택했어요. 코드 생성의 복잡성을 피하면서 "한쪽만 수정" 실수를 기계로 잡아요.
+**Kit 활성화는 두 곳에 선언해야 해요** — `app_kits.yaml` (선언적 진실) 과 `lib/main.dart` 의 `AppKits.install([...])` (실제 코드). 자동화로 두 곳을 동기화하는 대신, **양쪽을 수동으로 맞추고 CI 는 `app_kits.yaml` 의 의존성 정합성을 검증** 하는 방식을 택했어요. 코드 생성의 복잡성을 피하는 대신, `app_kits.yaml` ↔ `main.dart` 일치는 수동 책임으로 남아요 (자동 검증은 향후 확장 예정).
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -219,7 +219,7 @@ jobs:
 
 - **선언적 가독성 + 타입 안전 동시 달성**: YAML 로 한눈 파악, Dart 로 타입 체크.
 - **코드 생성 파이프라인 0**: `build_runner` 불필요. `flutter pub get` 후 즉시 빌드 가능.
-- **CI 실수 차단**: "YAML 엔 auth_kit 추가했는데 main.dart 는 깜빡" 이 CI 에서 exit 1 로 잡힘.
+- **의존성 정합성 CI 차단**: `app_kits.yaml` 의 kit 선언 + `requires` 누락이 `--audit` exit 1 로 잡힘. (단, `app_kits.yaml` ↔ `main.dart` 줄 단위 일치 여부는 아직 자동 검증 대상이 아니에요 — 부정적 결과의 "수동 동기화" 참조.)
 - **의존성 자동 검증**: `auth_kit` 넣고 `backend_api_kit` 빼먹으면 CI 에서 차단.
 - **Recipe 시스템 자연 통합** (ADR-021): `recipes/*.yaml` 가 `app_kits.yaml` 와 동일 포맷이라 복사만으로 적용.
 - **단일 Dart 스크립트**: `tool/configure_app.dart` 270줄. 이해 · 수정 쉬움.

@@ -107,7 +107,7 @@ class LoginViewModel extends StateNotifier<LoginState> {
       state = state.copyWith(
         isLoading: false,
         errorCode: safeErrorCode(e, fallbackCode: 'LOGIN_FAILED'),  // ← ViewModel 은 code 만
-        errorMessage: safeErrorMessage(e),                            // ← 사용자 메시지는 ErrorInterceptor 가 i18n 변환
+        errorMessage: safeErrorMessage(e),                            // ← 서버가 준 메시지 그대로 (i18n 은 화면에서 code→ARB 매핑)
       );
     }
   }

@@ -50,14 +50,15 @@
 
 - [`onboarding.md`](./onboarding.md) — 전체 한 번 정독
 
-핵심 흐름은 다음과 같아요.
+핵심 흐름 (`factory` CLI 기반):
 
 1. `§1 사전 설치 체크리스트` — Flutter SDK (3.41.8+) · FVM · Xcode · Android Studio 확인
-2. `§2 파생 레포 생성` — `Use this template` 으로 본인 레포 만들기
-3. `§3 앱 정체성 설정` — `rename-app.sh` 로 슬러그 · 번들 ID · 패키지명 일괄 치환
-4. `§4 첫 기동` — `flutter pub get` → `dart run tool/configure_app.dart` → `flutter run`
+2. `§2 파생 레포 생성` — `Use this template` 으로 본인 레포 만들기 + clone
+3. `§3 앱 정체성 설정` — `./factory install` (symlink 등록) → `<repo> local init <slug> <bundle_id>` (rename + .env + pub get 한 번에)
+4. `§5 첫 기동` — `<repo> local start` (mock 자동 폴백 — 백엔드 없이 시연)
+5. `§5.5 Firebase dev/prod 셋업` (선택, 실 OAuth 검증 시) — `<repo> dev init` + `<repo> prod init`
 
-여기까지 마치면 시뮬레이터에 본인 앱 이름으로 첫 화면이 떠요.
+여기까지 마치면 시뮬레이터에 본인 앱 이름으로 첫 화면이 떠요. dev/prod flavor 분리 인프라 (Bundle ID `.dev` suffix + xcconfig 변수 substitution) 는 [`architecture.md § 환경 분리 인프라`](./architecture.md#환경-분리-인프라-devprod-flavor) 에서 깊이 설명해요.
 
 ---
 
@@ -183,7 +184,7 @@ git push --tags
 | 왜 이렇게 설계? | [`Philosophy 인덱스`](../philosophy/README.md) | ADR 카드 전체 인덱스 |
 | 모듈 구조 상세 | [`architecture.md`](./architecture.md) | core / kits / common / features 의존 그래프 |
 | AppKit 계약 전체 | [`FeatureKit Contract`](../architecture/featurekit-contract.md) | `AppKit` 인터페이스 명세 |
-| 부팅 시퀀스 | [`Boot Sequence`](../architecture/boot-sequence.md) | Sentry → AppConfig → Kits → Splash |
+| 부팅 시퀀스 | [`Boot Sequence`](../architecture/boot-sequence.md) | 바인딩/팔레트 → AppConfig → Sentry 래핑 → Kits → Splash |
 | 코딩 규약 | [`Conventions`](../conventions/README.md) | 네이밍 · MVVM · 에러 · 로딩 · 테스트 |
 | Kit 개별 사용법 | [`Features`](../features/README.md) | 14개 Kit 별 상세 문서 |
 | API 계약 (백엔드 쌍) | [`API Contract`](../api-contract/README.md) | 응답 스키마 · 에러 코드 · JWT |
