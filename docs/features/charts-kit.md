@@ -9,7 +9,7 @@
 - **fl_chart 기반**: 검증된 Flutter 차트 라이브러리
 - **래핑 위젯**: `AppLineChart` · `AppPieChart` · `DonutGauge`
 - **테마 통합**: `AppPalette` 색상 자동 적용
-- **접근성**: semanticLabel 지원
+- **빈 데이터 안전**: 포인트/슬라이스 없으면 빈 위젯 자동 반환
 
 ---
 
@@ -45,18 +45,15 @@ await AppKits.install([
 
 ```dart
 AppLineChart(
-  spots: [
-    FlSpot(0, 100),
-    FlSpot(1, 250),
-    FlSpot(2, 180),
+  points: [
+    LinePoint(0, 100),
+    LinePoint(1, 250),
+    LinePoint(2, 180),
   ],
-  semanticLabel: '지난 3일 지출 추이',
 )
 
 DonutGauge(
-  value: 0.72,
-  label: '72%',
-  semanticLabel: '일일 목표 달성률',
+  progress: 0.72, // centerLabel 생략 시 '72%' 자동 표기
 )
 ```
 

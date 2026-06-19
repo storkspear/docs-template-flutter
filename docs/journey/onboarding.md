@@ -45,9 +45,14 @@ flutter doctor
 ### 2. 클론
 
 ```bash
+# SSH (권장 — 이후 git push 도 OAuth 재인증 없이)
 git clone git@github.com:<your-org>/<your-app>.git
 cd <your-app>
 ```
+
+> SSH key 미설정이면 즉시 `Permission denied (publickey)` 로 막혀요. 두 옵션:
+> - **SSH key 셋업**: [GitHub 공식 가이드](https://docs.github.com/en/authentication/connecting-to-github-with-ssh)
+> - **HTTPS 로 우회**: `git clone https://github.com/<your-org>/<your-app>.git` — gh CLI 가 로그인돼 있으면 토큰으로 자동 인증
 
 ### 3. git hooks 활성화
 
@@ -69,25 +74,41 @@ git fetch template
 
 ---
 
-## §3 앱 정체성 설정
+## §3 앱 정체성 설정 + 로컬 셋업 (`<repo> local init`)
 
-### rename-app.sh 실행
+`factory` CLI 의 `local init` verb 가 다음 4단계를 한 번에 처리해요:
+
+1. **rename-app.sh 실행** — 아래 변경 목록을 자동 적용
+2. **`.env.example` → `.env`** 복사 (placeholder 보존)
+3. **`flutter pub get`** 실행
+4. 다음 단계 안내 출력
+
+### 사용
 
 ```bash
-./scripts/rename-app.sh <slug> <bundle_id>
+# 첫 1회 — factory shortcut 등록
+./factory install                       # ~/.local/bin/<repo-name> symlink
+
+# rename + .env + pub get 한 번에
+<repo> local init <slug> <bundle_id>    # 인자 명시 (CI 친화)
+<repo> local init                       # 또는 interactive prompt
 
 # 예
-./scripts/rename-app.sh my_tracker com.example.mytracker
+<repo> local init my_tracker com.example.mytracker
 ```
 
-변경되는 곳:
+> 옵션: `<repo> local init --skip-rename` (이미 rename 한 경우), `<repo> local init --reinit` (강제 재실행).
+
+rename 단계에서 변경되는 곳:
+
 - `pubspec.yaml` 의 `name:`
 - `lib/main.dart` 의 `AppConfig.init(appSlug: ...)`
 - `android/app/build.gradle.kts` 의 `namespace` · `applicationId`
 - `android/app/src/main/AndroidManifest.xml` 의 `android:label`
 - Android Kotlin 파일의 `package` 선언 + 디렉토리 이동
-- `ios/Runner.xcodeproj/project.pbxproj` 의 `PRODUCT_BUNDLE_IDENTIFIER`
-  (Info.plist 의 `CFBundleIdentifier` 는 `$(PRODUCT_BUNDLE_IDENTIFIER)` 변수 참조라 자동 반영)
+- `ios/Flutter/AppEnv-{dev,prod}.xcconfig` 의 `BUNDLE_ID_BASE`
+  (iOS PRODUCT_BUNDLE_IDENTIFIER 가 `$(BUNDLE_ID_BASE)$(BUNDLE_ID_SUFFIX)` 변수로
+  박혀있어 dev 빌드는 `<bundle_id>.dev`, prod 빌드는 `<bundle_id>` 로 자동 결정)
 - `ios/Runner/Info.plist` 의 `CFBundleDisplayName` · `CFBundleName`
 - `app_kits.yaml` 의 `app.name` · `app.slug`
 - `android/fastlane/Appfile` 의 `package_name`
@@ -99,6 +120,8 @@ git fetch template
 git add -A
 git commit -m "chore: rename to <slug>"
 ```
+
+> 직접 실행이 필요하면 (예: dry-run 검토): `bash scripts/rename-app.sh --dry-run <slug> <bundle_id>`.
 
 ---
 
@@ -175,70 +198,61 @@ Status: OK 확인.
 
 ---
 
-## §5 첫 기동
+## §5 첫 기동 (`<repo> local start`)
 
-### 의존성 설치
+`<repo> local init` 단계에서 `flutter pub get` 까지 끝났으니 바로 빌드/실행으로 갑니다.
+
+### iOS 만 — pod install (필요 시)
+
+대부분 `local init` 후 첫 빌드 시 자동 실행되지만 명시적으로:
 
 ```bash
-flutter pub get
-cd ios && pod install && cd ..  # iOS 만
+cd ios && pod install && cd ..
 ```
 
 ### 코드 생성 (필요 시)
 
-`local_db_kit` 쓰면:
+`local_db_kit` 사용 시 `dart run build_runner build --delete-conflicting-outputs`.
+i18n 추가 시 `flutter gen-l10n`.
+
+### 시뮬레이터 / 에뮬레이터 준비
 
 ```bash
-dart run build_runner build --delete-conflicting-outputs
-```
-
-i18n:
-
-```bash
-flutter gen-l10n
-```
-
-### 시뮬레이터 / 에뮬레이터 실행
-
-**iOS**:
-```bash
+# iOS
 open -a Simulator
+
+# Android — AVD 부팅
+flutter emulators --launch <AVD_ID>
 ```
 
-**Android**:
-```bash
-# Android Studio → AVD Manager 에서 실행
-# 또는
-emulator -list-avds
-emulator -avd Pixel_8_API_34
-```
-
-### 앱 실행
+### 앱 실행 — `local start` (Mock 자동 폴백)
 
 ```bash
-flutter run
+<repo> local start                      # 자동 감지 + flutter run
+<repo> local start -d <device-id>       # 디바이스 지정
 ```
+
+`scripts/start.sh` 가 다음 규칙으로 분기해요 (debug 빌드 기준):
+
+| 조건 | 동작 |
+|---|---|
+| `GoogleService-Info-{dev,prod}.plist` + `android/app/src/{dev,prod}/google-services.json` 모두 없음 | `--dart-define=AUTH_DEV_MOCK=true` 자동 주입 → 백엔드/OAuth 없이 keyless 시연 |
+| 위 중 하나라도 있음 | 실 SDK 경로 (flutter run 그대로) |
 
 처음 실행이면 빌드에 1~2분. 이후엔 hot reload.
 
-### 백엔드 없이 시연 (선택)
+### `AUTH_DEV_MOCK` 모드 동작 (선택 — Mock 폴백 진입 시)
 
-template-spring 백엔드를 아직 안 띄웠으면 `AUTH_DEV_MOCK` 으로 인증 흐름까지 keyless 시연이 가능해요.
-
-```bash
-flutter run --dart-define=AUTH_DEV_MOCK=true
-```
-
-동작:
+template-spring 백엔드를 안 띄웠어도 인증 흐름 끝까지 keyless 시연 가능:
 
 - 부팅 시 `BackendReachability.probe()` 가 `baseUrl/actuator/health` 핑 → connection refused
 - `DevOfflineAuthInterceptor` 가 `/auth/*` 호출 가로채서 fake JWT 응답 반환
-- 구글 / 애플 로그인 버튼은 SDK 모달 우회 → 즉시 fake credential 으로 로그인 완료
+- Google / Apple 로그인 버튼은 SDK 모달 우회 → 즉시 fake credential 로 로그인 완료
 - 로그인 후 `/home` 진입까지 백엔드 · OAuth 키 없이 시연 가능
 
-자세한 메커니즘은 [`auth_kit/README.md` Dev Mock 섹션](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/README.md#dev-mock-백엔드-없이-시연) 참고 (`docs/` 외부의 Kit README 직접 링크라 GitHub URL 사용).
+자세한 메커니즘: [`auth_kit/README.md` Dev Mock 섹션](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/README.md#dev-mock-백엔드-없이-시연).
 
-> ⚠️ **운영 빌드 절대 금지**: release 에서 `AUTH_DEV_MOCK=true` 박으면 모든 인증이 fake JWT 로 처리돼요. `.env.example` 의 `AUTH_DEV_MOCK=false` 가 운영 기본값.
+> ⚠️ **release 빌드 금지**: `<repo> local start --release` 는 `start.sh` 가 mock 자동 주입을 비활성화해요. 추가로 Dart 사이드의 `kReleaseMode + isDevMockEnabled` 가드가 startup 시 `StateError` throw — 이중 방어.
 
 ### 확인 포인트
 
@@ -246,6 +260,59 @@ flutter run --dart-define=AUTH_DEV_MOCK=true
 - [ ] 앱 이름이 `<slug>` 로 표시
 - [ ] 스플래시 → 홈 화면
 - [ ] `flutter run` 콘솔에 에러 없음
+
+---
+
+## §5.5 Firebase dev/prod 셋업 (실 OAuth 로 갈 때)
+
+Mock 으로 흐름만 확인했으면, 실제 Google 로그인 동작까지 검증할 때 Firebase 자동화를 씁니다.
+
+### 사전 1회 셋업
+
+```bash
+brew install firebase-cli                       # 또는 npm install -g firebase-tools
+firebase login                                  # 인터랙티브 인증 1회
+```
+
+### dev 환경 (`<repo> dev init`)
+
+```bash
+<repo> dev init                                 # interactive 모드
+# 또는
+<repo> dev init --project=<slug>-dev            # project_id 명시
+```
+
+자동 수행:
+
+1. Firebase `<slug>-dev` 프로젝트 생성
+2. iOS 앱 등록 — Bundle ID = `<base>.dev` (AppEnv-dev.xcconfig 의 변수에서 읽음)
+3. Android 앱 등록 — package = `<base>.dev` (productFlavors 의 applicationIdSuffix 가 부여)
+4. `GoogleService-Info-dev.plist` + `android/app/src/dev/google-services.json` 다운로드 (둘 다 gitignored)
+5. `.env.dev` placeholder 자동 채움 (Firebase IDs, OAuth Client IDs)
+6. `link-oauth --env=dev` 자동 호출 → `ios/Flutter/AppEnv-secrets-dev.xcconfig` 생성 (gitignored)
+
+### 사용자가 직접 마무리할 콘솔 1회 작업 (스크립트 출력에 URL 안내됨)
+
+1. **Firebase Console → Authentication → Sign-in method → Google 활성화** (firebase CLI 미지원)
+2. **Android SHA-1 추가** — debug.keystore SHA-1 자동 추출돼서 출력됨. 콘솔에 paste → 저장
+3. plist 다시 다운로드 → `<repo> dev link-oauth` 재실행 (Auth 활성 후 CLIENT_ID 갱신)
+4. `.env.dev` 의 `SENTRY_DSN` / `POSTHOG_KEY` / `BASE_URL` 직접 입력
+
+### prod 환경 (`<repo> prod init`)
+
+동일 흐름의 prod 버전 — Bundle ID 는 `.dev` suffix 없이 base 그대로, 별도 Firebase 프로젝트 (`<slug>-prod`).
+
+```bash
+<repo> prod init
+```
+
+### 빌드/실행 (실 OAuth)
+
+```bash
+<repo> dev start                                # dev flavor, com.<base>.dev Bundle ID
+<repo> prod start                               # prod flavor, com.<base>
+<repo> dev start --release                      # release 빌드 (mock 자동 주입 비활성)
+```
 
 ---
 

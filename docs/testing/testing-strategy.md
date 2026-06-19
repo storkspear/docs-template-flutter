@@ -193,34 +193,21 @@ void main() {
 
 ---
 
-## 4. 마이그레이션 지문
+## 4. 마이그레이션 지문 (recipe 재구성 회귀)
 
-Drift 스키마 변경 자동 감지. `local_db_kit` 활성 시만.
-
-```dart
-// test/migration_fingerprint/app_database_fingerprint_test.dart
-void main() {
-  test('schema fingerprint matches snapshot', () async {
-    final db = AppDatabase.forTesting();
-    final schema = await db.customSelect('SELECT sql FROM sqlite_schema').get();
-    // drift_dev 가 snapshot 비교
-  });
-}
-```
-
-### 스키마 변경 시
+`test/migration_fingerprint/` 는 **Drift 스키마 지문이 아니라**, 과거 앱 시나리오가 현재 kit 조합으로 재현 가능한지 검증하는 회귀 테스트예요 (`sumtally_onboarding_fingerprint_test.dart`, `rny_daily_alert_fingerprint_test.dart`). kit 계약이 깨지면 여기서 잡혀요.
 
 ```bash
-# 1. 의도한 변경인지 확인 — fingerprint 테스트가 실패해야 정상 (스키마 hash 가 바뀜)
 flutter test test/migration_fingerprint/
+```
 
-# 2. schemaVersion 올림 + onUpgrade 작성 (lib/database/app_database.dart)
+### Drift schema fingerprint 는 템플릿 미포함
 
-# 3. 지문 snapshot 갱신 — 테스트 코드의 expected hash 를 새 값으로 교체
-#    (drift_dev schema dump 로 자동 추출 가능)
+스키마 hash 스냅샷 비교 방식은 **템플릿에 없어요** — `AppDatabase` · `lib/database/` 자체가 스텁이라 없어요. `local_db_kit` 쓰는 파생 레포가 `drift_dev schema dump` 로 직접 셋업하세요.
+
+```bash
+# 파생 레포에서 (local_db_kit + AppDatabase 정의 후)
 dart run drift_dev schema dump lib/database/app_database.dart drift_schemas/
-
-# 4. 갱신된 지문 + 마이그레이션 코드 함께 커밋
 ```
 
 ---
@@ -264,16 +251,16 @@ await prefs.init();
 
 ## CI 통합
 
-`.github/workflows/ci.yml` 에서:
+`.github/workflows/ci.yml` 의 `analyze-and-test` 잡 실제 단계:
 
 ```yaml
-- run: flutter test --reporter=expanded --coverage
-- uses: codecov/codecov-action@v4
-  with:
-    file: coverage/lcov.info
+- run: dart format --output=none --set-exit-if-changed lib/ test/
+- run: dart run tool/configure_app.dart --audit
+- run: flutter analyze
+- run: flutter test --reporter=expanded
 ```
 
-Codecov 에 커버리지 리포트 업로드 (선택).
+> 커버리지 측정 / Codecov 업로드는 CI 에 **없어요** — 로컬에서 `./scripts/coverage.sh` 로 측정해요 (게이트 아님, 월 1회 권장).
 
 ---
 

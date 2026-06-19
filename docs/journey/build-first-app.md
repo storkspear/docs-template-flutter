@@ -33,7 +33,8 @@
 ## §2 앱 정체성 설정 (5분)
 
 ```bash
-./scripts/rename-app.sh my_items com.example.myitems
+./factory install                                  # 1회 — symlink 등록
+<repo> local init my_items com.example.myitems     # rename + .env + pub get
 ```
 
 `app_kits.yaml` recipe 복사:
@@ -120,21 +121,17 @@ environment: Environment.values.byName(
 빌드 시 주입:
 
 ```bash
-# dev (기본)
-flutter run
+# local (mock 자동 폴백 — 백엔드/OAuth 없이)
+<repo> local start
 
-# staging
-flutter run \
-  --dart-define=BASE_URL=https://staging.api.myapp.com \
-  --dart-define=APP_ENV=staging
+# dev (Firebase dev project + 실 OAuth — <repo> dev init 후)
+<repo> dev start                # APP_ENV=dev 자동 주입, BASE_URL 은 .env.dev 에서
 
 # prod release
-flutter build apk --release \
-  --dart-define=BASE_URL=https://api.myapp.com \
-  --dart-define=APP_ENV=prod
+<repo> prod start --release     # mock 자동 주입 비활성, AppConfig 가드 발동
 ```
 
-`.env.example` 의 `BASE_URL` / `APP_ENV` 라인 참고. release 빌드는 AppConfig 가드가 default(localhost / `Environment.dev`) 를 자동 차단해요.
+`.env.{dev,prod}` 에 `BASE_URL` / `APP_ENV` 입력. release 빌드는 AppConfig 가드가 default(localhost / `Environment.dev`) 를 자동 차단해요.
 
 ---
 
@@ -487,7 +484,9 @@ void main() {
 ## §12 실행 · 검증
 
 ```bash
-flutter run
+<repo> local start                    # mock 모드 (백엔드/OAuth 없이 시연)
+# 또는
+<repo> dev start                      # Firebase dev 셋업 (<repo> dev init) 후 실 OAuth
 ```
 
 - [ ] 로그인 화면 (auth_kit) 자동 리다이렉트

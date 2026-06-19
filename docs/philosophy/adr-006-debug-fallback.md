@@ -266,8 +266,7 @@ Sentry 가 안 찍혀서 "Sentry SDK 버그?" 의심했는데 원인은 `--dart-
 - [`lib/kits/observability_kit/observability_env.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/observability_kit/observability_env.dart) — 환경 변수 감지
 
 **notifications_kit 의 같은 패턴**
-- [`lib/kits/notifications_kit/notification_service.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/notifications_kit/notification_service.dart) — 추상 + Debug
-- [`lib/kits/notifications_kit/fcm_notification_service.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/notifications_kit/fcm_notification_service.dart) — FCM 구현
+- [`lib/kits/notifications_kit/notification_service.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/notifications_kit/notification_service.dart) — 추상 인터페이스 + Debug 구현 (FCM 실제 구현체는 파생 레포가 채움)
 
 **관련 ADR**:
 - [`ADR-002 · 3계층 모듈 구조`](./adr-002-layered-modules.md) — 인터페이스를 `core/` 에 두는 이유

@@ -20,6 +20,26 @@
 
 **A.** 앱마다 필요 기능이 다름. 로컬 전용 앱에 Sentry SDK · Apple Sign In 플러그인이 박혀 있으면 바이너리 낭비 + 스토어 리뷰 문제. 근거: [`ADR-003`](../philosophy/adr-003-featurekit-registry.md).
 
+### Q. `<repo> local init` 과 `<repo> dev init` 차이가 뭐예요?
+
+**A.** 셋업 깊이가 달라요.
+
+| verb | 하는 일 | 외부 자격 필요 |
+|---|---|---|
+| `local init` | rename + `.env` + `flutter pub get` | 없음 (백엔드/Firebase 없이도 OK) |
+| `dev init` | Firebase dev project 생성 + iOS/Android 앱 등록 + plist/json 다운 + link-oauth | `firebase login` 1회 |
+| `prod init` | 동일 흐름의 prod (별도 Firebase project) | 동일 |
+
+`local start` 는 mock 자동 폴백이 있어 `dev init` 없이도 인증 흐름까지 시연 가능. 실 Google 로그인 검증할 때 `dev init` 으로 넘어가요.
+
+### Q. dev / prod 별 Bundle ID 가 다르게 떨어지는 메커니즘이?
+
+**A.** `ios/Flutter/AppEnv-{dev,prod}.xcconfig` 의 `BUNDLE_ID_SUFFIX` 변수가 dev=`.dev` / prod=비어있음. iOS pbxproj 의 `PRODUCT_BUNDLE_IDENTIFIER` 가 `$(BUNDLE_ID_BASE)$(BUNDLE_ID_SUFFIX)` 로 변수화되어 Xcode 빌드 시점에 flavor 별로 다른 Bundle ID 가 박힘. Android 는 `productFlavors { dev { applicationIdSuffix = ".dev" } }` 로 같은 결과. 깊이: [`architecture.md § 환경 분리 인프라`](./architecture.md#환경-분리-인프라-devprod-flavor).
+
+### Q. `<repo> dev link-oauth` 가 secrets 파일을 만든다는데 어디인가요?
+
+**A.** `ios/Flutter/AppEnv-secrets-dev.xcconfig` (gitignored). `GoogleService-Info-dev.plist` 의 `CLIENT_ID` / `REVERSED_CLIENT_ID` 두 값이 거기 들어가고, `AppEnv-dev.xcconfig` 가 `#include? "AppEnv-secrets-dev.xcconfig"` 로 optional include 하고 있어 Xcode 빌드 시 자동 반영. 사용자가 link-oauth 후 `git status` 해도 변경 안 보임 (gitignored) → 실수 commit 봉인.
+
 ---
 
 ## 아키텍처

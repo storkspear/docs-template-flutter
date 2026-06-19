@@ -38,7 +38,7 @@ Content-Type: application/json
 | 필드 | 타입 | 필수 | 설명 |
 |---|---|---|---|
 | `platform` | string | ✅ | `"ios"` 또는 `"android"` |
-| `pushToken` | string | ✅ | FCM 토큰 (iOS 도 FCM 사용 권장) 또는 APNs 토큰 |
+| `pushToken` | string | ⬜ | FCM 토큰 (iOS 도 FCM 사용 권장) 또는 APNs 토큰. 서버는 null 허용 (토큰 없이 등록 가능) |
 | `deviceName` | string | ⬜ | 사용자 표시용 (예: "홍길동의 아이폰") |
 
 ### Upsert 의미론

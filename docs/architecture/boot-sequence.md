@@ -12,8 +12,27 @@
 └──────────────────┬──────────────────────┘
                    │
                    ▼
+1. WidgetsFlutterBinding.ensureInitialized()
+                 │
+                 ▼
+2. AppPaletteRegistry.install(DefaultPalette())
+   AppTypefaceRegistry.install(DefaultTypeface())
+                 │
+                 ▼
+3. PackageInfo.fromPlatform()  (appVersion 추출)
+                 │
+                 ▼
+4. AppConfig.init(
+     appSlug: 'template',
+     baseUrl: 'http://localhost:8080',
+     environment: Environment.dev,
+     ...
+   )
+                 │
+                 ▼
     ┌────────────────────────────┐
-    │ ObservabilityEnv 확인        │
+    │ ObservabilityEnv             │
+    │   .isSentryEnabled?          │
     │ (Sentry DSN 주입 여부)        │
     └────────┬───────────┬────────┘
              │           │
@@ -21,10 +40,10 @@
              │           │
              ▼           ▼
   ┌──────────────┐  ┌──────────┐
-  │ SentryFlutter│  │ plain    │
-  │   .init(     │  │ bootstrap│
-  │  appRunner:  │  └────┬─────┘
-  │  _bootstrap) │       │
+  │ SentryFlutter│  │ 직접      │
+  │   .init(     │  │_bootstrap│
+  │  appRunner:  │  │   ()     │
+  │  _bootstrap) │  └────┬─────┘
   └──────┬───────┘       │
          │               │
          └───────┬───────┘
@@ -34,25 +53,10 @@
       └──────────┬──────────┘
                  │
                  ▼
-1. WidgetsFlutterBinding.ensureInitialized()
+5. PrefsStorage().init()   (SharedPreferences 초기화)
                  │
                  ▼
-2. AppPaletteRegistry.install(DefaultPalette())
-   AppTypefaceRegistry.install(DefaultTypeface())
-                 │
-                 ▼
-3. AppConfig.init(
-     appSlug: 'template',
-     baseUrl: 'http://localhost:8080',
-     environment: Environment.dev,
-     ...
-   )
-                 │
-                 ▼
-4. PrefsStorage().init()   (SharedPreferences 초기화)
-                 │
-                 ▼
-5. AppKits.install([
+6. AppKits.install([
      BackendApiKit(),
      AuthKit(),
      UpdateKit(service: NoUpdateAppUpdateService()),
@@ -65,7 +69,7 @@
    └─ 실패 시 역순 rollback
                  │
                  ▼
-6. ProviderContainer 생성
+7. ProviderContainer 생성
    container = ProviderContainer(
      overrides: [
        ...AppKits.allProviderOverrides,     // Kit 이 기여
@@ -74,17 +78,17 @@
    )
                  │
                  ▼
-7. AppKits.attachContainer(container)
+8. AppKits.attachContainer(container)
    (이제 bootSteps · refreshListenable 이 container.read 가능)
                  │
                  ▼
-8. CrashService 초기화
+9. CrashService 초기화
    container.read(crashServiceProvider).init()
    (ObservabilityKit 활성 + SENTRY_DSN 주입 → SentryCrashService)
    (그 외 → DebugCrashService)
                  │
                  ▼
-9. SplashController(steps: AppKits.allBootSteps).run()
+10. SplashController(steps: AppKits.allBootSteps).run()
    │
    ├─ AuthKit 이 기여한 AuthCheckStep
    │    │
@@ -110,7 +114,7 @@
    └─ status: error → crashService.reportError (non-fatal) + 계속 진행
                  │
                  ▼
-10. runApp(
+11. runApp(
       UncontrolledProviderScope(
         container: container,
         child: const App(),
@@ -120,7 +124,7 @@
                  ▼
     App (MaterialApp.router)
         │
-        ├─ ValueListenableBuilder (AppPaletteRegistry 구독)
+        ├─ AnimatedBuilder (Listenable.merge([Palette, Typeface]) 구독)
         ├─ MaterialApp.router (AppRouter.router)
         │    │
         │    ├─ initialLocation: /splash
@@ -139,17 +143,16 @@
 
 ## 단계별 설명
 
-### 1. Sentry 래핑
+### 1. Flutter 바인딩 · 팔레트 · 설정 (main 본문)
 
-`ObservabilityEnv.isSentryEnabled` 확인. DSN 주입되어 있으면 `SentryFlutter.init(...)` 이 내부적으로 `runZonedGuarded` 세팅 → **비동기 에러까지 자동 포착**.
-
-### 2. Flutter 바인딩 · 팔레트 · 설정 · SharedPreferences
-
-순서가 중요해요:
+`main()` 본문에서 Sentry 래핑보다 **먼저** 실행돼요:
 - 바인딩 먼저 (기타 `Platform.` 호출 전제)
-- 팔레트 먼저 (MaterialApp 이 구독할 Notifier)
-- AppConfig 는 Kit 들이 참조하므로 Kit 설치 전
-- PrefsStorage 는 Provider override 로 주입되므로 container 생성 전
+- 팔레트/타이페이스 install (MaterialApp 이 구독할 Listenable)
+- AppConfig.init — Sentry options 람다가 `AppConfig.instance` 를 읽으므로 Sentry 래핑보다 먼저
+
+### 2. Sentry 래핑
+
+`ObservabilityEnv.isSentryEnabled` 확인. DSN 주입되어 있으면 `SentryFlutter.init(..., appRunner: _bootstrap)` 이 내부적으로 `runZonedGuarded` 세팅 → **비동기 에러까지 자동 포착**. 미주입 시 `_bootstrap()` 직접 호출. 이후 단계(PrefsStorage·Kit 설치·container·splash)는 모두 `_bootstrap()` 안에서 실행돼요. (PrefsStorage 는 Provider override 로 주입되므로 container 생성 전.)
 
 ### 3. Kit 설치
 
@@ -184,7 +187,7 @@ initialLocation `/splash` → refreshListenable 이 곧 초기 notify → `_comp
 
 | 단계 | 실패 시 |
 |------|--------|
-| SentryFlutter.init | 예외 발생 시 Debug 모드로 폴백 (Sentry 없이 계속) |
+| Sentry 분기 | DSN 미주입 시 plain `_bootstrap()` 으로 계속 (Sentry 없이). DSN 있을 때 `SentryFlutter.init` 자체엔 try/catch 없음 — 실패 시 전파 |
 | AppKits.install | rollback 후 throw — 앱 시작 불가 (치명) |
 | BootStep 실행 | Result.error 반환 + crashService 리포트, 앱 계속 |
 | runApp | Flutter 프레임워크가 자체 처리 |

@@ -45,12 +45,10 @@ git tag v1.0.0 → GitHub Actions → fastlane build (AAB) → Play Console Inte
 ## 3. GHA Secrets 등록
 
 ```bash
-./scripts/upload-secrets-to-github.sh
+./scripts/upload-secrets-to-github.sh <app-slug>
 ```
 
-스크립트가 묻는 항목:
-- `PLAY_STORE_JSON_KEY` — 위에서 발급받은 Service Account JSON 파일 경로
-- `ANDROID_KEYSTORE_BASE64` 외 keystore 관련 (이미 [`docs/infra/android-deployment.md`](../infra/android-deployment.md) §최초 설정 참고)
+스크립트는 `~/Documents/keystores-pending/<app-slug>/` 의 키스토어를 읽어 **`ANDROID_*` 4종만 자동 업로드**해요. `PLAY_STORE_JSON_KEY` 와 `SENTRY_*` 는 스크립트가 출력하는 `gh secret set` 안내대로 직접 등록하세요. (keystore 발급은 [`docs/infra/android-deployment.md`](../infra/android-deployment.md) §최초 설정 참고)
 
 ---
 

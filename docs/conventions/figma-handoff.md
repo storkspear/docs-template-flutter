@@ -99,17 +99,11 @@ class MyAppPalette extends AppPalette {
   @override
   Color get seed => const Color(0xFF6366F1);  // Brand/Primary
 
+  // Material 3 fromSeed 가 자동 생성하는 ColorScheme 위에 시맨틱 색만 override.
+  // super.lightScheme() 이 ColorScheme.fromSeed(seedColor: seed) 를 반환.
   @override
-  Brightness get brightness => Brightness.light;
-
-  // Material 3 fromSeed 가 자동 생성하는 ColorScheme 위에 시맨틱 색만 override
-  @override
-  ColorScheme buildColorScheme() {
-    final base = ColorScheme.fromSeed(
-      seedColor: seed,
-      brightness: brightness,
-    );
-    return base.copyWith(
+  ColorScheme lightScheme() {
+    return super.lightScheme().copyWith(
       // Figma 의 Surface/Background 와 매핑
       surface: const Color(0xFFFFFFFF),
       onSurface: const Color(0xFF1F2937),
@@ -153,20 +147,21 @@ AppPaletteRegistry.install(MyAppPalette());
      String get id => 'my-app';
 
      @override
-     String get fontFamily => 'Pretendard';
+     String get name => 'My App';
 
-     // Material 3 TextTheme override
      @override
-     TextTheme buildTextTheme(TextTheme base) {
+     String? get fontFamily => 'Pretendard';
+
+     // (선택) 사이즈/weight 미세조정 — 무인자 buildTextTheme() 를 override.
+     // super.buildTextTheme() 가 fontFamily 적용된 8-스케일 TextTheme 을 반환.
+     @override
+     TextTheme buildTextTheme() {
+       final base = super.buildTextTheme();
        return base.copyWith(
-         // Display
-         displayLarge: base.displayLarge?.copyWith(
-           fontWeight: FontWeight.w700,
-           letterSpacing: -0.5,
-         ),
          // Headline
          headlineLarge: base.headlineLarge?.copyWith(
-           fontWeight: FontWeight.w600,
+           fontWeight: FontWeight.w700,
+           letterSpacing: -0.5,
          ),
          // Body
          bodyLarge: base.bodyLarge?.copyWith(

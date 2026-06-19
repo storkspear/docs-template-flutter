@@ -230,17 +230,19 @@ dart run tool/configure_app.dart
 
 Status: OK 확인.
 
-### 5. 앱 정체성 변경
+### 5. 앱 정체성 변경 + 로컬 셋업
 
 ```bash
-./scripts/rename-app.sh my_cool_app com.example.mycoolapp
+./factory install                                          # 1회
+<repo> local init my_cool_app com.example.mycoolapp        # rename + .env + pub get
 ```
 
 ### 6. 실행
 
 ```bash
-flutter pub get
-flutter run
+<repo> local start                                         # mock 자동 폴백
+# 또는 (Firebase 자동화 후)
+<repo> dev start
 ```
 
 ---

@@ -84,6 +84,109 @@ find . -name '*.dart' -exec sed -i '' 's|package:template|package:my_app|g' {} +
 
 ---
 
+### ❌ Android 에뮬레이터 화면이 까만 채로 안 뜸 (M-series Mac)
+
+**증상**: `<repo> start -d <android-emulator>` 후 빌드/install 까지 성공. 앱 프로세스도 살아있음. 하지만 에뮬레이터 화면이 검정. logcat 에 `D/FlutterRenderer: Width is zero. 0,0` 반복.
+
+**원인**: AVD 의 `hw.gpu.mode=auto` 가 M1/M2/M3 Mac 에서 잘못된 GPU 백엔드(software fallback) 를 선택해 Flutter surface 가 0×0 으로 잡힘.
+
+**해결**: AVD config 에서 GPU 모드를 `host` (Mac 의 실 GPU 사용) 로 강제.
+
+```bash
+# AVD 이름은 'Medium_Phone' 부분만 본인 AVD 명으로 교체
+sed -i.bak 's/hw\.gpu\.mode=auto/hw.gpu.mode=host/' \
+  ~/.android/avd/Medium_Phone.avd/config.ini
+
+# emulator 종료 후 재기동
+~/Library/Android/sdk/platform-tools/adb -s emulator-5554 emu kill
+flutter emulators --launch <AVD_ID>
+```
+
+**대안**: Android Studio → Device Manager → AVD 편집 → "Graphics" 를 명시적으로 "Hardware - GLES 2.0" 선택. 실 Android 기기에선 발생 안 함.
+
+---
+
+### ❌ Android 빌드 후 앱 launch 시 `ClassCastException: MainActivity cannot be cast to FlutterFragmentActivity`
+
+**증상**: APK install 성공. 앱 시작 직후 강제종료. logcat 의 `GeneratedPluginRegistrant` 에 위 예외.
+
+**원인**: 일부 Flutter 플러그인 (`flutter_naver_login` 등) 이 MainActivity 를 `FlutterFragmentActivity` 로 캐스팅. 기본 `FlutterActivity` 만 상속하면 캐스트 실패.
+
+**해결**: `android/app/src/main/kotlin/.../MainActivity.kt` 에서 `FlutterFragmentActivity` 로 변경 (템플릿엔 이미 적용됨).
+```kotlin
+import io.flutter.embedding.android.FlutterFragmentActivity
+class MainActivity : FlutterFragmentActivity()
+```
+
+---
+
+### ❌ `<repo> dev init` 후 빌드 시 `No matching client found for package name ...`
+
+**증상**: Android 빌드 (특히 `flutter build apk --flavor dev` 또는 `<repo> dev start`) 가 `processDevDebugGoogleServices` 에서 실패. 메시지 끝에 "No matching client found for package name 'com.<...>.dev'".
+
+**원인**: `google-services.json` 안에 등록된 package_name 이 dev flavor 의 `applicationId.dev` 와 매칭 안 됨. 보통 `<repo> dev init` 이 끝나면 자동 해결되지만, prod 의 google-services.json 을 dev 자리에 복사한 경우 발생.
+
+**해결**:
+1. `<repo> dev init` 재실행 (사용자 확인 후 — Firebase 에 dev 용 Android 앱이 정확한 package name 으로 등록되는지 확인)
+2. 또는 Firebase Console → 새 Android 앱 등록 → package name = `com.<your>.<app>.dev` → google-services.json 다운 → `android/app/src/dev/` 에 배치
+
+---
+
+### ❌ iOS dev/prod 빌드 후 GIDClientID 가 빈 값 (`(GID_CLIENT_ID)` 그대로)
+
+**증상**: 빌드는 성공. 앱 launch 후 "구글로 로그인" 탭 시 `signInWithOptions:` 호출 직후 크래시. Info.plist 에 `GIDClientID = (GID_CLIENT_ID)` 또는 비어있음.
+
+**원인**: `AppEnv-<env>.xcconfig` 의 `GID_CLIENT_ID` 가 빈 채로 빌드됨. `<env> link-oauth` 실행이 누락됐거나, GoogleService-Info-<env>.plist 가 없거나, plist 에 CLIENT_ID 키가 빠짐 (Firebase Auth Google 사용 설정 안 한 경우).
+
+**해결**:
+1. Firebase Console → Authentication → Google sign-in 활성화 확인
+2. plist 재다운로드 → `ios/Runner/GoogleService-Info-<env>.plist` 덮어쓰기
+3. `<repo> <env> link-oauth` 재실행 — `AppEnv-<env>.xcconfig` 의 GID_CLIENT_ID 자동 갱신
+4. `<repo> <env> link-oauth --check` 로 확인 — 값이 비어있지 않은지
+
+---
+
+### ❌ derived repo 정리하려는데 `firebase projects:delete` 가 "is not a Firebase command"
+
+**증상**: 검증 끝나고 만든 Firebase project 정리하려고 `firebase projects:delete <pid>` 호출 → `Error: projects:delete is not a Firebase command`.
+
+**원인**: firebase CLI 는 project 생성 (`projects:create`) 은 지원하지만 **삭제는 지원 안 함** (의도된 한계). Firebase project = 내부적으로 GCP project 라 GCP 측 도구 필요.
+
+**해결** (둘 중 택1):
+
+옵션 A — `gcloud` CLI 설치 후:
+```bash
+brew install --cask google-cloud-sdk      # 또는 https://cloud.google.com/sdk/docs/install
+gcloud auth login
+gcloud projects delete <project-id> --quiet
+```
+
+옵션 B — Firebase Console 에서 수동 (가장 빠름):
+```
+https://console.firebase.google.com/project/<project-id>/settings/general
+  → 페이지 최하단 "이 프로젝트 삭제" → 프로젝트 ID 입력 → 종료
+```
+
+> Firebase project 삭제는 30일 유예 후 영구 삭제. 잘못 삭제 시 30일 안에 GCP 콘솔에서 복구 가능.
+
+---
+
+### ❌ `gh repo delete` 가 403 — `Must have admin rights to Repository ... needs "delete_repo" scope`
+
+**증상**: 도그푸딩 검증 끝나고 derived repo 정리하려고 `gh repo delete <owner>/<repo> --yes` → HTTP 403.
+
+**원인**: 기본 `gh auth login` 시 발급되는 토큰엔 `delete_repo` scope 가 빠져있어요. 안전상 default 가 read/write 만 포함.
+
+**해결**:
+```bash
+gh auth refresh -h github.com -s delete_repo     # 브라우저 OAuth 1회 — scope 추가
+gh repo delete <owner>/<repo> --yes              # 이제 동작
+```
+
+또는 GitHub 웹 UI 의 Settings → Danger Zone → Delete this repository.
+
+---
+
 ## 개발 단계
 
 ### ❌ `AppKits.install` 후 화면 안 뜸
