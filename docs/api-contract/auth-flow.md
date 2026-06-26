@@ -15,7 +15,7 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
 클라이언트                                         백엔드
    │                                                │
    │ POST /api/apps/{slug}/auth/email/signin        │  ← API endpoint
-   │ Body: { email, password, appSlug }             │
+   │ Body: { email, password }                      │
    │ Header: (Authorization 없음 — skipAuth)         │
    │─────────────────────────────────────────────▶  │
    │                                                │
@@ -85,7 +85,7 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
    │ onTokenRefresh 콜백 실행                         │
    │                                                │
    │ POST /api/apps/{slug}/auth/refresh             │
-   │ Body: { refreshToken, appSlug }                │
+   │ Body: { refreshToken }                         │
    │─────────────────────────────────────────────▶  │
    │                                                │
    │                       Refresh token 검증        │
@@ -137,7 +137,7 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
 클라이언트                                         백엔드
    │                                                │
    │ POST /api/apps/{slug}/auth/email/signin        │  ← 1단계
-   │ Body: { email, password, appSlug }             │
+   │ Body: { email, password }                      │
    │─────────────────────────────────────────────▶  │
    │                                                │
    │                       2FA enabled 감지            │
@@ -156,7 +156,7 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
    │ UI: TOTP 코드 입력 화면 표시                       │
    │                                                │
    │ POST /api/apps/{slug}/auth/2fa/login           │  ← 2단계
-   │ Body: { twoFactorToken, code: "123456" }       │
+   │ Body: { twoFactorToken, code: "123456" }                │
    │─────────────────────────────────────────────▶  │
    │                                                │
    │                       TOTP 검증 + 정식 토큰 발급    │
@@ -277,7 +277,7 @@ authState.emit(unauthenticated) → /login 라우터로 리다이렉트
 ```
 1. 클라이언트: provider SDK 로 사용자 로그인 → 토큰 획득
 2. 클라이언트: POST /api/apps/{slug}/auth/{provider}
-   Body: { ... provider 별 토큰 필드 ..., appSlug }
+   Body: { ... provider 별 토큰 필드 ... }
 3. 백엔드: provider 공식 endpoint 로 토큰 재검증 (위조 방지)
 4. 백엔드: social_identities (provider, provider_id) 조회 → 신규/기존 분기
 5. 백엔드: 우리 JWT 발급 (access + refresh, family 신규)
@@ -288,10 +288,10 @@ authState.emit(unauthenticated) → /login 라우터로 리다이렉트
 
 | Provider | Endpoint | Body 필드 | 검증 방식 (백엔드) |
 |---|---|---|---|
-| Google | `POST /auth/google` | `{ idToken, appSlug }` | `oauth2.googleapis.com/tokeninfo` 호출 → `aud` 검증 |
-| Apple | `POST /auth/apple` | `{ identityToken, authorizationCode?, firstName?, lastName?, email?, nonce?, appSlug }` | JWKS + RS256 직접 검증 → `iss`/`aud`/`exp` |
-| Kakao | `POST /auth/kakao` | `{ accessToken, appSlug }` | `kapi.kakao.com/v1/user/access_token_info` (app_id) + `/v2/user/me` (email) |
-| Naver | `POST /auth/naver` | `{ accessToken, appSlug }` | `openapi.naver.com/v1/nid/me` (Naver 가 client 자체 검증) |
+| Google | `POST /auth/google` | `{ idToken }` | `oauth2.googleapis.com/tokeninfo` 호출 → `aud` 검증 |
+| Apple | `POST /auth/apple` | `{ identityToken, authorizationCode?, firstName?, lastName?, email?, nonce? }` | JWKS + RS256 직접 검증 → `iss`/`aud`/`exp` |
+| Kakao | `POST /auth/kakao` | `{ accessToken }` | `kapi.kakao.com/v1/user/access_token_info` (app_id) + `/v2/user/me` (email) |
+| Naver | `POST /auth/naver` | `{ accessToken }` | `openapi.naver.com/v1/nid/me` (Naver 가 client 자체 검증) |
 
 ### Apple "Hide My Email" 처리
 

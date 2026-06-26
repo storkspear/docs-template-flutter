@@ -88,7 +88,7 @@ page.data!.hasNextPage  // bool
 // 인증 우회 (로그인 · 가입 · 비번 찾기 — Authorization 헤더 미부착)
 await api.postRaw(
   ApiEndpoints.emailSignIn,  // '/api/apps/{slug}/auth/email/signin'
-  data: {'email': email, 'password': password, 'appSlug': appSlug},
+  data: {'email': email, 'password': password},
 );
 // → AuthInterceptor 가 SKIP_AUTH 옵션 인식, refresh 시도 안 함
 ```
