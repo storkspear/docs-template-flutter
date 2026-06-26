@@ -259,7 +259,7 @@ _dio.interceptors.addAll([
 // ApiClient 의 API
 await api.postRaw(
   ApiEndpoints.emailSignIn,  // '/api/apps/{slug}/auth/email/signin'
-  data: {'email': email, 'password': password, 'appSlug': appSlug},
+  data: {'email': email, 'password': password},
 );
 // → 내부적으로 RequestOptions.extra['skipAuth'] = true
 // → AuthInterceptor 가 감지 → 토큰 첨부 건너뜀
