@@ -191,7 +191,7 @@ google_sign_in SDK: 시스템 계정 선택기 또는 Web OAuth → ID token 획
   ↓
 authService.signInWithGoogle(idToken: '...')
   ↓
-백엔드: POST /api/apps/{slug}/auth/google { idToken, appSlug }
+백엔드: POST /api/apps/{slug}/auth/google { idToken }
   ↓
 백엔드: oauth2.googleapis.com/tokeninfo 로 검증 + audience(aud) 비교
   ↓

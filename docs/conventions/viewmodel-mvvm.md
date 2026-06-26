@@ -237,7 +237,7 @@ class AuthService {
     // 실제 구현은 lib/kits/auth_kit/auth_service.dart 참조 — 여기는 패턴 예시
     final response = await _apiClient.postRaw(
       ApiEndpoints.emailSignIn,  // '/api/apps/{slug}/auth/email/signin'
-      data: {'email': email, 'password': password, 'appSlug': AppConfig.instance.appSlug},
+      data: {'email': email, 'password': password},
     );
     // Spring AuthResponse 구조: { user, tokens: { accessToken, refreshToken } }
     final data = response.data as Map<String, dynamic>;

@@ -1,10 +1,10 @@
 # User Profile
 
-현재 로그인 유저의 **자신의 프로필** 조회/수정. 짝 백엔드의 `UserController` ([`/api/core/users/me`](https://github.com/storkspear/template-spring/blob/main/core/core-user-impl/src/main/java/com/factory/core/user/impl/controller/UserController.java)) 와 1:1 결합.
+현재 로그인 유저의 **자신의 프로필** 조회/수정. 짝 백엔드의 `UserController` ([`/api/apps/{slug}/users/me`](https://github.com/storkspear/template-spring/blob/main/core/core-user-impl/src/main/java/com/factory/core/user/impl/controller/UserController.java)) 와 1:1 결합.
 
-> **경로 주의 — 글로벌 endpoint** : `/api/apps/{slug}` prefix 가 **없어요**. user 프로필은 앱별이 아닌 글로벌 도메인이라 짝 백엔드에서 `/api/core/users/...` 경로로 노출돼요.
+> **경로 — 앱별 endpoint** : auth·device 와 동일하게 `/api/apps/{slug}/users/...` 아래에 있어요. 백엔드 `AppSlugVerificationFilter` 가 path slug ↔ JWT slug 일치를 강제해 cross-app 접근을 막아요.
 >
-> Flutter `ApiClient.get/patch` 는 `/api/apps/{slug}` 자동 prefix 를 붙이므로 user 프로필 호출 시에는 **prefix 우회** 가 필요해요. 코드는 `lib/kits/backend_api_kit/api_endpoints.dart` 의 `userMe` 상수 (절대 경로) + `_apiClient.dio` 직접 호출 또는 `postRaw` 패턴을 써요.
+> Flutter `ApiClient.get/patch` 의 `/api/apps/{slug}` 자동 prefix 를 그대로 써요. `api_endpoints.dart` 의 `userMe`/`userById` 는 **상대 경로**(`/users/me`, `/users/{id}`)이고, `_apiClient.get(ApiEndpoints.userMe)` 처럼 호출해요 (device 와 동일 컨벤션).
 
 ---
 
@@ -12,8 +12,8 @@
 
 | Method | Path | 인증 | Response |
 |---|---|---|---|
-| GET | `/api/core/users/me` | 필수 | `ApiResponse<UserProfile>` |
-| PATCH | `/api/core/users/me` | 필수 | `ApiResponse<UserProfile>` |
+| GET | `/api/apps/{slug}/users/me` | 필수 | `ApiResponse<UserProfile>` |
+| PATCH | `/api/apps/{slug}/users/me` | 필수 | `ApiResponse<UserProfile>` |
 
 ---
 
@@ -22,11 +22,11 @@
 ### Request
 
 ```
-GET /api/core/users/me
+GET /api/apps/{slug}/users/me
 Authorization: Bearer <access_token>
 ```
 
-> URL 의 `appSlug` 가 없으므로 백엔드 `AppSlugVerificationFilter` 의 검증을 거치지 않아요. JWT 의 `sub` 만으로 본인 식별.
+> URL 의 `{slug}` 와 JWT 의 `appSlug` 가 일치해야 통과해요 (`AppSlugVerificationFilter`). 본인 식별은 JWT 의 `sub` 로 해요.
 
 ### Response
 
@@ -53,7 +53,7 @@ Authorization: Bearer <access_token>
 ### Request
 
 ```
-PATCH /api/core/users/me
+PATCH /api/apps/{slug}/users/me
 Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
