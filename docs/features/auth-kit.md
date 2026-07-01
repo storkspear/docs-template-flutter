@@ -70,12 +70,22 @@ await AppKits.install([
 // 이메일 로그인
 await authService.signInWithEmail(email: 'x@y.com', password: 'pw');
 
-// 가입
+// 가입 — verify-before-signup 3단계 (이메일 코드 인증 후 계정 생성)
+//   1) 코드 발송 (dev/non-prod 백엔드는 devCode 를 응답에 담아줘요. prod 는 null + 메일 발송)
+final devCode = await authService.sendSignupCode(email: 'x@y.com');
+//   2) 코드 검증 → proofToken (약 30분 유효)
+final proofToken = await authService.verifySignupCode(
+  email: 'x@y.com',
+  code: '123456',
+);
+//   3) proofToken 과 함께 계정 생성 (성공 시 자동 로그인)
 await authService.signUpWithEmail(
   email: 'x@y.com',
   password: 'pw',
   displayName: 'Alice',
+  proofToken: proofToken,
 );
+// LoginScreen 은 이 3단계를 signUp 모드 내부 단계(enterDetails → enterCode)로 자동 처리해요.
 
 // 소셜 로그인 — 각 provider SDK 로 받은 토큰을 인자로 전달
 await authService.signInWithGoogle(idToken: googleIdToken);
@@ -263,7 +273,9 @@ try {
 - [ ] `template-spring` 쌍 운영 전제
 - [ ] 유저 테이블이 `appSlug` 기반 격리 ([`ADR-012`](../philosophy/adr-012-per-app-user.md))
 - [ ] 다음 endpoint 제공 (`template-spring/common/common-web/.../ApiEndpoints.java` 의 `Auth.*`):
-  - `POST /api/apps/{slug}/auth/email/signup` (201)
+  - `POST /api/apps/{slug}/auth/email/send-code` (200, `{data:{devCode}}` — devCode 는 non-prod 만)
+  - `POST /api/apps/{slug}/auth/email/verify-code` (200, `{data:{proofToken}}` — 약 30분 유효)
+  - `POST /api/apps/{slug}/auth/email/signup` (201, body 에 `proofToken` 필수 — verify-before-signup)
   - `POST /api/apps/{slug}/auth/email/signin` (200)
   - `POST /api/apps/{slug}/auth/{google|apple|kakao|naver}` (200)
   - `POST /api/apps/{slug}/auth/refresh` (200, AuthTokens — 회전)

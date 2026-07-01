@@ -45,7 +45,10 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
    │ (router refreshListenable → /home 으로 이동)     │  ← 라우터 경로
 ```
 
-> 회원가입(`POST /auth/email/signup`) 도 동일한 응답 구조. signup 은 201, signin 은 200.
+> 회원가입은 **verify-before-signup** 3단계예요: ① `POST /auth/email/send-code {email}` → `{data:{devCode}}`
+> (devCode 는 non-prod 편의값, prod 는 null + 메일 발송) → ② `POST /auth/email/verify-code {email, code}`
+> → `{data:{proofToken}}` (약 30분 유효) → ③ `POST /auth/email/signup {email, password, displayName, proofToken}`.
+> ③ 의 응답 구조는 signin 과 동일 (`{user, tokens}`). signup 은 201, signin 은 200.
 
 ---
 
@@ -307,7 +310,9 @@ Apple 사용자가 "Hide My Email" 을 선택하면 첫 로그인 후 identity t
 
 | 클라이언트 호출 | 백엔드 엔드포인트 | 설명 |
 |---|---|---|
-| `signUpWithEmail` | `POST /api/apps/{slug}/auth/email/signup` | 이메일 가입 (201) |
+| `sendSignupCode` | `POST /api/apps/{slug}/auth/email/send-code` | 가입 코드 발송 (`{data:{devCode}}`, devCode 는 non-prod 만) |
+| `verifySignupCode` | `POST /api/apps/{slug}/auth/email/verify-code` | 코드 검증 → `{data:{proofToken}}` (약 30분 유효) |
+| `signUpWithEmail` | `POST /api/apps/{slug}/auth/email/signup` | 이메일 가입 (201, body 에 `proofToken` 필수) |
 | `signInWithEmail` | `POST /api/apps/{slug}/auth/email/signin` | 이메일 로그인 |
 | `signInWithGoogle` | `POST /api/apps/{slug}/auth/google` | Google ID token 검증 |
 | `signInWithApple` | `POST /api/apps/{slug}/auth/apple` | Apple identity token 검증 |
