@@ -176,7 +176,7 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
 
 **짝 백엔드 DTO**: `TotpLoginRequest{ twoFactorToken, code }`. `code` 는 6자리 TOTP 또는 8자리 backup code 모두 허용 (백엔드가 자동 분기).
 
-**TOTP 등록 (Setup)**: 서버엔 `AuthPort.setupTotp` / `verifyAndEnableTotp` / `disableTotp` **서비스 메서드만 있고 HTTP 엔드포인트(컨트롤러 매핑)는 아직 노출돼 있지 않아요** — 표준 제공은 `/2fa/login` 2단계 로그인 흐름까지예요. TOTP 등록 화면 + 엔드포인트 노출은 파생 레포 책임.
+**TOTP 등록 (Setup)**: 백엔드엔 이미 setup (`POST /me/2fa/setup`) · verify (`POST /me/2fa/verify`) · disable (`POST /me/2fa/disable`) **HTTP 엔드포인트가 노출돼 있어요** (모두 인증 필요). 다만 **Flutter 표준 화면 / `AuthService` 메서드는 미구현** — 표준 제공은 `/2fa/login` 2단계 로그인 흐름까지예요. TOTP 등록 UI + 위 엔드포인트 호출은 파생 레포에서 추가.
 
 ---
 
@@ -320,6 +320,9 @@ Apple 사용자가 "Hide My Email" 을 선택하면 첫 로그인 후 identity t
 | `requestPasswordReset` | `POST /api/apps/{slug}/auth/password-reset/request` | 재설정 메일 발송 (204) |
 | `confirmPasswordReset` | `POST /api/apps/{slug}/auth/password-reset/confirm` | 토큰으로 재설정 (204) |
 | `withdraw` | `POST /api/apps/{slug}/auth/withdraw` | 회원 탈퇴 (인증 필요, 204) |
+| _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/me/2fa/setup` | TOTP 등록 시작 (인증 필요, 200) |
+| _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/me/2fa/verify` | TOTP 코드 검증 + 활성화 (인증 필요, 200) |
+| _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/me/2fa/disable` | 2FA 해제 (인증 필요, 204) |
 
 > 백엔드 `PATCH /api/apps/{slug}/auth/password` (인증 비번 변경) 는 contract에 있지만 `AuthService` 메서드는 미구현 (파생 레포에서 필요 시 직접 호출).
 
