@@ -102,14 +102,14 @@ await deviceRegistration.unregister(savedDeviceId);
 
 ## 알림 흐름 결합
 
-디바이스가 등록돼야 백엔드가 푸시를 보낼 대상을 결정해요. 알림 채널 (push/email) 별 toggle 은 [`notification-preferences.md`](./notification-preferences.md) 참조.
+디바이스가 등록돼야 백엔드가 푸시를 보낼 대상을 결정해요. 알림 채널 (push/email) 별 toggle 은 [`notification-settings.md`](./notification-settings.md) 참조.
 
 ```
 NotificationsKit.init()
   → FCM 토큰 획득
     → DeviceRegistration.register(pushToken)        ← 본 문서
       → 알림 발송 시 백엔드가 device.pushToken 로 발송
-        → kind 별 NotificationPreferences 가 ON 일 때만 발송
+        → kind 별 NotificationSettings 가 ON 일 때만 발송
 ```
 
 ---
@@ -122,6 +122,6 @@ NotificationsKit.init()
 
 ## 관련 문서
 
-- [`notification-preferences.md`](./notification-preferences.md) — kind 별 push/email toggle
+- [`notification-settings.md`](./notification-settings.md) — kind 별 push/email toggle
 - [`response-schema.md`](./response-schema.md) — `ApiResponse<T>` 래퍼
 - [짝 백엔드 `DeviceController`](https://github.com/storkspear/template-spring/blob/main/core/core-device-impl/src/main/java/com/factory/core/device/impl/controller/DeviceController.java)

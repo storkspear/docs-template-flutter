@@ -36,9 +36,12 @@ Authorization: Bearer <access_token>
     "id": 42,
     "email": "user@example.com",
     "displayName": "홍길동",
+    "nickname": "gildong",
     "emailVerified": true,
     "role": "user",
-    "createdAt": "2026-04-15T03:21:00Z"
+    "isPremium": false,
+    "createdAt": "2026-04-15T03:21:00Z",
+    "updatedAt": "2026-04-15T03:21:00Z"
   },
   "error": null
 }
@@ -68,7 +71,7 @@ Content-Type: application/json
 
 - **`null` 필드는 유지**: 본문에 포함되지 않은 필드는 변경 안 됨.
 - **명시적 `null` 도 유지** (clear 의도가 아님): 짝 백엔드는 PATCH 의미를 "absent = no-op" 로 해석.
-- 변경 불가 필드 (id, email, emailVerified, role, createdAt) 는 본문에 포함해도 무시.
+- 변경 불가 필드 (id, email, emailVerified, role, isPremium, createdAt, updatedAt) 는 본문에 포함해도 무시. (`isPremium` 은 결제/구독 상태, `updatedAt` 은 서버가 자동 갱신.)
 
 ### Response
 
@@ -80,9 +83,12 @@ Content-Type: application/json
     "id": 42,
     "email": "user@example.com",
     "displayName": "홍길동(수정)",
+    "nickname": "gildong",
     "emailVerified": true,
     "role": "user",
-    "createdAt": "2026-04-15T03:21:00Z"
+    "isPremium": false,
+    "createdAt": "2026-04-15T03:21:00Z",
+    "updatedAt": "2026-04-16T09:10:00Z"
   },
   "error": null
 }
