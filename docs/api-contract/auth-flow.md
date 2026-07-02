@@ -207,21 +207,29 @@ AuthKit.buildRedirect → /login 라우터 경로로 이동
 ## Refresh 실패 → signOut
 
 ```
+원 요청 401 (CMN_007) → AuthInterceptor 가 자동 refresh 시도
+  ↓
 refresh 응답: 401 { error: { code: "ATH_002" or "ATH_003" } }
   ↓ (refresh token 만료 또는 무효)
-AuthInterceptor 가 catch → ViewModel 로 401 전파
+AuthService.refreshToken() 의 `on ApiException` 이 감지
   ↓
-ViewModel 의 catch 에서 ApiException.isRefreshTokenExpired 또는
-  isRefreshTokenInvalid 감지
+authService.signOut() **직접 호출** (refresh 소유자가 정리 책임)
   ↓
-authService.signOut() 호출
+TokenStorage.clearTokens() + authState.emit(unauthenticated)
   ↓
-TokenStorage.clearTokens()
-  ↓
-authState.emit(unauthenticated) → /login 라우터로 리다이렉트
+원 요청은 원래의 401 을 그대로 throw → 라우터가 unauthenticated 상태를 보고 /login 리다이렉트
 ```
 
-**인터셉터가 signOut 직접 호출 금지** — ViewModel 이 판단 (저장 안 된 입력 등 보호).
+**refresh 실패 시 signOut 은 `AuthService.refreshToken()` 이 직접 수행합니다.** refresh 는
+전용 Dio(`ApiClient.postRefresh`)로 나가며, 실패 시 곧바로 토큰을 정리하고 `false` 를
+반환해요. `AuthInterceptor` 는 refresh 가 false 면 원 401 을 그대로 전파할 뿐 signOut 을
+직접 호출하지 않습니다 — refresh 흐름의 소유자(AuthService)가 단일 지점에서 정리하도록 한
+설계예요.
+
+> `ApiException` 의 `isRefreshTokenExpired`/`isRefreshTokenInvalid` 등 의미 getter 는
+> 파생 레포의 ViewModel 이 401 을 세분 처리(예: 저장 안 된 입력 보호 후 수동 signOut)하고
+> 싶을 때 쓰라고 노출한 **공개 API** 예요. 템플릿 기본 흐름은 위처럼 AuthService 가 자동
+> 처리하므로 이 getter 들을 쓰지 않습니다.
 
 ---
 

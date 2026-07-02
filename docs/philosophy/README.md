@@ -193,7 +193,7 @@ ADR-004 (YAML ↔ Dart 수동 동기화 + CI 검증)
 
 - [`ADR-019 · 솔로 친화적 운영 (Debug 폴백 · 관리형 서비스 선호)`](./adr-019-solo-friendly.md)
 - [`ADR-020 · 이중 난독화 + SSL 핀닝 + Keychain 정책`](./adr-020-security-hardening.md)
-- [`ADR-021 · Multi-Recipe 구성 (local-only / local-notifier / backend-auth)`](./adr-021-multi-recipe.md)
+- [`ADR-021 · Multi-Recipe 구성 (local-only / local-notifier / backend-auth / social-auth)`](./adr-021-multi-recipe.md)
 - [`ADR-022 · very_good_analysis 도입 + 컨텍스트 기반 큐레이션`](./adr-022-very-good-analysis.md)
 
 ---

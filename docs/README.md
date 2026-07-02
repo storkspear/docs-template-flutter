@@ -84,6 +84,9 @@
 - [`Search Request`](./api-contract/search-request.md) — SearchRequestBuilder 연산자
 - [`Error Codes`](./api-contract/error-codes.md) — ErrorCode enum 동기화
 - [`Auth Flow`](./api-contract/auth-flow.md) — JWT · appSlug 흐름
+- [`User Profile`](./api-contract/user-profile.md) — `/users/me` 조회 · PATCH
+- [`Devices`](./api-contract/devices.md) — 푸시 기기 등록 / 해제
+- [`Notification Settings`](./api-contract/notification-settings.md) — kind 별 채널 toggle
 
 ## 인프라 / 운영 (infra/)
 
@@ -101,7 +104,7 @@
 ## 참조 (reference/)
 
 - [`Scripts`](./reference/scripts.md) — `scripts/*.sh` 사용법
-- [`Recipes`](./reference/recipes.md) — 3가지 recipe (local-only / local-notifier / backend-auth)
+- [`Recipes`](./reference/recipes.md) — 4가지 recipe (local-only / local-notifier / backend-auth / social-auth)
 - [`Glossary`](./reference/glossary.md) — 용어 사전 (파생 레포 · Kit · Recipe 등)
 - [`Migration from Template`](./reference/migration-from-template.md) — cherry-pick 전파 규칙
 
