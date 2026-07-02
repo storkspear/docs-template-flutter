@@ -257,7 +257,8 @@ Dart enum 을 쓰면 `ErrorCode.invalidCredentials.name` 같은 방식이 가능
 
 ### 부정적 결과
 
-- **두 레포 수동 동기화**: 에러 코드 추가 · 스키마 변경 시 양쪽 파일을 사람이 맞춰야 해요. 자동화 없음. 단기 실수 위험.
+- **두 레포 수동 동기화**: 에러 코드 추가 · 스키마 변경 시 양쪽 파일을 사람이 맞춰야 해요. 결정 당시엔 자동화 없음. 단기 실수 위험.
+  - **갱신 (2026-07)**: 이후 계약 스냅샷 자동화가 도입돼 이 리스크는 완화됐어요 — backend 가 소스에서 `contract-snapshot.json` 을 생성(CI staleness 게이트)하고, 본 레포의 `test/contract/contract_test.dart` 가 "클라 참조 ⊆ 스냅샷" 을 `flutter test` 에서 검증하며, `contract-sync.yml` 이 매일 스냅샷 변경을 auto-PR 로 가져와요 (자동 머지 없음 — 사람 리뷰 필수). 수동 동기화 원칙 자체는 유지.
 - **`ApiResponse` 의 nullable 혼란**: `data` 는 nullable, `error` 도 nullable 이라 **논리적으로 4가지 조합** (둘 다 있음 / 둘 다 없음 등) 이 컴파일러 입장에선 가능해 보여요. 불변량은 설계 문서에만 명시됨. 방어적 체크가 관용적으로 들어가요.
 - **generic parsing 의 cold start 감각**: 매 DTO 에 `fromJson` · `fromItem` 콜백 넘기는 관용이 처음엔 번잡하게 느껴져요. `freezed` 에 익숙한 개발자가 특히 그래요.
 - **팀이 커지면 재고 필요**: 백엔드팀이 분리되는 순간 이 수준의 결합은 깨져요. 그때는 mapper 층(DTO ↔ 도메인 분리) 도입을 재고해야 해요.

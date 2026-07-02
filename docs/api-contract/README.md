@@ -31,10 +31,10 @@
 
 ### 서버 변경 시
 
-1. 백엔드의 `ApiResponse.java` · `ErrorCode.java` 수정
+1. 백엔드의 `ApiResponse.java` · `ErrorCode.java` 수정 → `tools/contract-snapshot/gen-snapshot.sh` 재실행·커밋 (안 하면 backend CI 가 staleness 로 FAIL)
 2. 프론트의 `api_response.dart` · `error_code.dart` **동시** 수정
 3. 두 레포에 **같은 커밋 메시지** 로 PR
-4. 통합 테스트에서 스키마 일치 확인
+4. `flutter test` 의 계약 크로스체크(`test/contract/contract_test.dart`, 클라 참조 ⊆ 스냅샷)가 어긋남을 잡아요. 스냅샷 복사본 갱신은 `contract-sync.yml` 이 매일 auto-PR 로도 수행 (자동 머지 없음)
 
 ### 프론트 변경 시
 

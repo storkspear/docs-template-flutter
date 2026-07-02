@@ -35,10 +35,26 @@
 
 > 코드는 `<도메인약어>_<번호>` prefix 형식을 사용해요 (`CMN_*` = 공통, `ATH_*` = 인증). 전체 매핑은 [`error-codes.md`](./error-codes.md) 참조.
 
+### 본문 없는 성공 (204 No Content)
+
+verify-email · password-reset · withdraw · `DELETE /devices/{id}` · notification-settings PATCH 처럼 돌려줄 데이터가 없는 성공은 **204 + 빈 바디**로 응답해요.
+
+```http
+HTTP/1.1 204
+Content-Type: application/json
+
+(바디 없음)
+```
+
+> ⚠️ **wire 에는 JSON 이 아예 실리지 않아요.** 서버 코드는 `ApiResponse.empty()` 를 반환하지만 Tomcat 이 204 응답의 엔티티 바디를 제거하므로 `{"data": null, "error": null}` 같은 JSON 이 전송되지 않아요 (실측 확인). Dio 는 빈 바디를 `null` 로 디코드해요.
+
+`ApiClient` 가 빈 바디를 `ApiResponse.empty()` (data · error 모두 null, `isSuccess == true`) 로 정규화하므로 ViewModel 은 `isSuccess` 로만 판단하면 돼요. `response.data as Map<String, dynamic>` 같은 직접 캐스팅은 금지 — 204 에서 TypeError 가 나고, 이 예외는 `on DioException` 을 우회해 그대로 전파돼요.
+
 ### 규칙
 
 - `data` 와 `error` 는 **동시에 존재하지 않음**
 - 성공 시 `error: null`, 실패 시 `data: null`
+- **본문 없는 성공(204)은 바디 자체가 없음** — `ApiClient` 가 `ApiResponse.empty()` 로 정규화
 - `details` 는 선택 — 검증 에러 · 부가 정보
 
 ### Dart
@@ -51,6 +67,9 @@ class ApiResponse<T> {
   bool get isError => error != null;
 
   factory ApiResponse.fromJson(Map<String, dynamic> json, T Function(dynamic)? fromData);
+
+  /// 본문 없는 성공 (204 No Content) — data/error 모두 null, isSuccess == true
+  const ApiResponse.empty();
 }
 
 class ApiError {
