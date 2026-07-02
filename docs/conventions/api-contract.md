@@ -1,6 +1,6 @@
 # API Contract — 백엔드 계약 요약
 
-`template-spring` 백엔드와의 1:1 계약 한눈 요약. 상세는 [`docs/api-contract/`](../api-contract/) 의 4개 파일 참조.
+`template-spring` 백엔드와의 1:1 계약 한눈 요약. 상세는 [`docs/api-contract/`](../api-contract/) 의 7개 파일 참조.
 
 > 본 문서는 **conventions 영역의 진입점**이에요. "API 호출 코드 작성 시 따라야 할 것 한 페이지 요약" 목적. 깊이 들어가려면 아래 cross-link 의 전용 문서로.
 

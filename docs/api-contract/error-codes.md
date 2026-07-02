@@ -27,6 +27,7 @@
 | `CMN_007` | 401 | `ErrorCode.accessTokenExpired` | **JWT access token 만료** → refresh 시도 트리거 |
 | `CMN_008` | 401 | `ErrorCode.accessTokenInvalid` | JWT access token 무효 (서명 불일치/형식 오류) |
 | `CMN_009` | 503 | `ErrorCode.featureDisabled` | 기능 비활성화 (lite mode 등 feature toggle) |
+| `CMN_010` | 426 | `ErrorCode.upgradeRequired` | 앱 버전이 서버 최소 요구 버전 미만 (min-version 게이트). `ApiException.isUpgradeRequired` → 강제 업데이트 화면 유도 |
 | `CMN_429` | 429 | `ErrorCode.rateLimitExceeded` | Rate limit 초과. `Retry-After` 헤더 + `details.limit/window` |
 
 ### 인증 도메인 — `ATH_*` (AuthError)

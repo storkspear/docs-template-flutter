@@ -163,13 +163,17 @@ flutter build appbundle \
 
 ```bash
 echo | openssl s_client -servername api.example.com -connect api.example.com:443 2>/dev/null \
-  | openssl x509 -pubkey -noout \
-  | openssl pkey -pubin -outform DER \
+  | openssl x509 -outform der \
   | openssl dgst -sha256 -binary \
   | openssl enc -base64
 ```
 
-출력: `sha256/BASE64_HASH=`
+출력을 `sha256/` prefix 를 붙여 사용: `sha256/BASE64_HASH=`
+
+> ⚠️ 핀은 **leaf 인증서 전체 DER** 의 SHA256 이에요 (SPKI 아님) — 런타임의
+> `SslPinning.computePinFromCert(cert.der)` 와 같은 방식. SPKI(`-pubkey`) 로
+> 뽑은 핀은 절대 일치하지 않아요. 전체 DER 핀은 인증서 갱신 시 같은 키라도
+> 값이 바뀌므로 갱신 전에 다음 인증서 핀을 백업으로 함께 배포하세요.
 
 ### 최소 2개 핀 유지
 
