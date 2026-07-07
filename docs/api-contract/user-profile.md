@@ -14,6 +14,7 @@
 |---|---|---|---|
 | GET | `/api/apps/{slug}/users/me` | 필수 | `ApiResponse<UserProfile>` |
 | PATCH | `/api/apps/{slug}/users/me` | 필수 | `ApiResponse<UserProfile>` |
+| POST | `/api/apps/{slug}/users/me/activity` | 필수 | `204 No Content` |
 
 ---
 
@@ -93,6 +94,35 @@ Content-Type: application/json
   "error": null
 }
 ```
+
+---
+
+## 활동 ping (POST)
+
+포그라운드 복귀 시 호출하는 초경량 인증 엔드포인트예요. 본문 로직은 없고, **인증 통과 자체가 목적**이에요 — 백엔드의 `UserActivityTrackingFilter` 가 이 요청에서 `(user_id, 오늘)` 활동을 기록해요. 순수-로컬 세션(다른 API 호출 없이 캐시된 화면만 보는 경우)도 DAU/MAU 파생에서 누락되지 않게 하려는 설계예요.
+
+### Request
+
+```
+POST /api/apps/{slug}/users/me/activity
+Authorization: Bearer <access_token>
+```
+
+바디 없음.
+
+### Response
+
+```
+204 No Content
+```
+
+### 클라이언트 정책
+
+- Flutter `ActivityPinger`(`lib/kits/auth_kit/activity_pinger.dart`)가 **로그인 상태에서만**, 마지막 성공 시각 기준 **6시간 스로틀**로 호출해요.
+- 트리거는 부팅 1회(`ActivityPingStep`, fire-and-forget) + 포그라운드 복귀(`didChangeAppLifecycleState(resumed)`) 두 곳이에요.
+- 실패는 조용히 무시하고 재시도 로직은 없어요 — 다음 자연 트리거에서 다시 시도돼요.
+
+> `ApiEndpoints.activityPing` 은 `userMe`(상대 경로) 기준 `$userMe/activity` 로 계산돼요 — device/user 와 동일하게 `ApiClient` 의 `/api/apps/{slug}` 자동 prefix 를 타요.
 
 ---
 
