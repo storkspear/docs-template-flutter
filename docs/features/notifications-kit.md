@@ -38,8 +38,8 @@ await AppKits.install([
 
 | 항목 | 설명 |
 |------|------|
-| `ScheduledAlertService` | **로컬 예약 알림 인터페이스** — `init` · `schedule` · `cancel` |
-| `LocalScheduledAlertService` | `flutter_local_notifications` 기반 기본 구현 (NotificationsKit 의 default) |
+| `ScheduledAlertService` | **로컬 예약 알림 인터페이스** — `init` · `scheduleAt` · `scheduleDaily` · `cancel` · `cancelAll` · `getPending` |
+| `LocalScheduledAlertService` | `flutter_local_notifications` 기반 구현 — 로컬 전용 앱의 권장 구현 (`service:` 인자로 명시 전달, default 아님) |
 | `NotificationService` | **FCM 푸시 인터페이스** — `init` · `getToken` · `onTokenRefresh` · `onForegroundMessage` · `onNotificationTap` (구현은 파생 레포에서) |
 | `NotificationPermission` | 알림 권한 상태 enum + 헬퍼 |
 
@@ -81,7 +81,7 @@ await ref.read(scheduledAlertServiceProvider).cancelAll();
 ```dart
 // 토큰 등록 (로그인 시)
 final token = await FirebaseMessaging.instance.getToken();
-await ref.read(deviceRegistrationProvider).register(token!);
+await ref.read(deviceRegistrationProvider).register(pushToken: token!);
 
 // 포그라운드 메시지 수신
 FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -95,13 +95,13 @@ FirebaseMessaging.onMessage.listen((RemoteMessage message) {
 
 ### 로컬 알림만
 
-- [ ] `ios/Runner/Info.plist` 의 `UIBackgroundModes` 에 `fetch` · `remote-notification` 추가
 - [ ] Android: `AndroidManifest.xml` 에 `POST_NOTIFICATIONS` 권한 (API 33+)
 - [ ] `permissions_kit` 으로 권한 요청 UI
 
 ### FCM 푸시
 
 - [ ] [Firebase Console](https://console.firebase.google.com) 프로젝트 생성
+- [ ] iOS: `ios/Runner/Info.plist` 의 `UIBackgroundModes` 에 `remote-notification` 추가 (백그라운드 푸시 수신 시 — 로컬 예약 알림만 쓰면 불필요)
 - [ ] Android: `google-services.json` → `android/app/`
 - [ ] iOS: `GoogleService-Info.plist` → `ios/Runner/`, APNs key 업로드
 - [ ] 백엔드 `core-device-impl` 에 FCM 서버 키 설정

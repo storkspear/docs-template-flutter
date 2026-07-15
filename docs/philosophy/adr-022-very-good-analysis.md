@@ -4,11 +4,11 @@
 
 ## 결론부터
 
-기본 `flutter_lints` (9 룰) → `very_good_analysis` (100+ 룰) 로 정적 분석 룰셋을 강화하고, 솔로 앱 컨텍스트에 과한 20개 룰은 의식적으로 disable 했어요. 도입 직후 1,367개 위반이 떴고 그중 633개는 `dart fix --apply` 로 자동 수정. 정리 과정에서 **진짜 버그 1건** (`AppKits.install` 의 `_rollback` await 누락) 발견. 최종 0 이슈로 마무리.
+기본 `flutter_lints` (약 100 룰) + 커스텀 9 룰이던 기존 설정 → `very_good_analysis` (약 200 룰) 로 정적 분석 룰셋을 강화하고, 솔로 앱 컨텍스트에 과한 20개 룰은 의식적으로 disable 했어요. 도입 직후 1,367개 위반이 떴고 그중 633개는 `dart fix --apply` 로 자동 수정. 정리 과정에서 **진짜 버그 1건** (`AppKits.install` 의 `_rollback` await 누락) 발견. 최종 0 이슈로 마무리.
 
 ## 왜 이런 고민이 시작됐나?
 
-기본 `flutter_lints` 는 핵심 안전 룰 9개만 활성화돼 있어요. 이걸로는:
+기존 설정은 기본 `flutter_lints` (약 100 룰) 에 커스텀 룰 9개를 얹은 수준이었어요. 이걸로는:
 
 - 회피 가능한 잠재 버그 (제네릭 추론 실패, unawaited Future, 광범위 catch) 가 통과
 - 파생 레포마다 다른 코딩 스타일 누적 위험
@@ -34,7 +34,7 @@
 
 ## 고민했던 대안들
 
-### Option 1 — flutter_lints 유지 (기본 9 룰 + 커스텀 9 룰)
+### Option 1 — flutter_lints 유지 (기본 약 100 룰 + 커스텀 9 룰)
 
 - **장점**: 변경 0. 기존 코드 무수정. 룰 위반 거의 없음.
 - **단점**: 잠재 버그 통과. 룰 추가 시 매번 의식적 결정 필요 — 결국 누락.
@@ -116,14 +116,14 @@ analyzer:
 
 ## 이 선택이 가져온 것
 
-### 긍정
+### 긍정적 결과
 
-- **잠재 버그 1건 발견** — `AppKits.install` 의 `_rollback` await 누락 (line 53, 65). cleanup 비동기 작업이 throw 전 미완료될 수 있는 문제. 같은 함수 line 75 에는 이미 `await _rollback` 이 있어 일관성 회복.
+- **잠재 버그 1건 발견** — `AppKits.install` 의 `_rollback` await 누락 (line 54, 66). cleanup 비동기 작업이 throw 전 미완료될 수 있는 문제. 같은 함수 line 76 에는 이미 `await _rollback` 이 있어 일관성 회복.
 - **타입 안전 강화** — Dio `response.data` 캐스트 9곳에 `as Map<String, dynamic>` 명시. 런타임 동작은 동일하지만 의도가 코드에 표현됨.
 - **자동 강제** — pre-push hook + CI 모두 강한 룰셋 통과 필요. 의지력 의존 제거.
 - **파생 레포 상속** — 모든 파생 레포가 동일 엄격도 자동 적용. 신규 앱이 자동으로 "큐레이션된 룰셋" 위에서 시작.
 
-### 부정
+### 부정적 결과
 
 - **diff 폭발 1회** — 142 파일 변경 (대부분 `dart fix --apply` 자동, import 정렬/생성자 위치 등). 머지 부담은 1회성.
 - **disable 결정의 주관성** — 20개 룰 disable 사유가 본인 판단. 미래에 "다시 켜볼까?" 재검토 여지 있음 (예: 팀 합류 시 `public_member_api_docs` 재고).
@@ -151,16 +151,16 @@ analyzer:
 
 ## 관련 사례 (Prior Art)
 
-- **Very Good Ventures** — `very_good_analysis` 패키지 (Flutter 커뮤니티 사실상 표준급 강한 룰셋)
-- **Bloc 공식 템플릿** — VGV 룰셋 채택
-- **Google `lints` 패키지** — Dart 팀 공식이지만 더 가벼움 (이 ADR과 다른 선택지)
-- **Airbnb JavaScript Style Guide** — "강한 룰 + 사유 주석" 패턴의 원형 (다른 생태계지만 사상 유사)
+- [very_good_analysis (Very Good Ventures)](https://pub.dev/packages/very_good_analysis) — Flutter 커뮤니티 사실상 표준급 강한 룰셋
+- [Bloc 공식 라이브러리](https://github.com/felangel/bloc) — VGV 룰셋 채택 사례
+- [Google lints 패키지](https://pub.dev/packages/lints) — Dart 팀 공식이지만 더 가벼움 (이 ADR과 다른 선택지)
+- [Airbnb JavaScript Style Guide](https://github.com/airbnb/javascript) — "강한 룰 + 사유 주석" 패턴의 원형 (다른 생태계지만 사상 유사)
 
 ## Code References
 
 - [`analysis_options.yaml`](https://github.com/storkspear/template-flutter/blob/main/analysis_options.yaml) — 룰셋 include + disable 사유 (yaml 주석)
 - [`pubspec.yaml`](https://github.com/storkspear/template-flutter/blob/main/pubspec.yaml) — `very_good_analysis` dev_dependency
-- [`lib/core/kits/app_kits.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/kits/app_kits.dart) — 발견된 버그 수정 (line 53, 65 `await _rollback`)
+- [`lib/core/kits/app_kits.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/kits/app_kits.dart) — 발견된 버그 수정 (line 54, 66 `await _rollback`)
 - [`lib/kits/backend_api_kit/api_client.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/api_client.dart) — 타입 캐스트 명시 (`as Map<String, dynamic>`)
 
 **관련 ADR**:
@@ -176,4 +176,4 @@ analyzer:
 | 방향 | 문서 | 한 줄 |
 |---|---|---|
 | ← 이전 | [`ADR-021 · Multi-Recipe`](./adr-021-multi-recipe.md) | 동일 테마 (운영 & 배포) |
-| → 다음 | (없음, 최신 ADR) | |
+| → 다음 | [`ADR-023 · Typeface Registry`](./adr-023-typeface-registry.md) | 폰트도 Palette 패턴으로 — 앱별 타이페이스 교체 |

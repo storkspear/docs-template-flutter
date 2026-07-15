@@ -113,7 +113,11 @@ app:
 
 kits:
   backend_api_kit: {}
-  auth_kit: {}
+  auth_kit:
+    providers:
+      - email
+      - google
+      - apple
   notifications_kit: {}
   device_info_kit: {}
   update_kit: {}
@@ -251,7 +255,7 @@ Status: OK 확인.
 
 ### "로컬 + 서버 백업 옵션" 같은 혼합
 
-3개 Recipe 중 어느 것과도 정확히 안 맞음. 전략:
+4개 Recipe 중 어느 것과도 정확히 안 맞음. 전략:
 
 1. **가장 가까운 것 선택** — 예: `local-only-tracker`
 2. **Kit 추가** — `backend_api_kit` · `auth_kit` (옵션 기능)

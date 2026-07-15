@@ -4,7 +4,7 @@
 
 ## 결론부터
 
-이 템플릿은 **하나의 Flutter 프로젝트로 네 가지 유형의 앱** 을 만들 수 있게 설계됐어요 — 완전 로컬 앱 · 로컬 알림 앱 · 백엔드 연동 앱 · 한국 시장 소셜 로그인 앱. 각 유형은 **활성화하는 Kit 조합이 다름**. `recipes/*.yaml` 가 이 조합을 선언적으로 제공 → 파생 레포가 원하는 recipe 를 복사 → `app_kits.yaml` 로 사용. Kit 조합 외엔 모두 공통이라 templ 유지 비용이 단일.
+이 템플릿은 **하나의 Flutter 프로젝트로 네 가지 유형의 앱** 을 만들 수 있게 설계됐어요 — 완전 로컬 앱 · 로컬 알림 앱 · 백엔드 연동 앱 · 한국 시장 소셜 로그인 앱. 각 유형은 **활성화하는 Kit 조합이 다름**. `recipes/*.yaml` 가 이 조합을 선언적으로 제공 → 파생 레포가 원하는 recipe 를 복사 → `app_kits.yaml` 로 사용. Kit 조합 외엔 모두 공통이라 template 유지 비용이 단일.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -56,7 +56,7 @@ Kit 조립 개념 포기. 모든 기능이 기본 포함. 안 쓰는 건 그냥 
 - **단점 3**: `app_kits.yaml` 의 의도 (선택 조립) 가 무의미.
 - **탈락 이유**: 압력 A 의 "반복 작업" 을 해결하지만 바이너리 · 권한 낭비.
 
-### Option 3 — Single template + 3 recipes ★ (채택)
+### Option 3 — Single template + 4 recipes ★ (채택)
 
 Template 하나. `recipes/` 에 **대표 유형별 `app_kits.yaml` 샘플**. 파생 레포가 recipe 하나 골라 복사 → 필요 시 커스터마이징.
 
@@ -72,7 +72,7 @@ Template 하나. `recipes/` 에 **대표 유형별 `app_kits.yaml` 샘플**. 파
 #### 1. local-only-tracker (완전 로컬)
 
 ```yaml
-# recipes/local-only-tracker.yaml 전체
+# recipes/local-only-tracker.yaml 발췌 — 상단 안내 주석은 축약
 # 완전 로컬 앱 — 인증·백엔드 없음, Drift + 온보딩 + 차트.
 # update_kit 생략: 완전 로컬 앱 의도.
 app:
@@ -97,7 +97,7 @@ kits:
 #### 2. local-notifier-app (로컬 알림)
 
 ```yaml
-# recipes/local-notifier-app.yaml 전체
+# recipes/local-notifier-app.yaml 발췌 — 상단 안내 주석은 축약
 # 로컬 알림 중심 앱 — 인증 없음, DB + 알림 + 백그라운드 + 차트 + 광고.
 app:
   name: Notifier App
@@ -126,7 +126,7 @@ kits:
 #### 3. backend-auth-app (백엔드 연동)
 
 ```yaml
-# recipes/backend-auth-app.yaml 전체
+# recipes/backend-auth-app.yaml 발췌 — 상단 안내 주석은 축약
 # 백엔드 API + JWT 인증 앱.
 app:
   name: Authed App
@@ -136,7 +136,11 @@ app:
 
 kits:
   backend_api_kit: {}
-  auth_kit: {}
+  auth_kit:
+    providers:
+      - email
+      - google
+      - apple
   notifications_kit: {}
   device_info_kit: {}
   update_kit: {}
@@ -256,10 +260,10 @@ YAML 의 Kit 선언에 파라미터 넣을 수 있음 (`local_db_kit: { database
 
 ### 부정적 결과
 
-- **정확히 맞는 recipe 없는 경우**: "로컬 + 서버 옵션" 같은 혼합은 3개 중 정확한 선택 안 됨. 커스터마이징 필요.
+- **정확히 맞는 recipe 없는 경우**: "로컬 + 서버 옵션" 같은 혼합은 4개 중 정확한 선택 안 됨. 커스터마이징 필요.
 - **recipe 유지 부담**: 새 Kit 추가 시 4개 recipe 중 관련된 것에 반영 필요. 예: `feature_flag_kit` 추가 시 backend-auth-app · social-auth-app 에 포함?
 - **YAML 파라미터의 제한**: YAML 엔 `database_class: AppDatabase` 같은 단순 값만. Dart 객체 (e.g., `update_kit` 의 `service: NoUpdateAppUpdateService()`) 는 `main.dart` 에서만. 두 곳 수동 동기화 피로 (ADR-004).
-- **신규 유형 발견 시 recipe 추가?**: 4번째 유형 필요하면 recipe 추가 고민. 현재 3개로 제한이지만 성장 시 조정.
+- **신규 유형 발견 시 recipe 추가?**: 새 유형이 필요하면 recipe 추가 고민 (교훈 1 의 임계점 조건). 현재 4개로 제한이지만 성장 시 조정.
 
 ## 교훈
 

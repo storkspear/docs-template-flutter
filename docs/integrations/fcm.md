@@ -8,7 +8,7 @@
 
 ## 0. 본 템플릿의 푸시 전략
 
-- **Default**: `DebugNotificationService` (콘솔만 — 푸시 안 보냄). FCM 미사용 앱은 손댈 것 없음.
+- **Default**: `DebugNotificationService` (콘솔만 — 푸시 안 보냄). FCM 미사용 앱은 손댈 것 없어요.
 - **FCM 활성**: 파생 레포에서 `FcmNotificationService` (또는 동등 구현) 작성 후 `notificationServiceProvider` override.
 - **백엔드 통합**: `backend_api_kit/device_registration.dart` 의 `DeviceRegistration` 으로 FCM 토큰을 백엔드 `/api/apps/{appSlug}/devices` 에 등록 — 백엔드가 사용자별 토큰 관리.
 
@@ -68,27 +68,38 @@ APNs 인증서 / Auth Key 를 Firebase 콘솔에 업로드 (Project Settings →
 
 ## 4. Flutter 측 구현
 
-`lib/kits/notifications_kit/` 에 `fcm_notification_service.dart` 작성 (예시 골격):
+`lib/kits/notifications_kit/` 에 `fcm_notification_service.dart` 작성. [`NotificationService`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/notifications_kit/notification_service.dart) 인터페이스의 7개 멤버 (`init` · `getToken` · `onTokenRefresh` · `onForegroundMessage` · `onNotificationTap` · `showLocal` · `dispose`) 를 구현해요 — 인터페이스 파일의 doc 주석에 있는 예시 골격:
 
 ```dart
 class FcmNotificationService implements NotificationService {
-  Future<String?> getToken() async {
-    await Firebase.initializeApp();
-    return FirebaseMessaging.instance.getToken();
+  final FirebaseMessaging _fcm = FirebaseMessaging.instance;
+
+  @override
+  Future<void> init() async {
+    await _fcm.requestPermission();
+    FirebaseMessaging.onMessage.listen(_handleForeground);
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleTap);
   }
 
-  Stream<RemoteMessage> get foregroundMessages =>
-      FirebaseMessaging.onMessage;
+  @override
+  Future<String?> getToken() => _fcm.getToken();
+
+  @override
+  Stream<String> get onTokenRefresh => _fcm.onTokenRefresh;
+
+  // onForegroundMessage / onNotificationTap / showLocal / dispose 도 구현
 }
 ```
 
-`lib/common/providers.dart` 에서 override:
+override 는 `lib/main.dart` 의 `_bootstrap()` 에서 ProviderContainer 생성 시 추가해요 (기본 Debug 구현은 `lib/common/providers.dart` 의 `notificationServiceProvider` 에 정의돼 있어요):
 
 ```dart
-ProviderContainer(
+// lib/main.dart _bootstrap() 발췌 — overrides 에 한 줄 추가
+final container = ProviderContainer(
   overrides: [
+    ...AppKits.allProviderOverrides,
+    prefsStorageProvider.overrideWithValue(prefsStorage),
     notificationServiceProvider.overrideWithValue(FcmNotificationService()),
-    // ...
   ],
 );
 ```

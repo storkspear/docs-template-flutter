@@ -130,7 +130,7 @@ await api.get<User>('/users/me', fromData: User.fromJson);
 
 ### 설계 선택 포인트
 
-**포인트 1 — `appSlug` 는 URL 경로 _ 와 JWT 클레임 모두에 있음**  
+**포인트 1 — `appSlug` 는 URL 경로와 JWT 클레임 모두에 있음**  
 둘 다 있어야 검증이 가능. URL 만 있고 JWT 에 없으면 **변조 가능**, JWT 만 있고 URL 에 없으면 **라우팅 · 로깅 혼란**. 양쪽 확정이 계약.
 
 **포인트 2 — 프론트는 slug 관리 없음**  

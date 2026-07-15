@@ -8,7 +8,7 @@
 
 이 템플릿은 **FeatureKit 아키텍처** 기반이에요. 앱의 기능들이 독립 Kit 으로 쪼개져 있고, 앱 유형에 맞는 Kit 만 조립해서 쓰는 구조.
 
-```
+```text
 ┌─────────────────────────────────────────────────────┐
 │  main.dart + app.dart                                │
 │  (엔트리포인트 · MaterialApp)                          │
@@ -76,14 +76,14 @@
 
 ### `features/` (파생 레포 영역)
 
-```
+```text
 lib/features/
 ├── home/             # 템플릿은 스텁 (홈 화면 뼈대)
 └── settings/         # 템플릿은 스텁 (프로필 · 로그아웃 샘플)
 ```
 
 파생 레포가 여기에 **자기 도메인** 화면 추가:
-```
+```text
 lib/features/
 ├── home/
 ├── settings/
@@ -100,7 +100,7 @@ lib/features/
 
 **Riverpod + MVVM** — Screen 은 UI, ViewModel 은 로직.
 
-```
+```text
 사용자 클릭
   ↓
 Screen.onPressed
@@ -126,7 +126,7 @@ Screen: ref.watch 가 state 변화 감지 → 리빌드
 
 ## 네트워크 흐름 (backend_api_kit 활성 시)
 
-```
+```text
 ViewModel 이 ApiClient.get('/users/me') 호출
   ↓
 AuthInterceptor: Authorization 헤더 자동 첨부
@@ -153,7 +153,7 @@ ViewModel: try/catch 로 수신
 
 ## 부팅 시퀀스
 
-```
+```text
 main()
   ├─ Flutter 바인딩 초기화
   ├─ AppPaletteRegistry.install
@@ -212,7 +212,7 @@ derived repo 출시 운영을 위해 **iOS Build Configuration 6 + Android produ
 
 ### Bundle ID 결정 흐름
 
-```
+```text
 사용자 입력 (rename-app.sh):  com.hexator.budgetbook
                   ↓
 ios/Flutter/AppEnv-{dev,prod}.xcconfig:
@@ -232,7 +232,7 @@ Android 도 동일 원리 — `android/app/build.gradle.kts` 의 `productFlavors
 
 ### iOS Build Configuration / Scheme 구조
 
-```
+```text
 Build Configurations (6):
   Debug-dev / Release-dev / Profile-dev
   Debug-prod / Release-prod / Profile-prod
@@ -260,7 +260,7 @@ xcconfig 계층:
 
 ### Info.plist 변수 substitution
 
-```
+```text
 ios/Runner/Info.plist (committed):
   CFBundleIdentifier  = $(PRODUCT_BUNDLE_IDENTIFIER)
   GIDClientID         = $(GID_CLIENT_ID)                ← AppEnv-secrets-<env>.xcconfig 값

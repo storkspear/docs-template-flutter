@@ -98,13 +98,15 @@ Kit 의 의존성 · 필요 플러그인을 선언:
 ```yaml
 # lib/kits/auth_kit/kit_manifest.yaml
 name: auth_kit
-description: JWT 인증 + 소셜 로그인
-requires:
-  - backend_api_kit
+description: JWT 인증 + 소셜 로그인 (Google/Apple/Kakao/Naver) + 로그인 화면
 dependencies:
   - sign_in_with_apple
   - google_sign_in
+  - kakao_flutter_sdk_user
+  - flutter_naver_login
   - flutter_secure_storage
+requires:
+  - backend_api_kit
 ```
 
 ### 3. 검증 도구: `configure_app.dart`

@@ -1,6 +1,6 @@
 # local_db_kit
 
-**Drift (SQLite ORM) + 마이그레이션 BootStep + 지문 테스트**. 로컬 전용 앱 · 오프라인 우선 앱의 핵심.
+**Drift (SQLite ORM) + 마이그레이션 BootStep**. 로컬 전용 앱 · 오프라인 우선 앱의 핵심.
 
 ---
 
@@ -98,15 +98,18 @@ dart run build_runner build --delete-conflicting-outputs
 
 생성 파일: `app_database.g.dart`
 
-### 4. Provider 등록
+### 4. Provider 접근
+
+`LocalDbKit` 이 install 시점에 `databaseProvider` 를 override 해서 DB 인스턴스를 주입해요. **새 `AppDatabase()` 를 직접 만들지 마세요** — kit 이 관리하는 인스턴스와 별개로 DB 가 2개 생겨요.
 
 ```dart
-// lib/common/providers.dart (파생 레포에서 확장)
-final appDatabaseProvider = Provider<AppDatabase>((ref) {
-  final db = AppDatabase();
-  ref.onDispose(db.close);
-  return db;
-});
+// feature 에서 바로 사용
+final db = ref.watch(databaseProvider) as AppDatabase;
+
+// (권장) 타입 안전 접근용 파생 Provider — lib/common/providers.dart 에서 확장
+final appDatabaseProvider = Provider<AppDatabase>(
+  (ref) => ref.watch(databaseProvider) as AppDatabase,
+);
 ```
 
 ### 5. Repository 에서 사용
@@ -144,8 +147,8 @@ class ExpenseRepository {
 - [ ] `lib/database/app_database.dart` 작성 (DAO · 테이블)
 - [ ] `dart run build_runner build` 실행
 - [ ] `lib/main.dart` 에서 `LocalDbKit(database: () => AppDatabase())` 전달 (factory 함수)
-- [ ] 초기 실행 시 DB 파일 생성 확인 (Android: Documents, iOS: Application Support)
-- [ ] 테이블 변경 시: `schemaVersion` 올림 + `onUpgrade` 작성 + 지문 갱신
+- [ ] 초기 실행 시 DB 파일 생성 확인 (Android · iOS 모두 앱 Documents 디렉토리 — `getApplicationDocumentsDirectory()`)
+- [ ] 테이블 변경 시: `schemaVersion` 올림 + `onUpgrade` 작성
 
 ---
 
@@ -161,4 +164,4 @@ class ExpenseRepository {
 ## 관련 문서
 
 - [Drift 공식 문서](https://drift.simonbinder.eu/)
-- [`Testing Conventions`](../testing/testing-strategy.md) — 지문 테스트 상세
+- [`Testing Conventions`](../testing/testing-strategy.md) — 테스트 전략 전반

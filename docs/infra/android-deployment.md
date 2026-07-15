@@ -6,7 +6,7 @@
 
 ## 전체 흐름
 
-```
+```text
 개발자                         GitHub                    Play Console
   │                              │                          │
   │ git tag v1.0.0               │                          │
@@ -58,7 +58,7 @@
 - [Play Console](https://play.google.com/console) 에서 앱 생성
 - 서비스 계정 생성 → JSON 키 다운로드 → Google Cloud Console 에서 "Android Publisher" 권한 부여
 - 내부 테스트 track 활성화
-- 최초 1번은 **수동 업로드** 필요 (AAB 직접 업로드) — 이후 API 로 가능
+- 최초 1번은 **수동 업로드** 가 필요해요 (AAB 직접 업로드) — 이후엔 API 로 가능
 
 ---
 
@@ -195,7 +195,7 @@ Play Console 의 App Signing 에서 "Upload certificate" 가 `upload-keystore.jk
 
 ### "Package name conflict"
 
-Play Console 앱 패키지명과 Android `applicationId` 가 달라야. 새 앱 생성 시 `rename-app.sh` 결과 확인.
+Play Console 앱 패키지명과 Android `applicationId` 가 같아야 해요. 새 앱 생성 시 `rename-app.sh` 결과 확인.
 
 ---
 

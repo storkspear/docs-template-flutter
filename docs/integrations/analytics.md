@@ -36,12 +36,12 @@
 
 ## 2. 교체 방법 — `AnalyticsService` 인터페이스 활용
 
-이 템플릿은 `observability_kit` 이 `AnalyticsService` 인터페이스를 정의해두고, PostHog / Debug 두 구현체를 제공해요.
+이 템플릿은 `lib/core/analytics/` 가 `AnalyticsService` 인터페이스와 Debug 폴백 구현을 정의하고, `observability_kit` 이 PostHog 구현체를 제공해요.
 
 ```dart
-// lib/core/analytics/analytics_service.dart (인터페이스 일부)
+// lib/core/analytics/analytics_service.dart 발췌
 abstract class AnalyticsService {
-  Future<void> trackScreen(String name, {Map<String, dynamic>? properties});
+  Future<void> trackScreen(String screenName, {Map<String, dynamic>? properties});
   Future<void> trackEvent(String eventName, {Map<String, dynamic>? properties});
   Future<void> identify(String userId, {Map<String, dynamic>? traits});
   Future<void> reset();
@@ -79,9 +79,9 @@ class FanOutAnalyticsService implements AnalyticsService {
 
 ## 4. 한국 시장 특화
 
-- **Adjust** / **Appsflyer**: 광고 attribution 이 핵심이면 추가 (PostHog 와 병렬). 둘 다 SDK 가 무거워 (~5MB) 광고 운영 안 하면 비추.
-- **AceCounter** / **Naver Analytics**: 일반적이지 않음. 굳이 안 써도 됨.
-- **개인정보처리방침**: 어느 도구든 "수집 항목 + 보관 기간 + 위탁사 (PostHog Inc., 미국)" 명시 필요.
+- **Adjust** / **Appsflyer**: 광고 attribution 이 핵심이면 추가해요 (PostHog 와 병렬). 둘 다 SDK 가 무거워 (~5MB) 광고 운영 안 하면 권하지 않아요.
+- **AceCounter** / **Naver Analytics**: 일반적이지 않아요. 굳이 안 써도 돼요.
+- **개인정보처리방침**: 어느 도구든 "수집 항목 + 보관 기간 + 위탁사 (PostHog Inc., 미국)" 명시가 필요해요.
 
 ---
 

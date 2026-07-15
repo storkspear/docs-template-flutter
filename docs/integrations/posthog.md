@@ -55,7 +55,7 @@ ref.read(analyticsProvider).trackEvent(
 
 ### 3-3. Dogfooding 패널
 
-`lib/kits/observability_kit/dogfooding_panel.dart` 의 "Send test event" 버튼이 PostHog 와 Sentry 동시 검증.
+`lib/kits/observability_kit/dogfooding_panel.dart` 의 버튼 3개 (📊 분석 이벤트 보내기 · 🍞 Breadcrumb 추가 · 💥 테스트 크래시 발생) 로 PostHog 와 Sentry 를 한 번에 검증해요. PostHog 쪽은 "분석 이벤트 보내기" 가 `dogfood_button_click` 이벤트를 전송.
 
 ---
 
@@ -63,7 +63,7 @@ ref.read(analyticsProvider).trackEvent(
 
 | 증상 | 원인 | 해결 |
 |---|---|---|
-| 이벤트가 안 옴 | API Key 미주입 (Debug 폴백) | 콘솔에서 `[DebugAnalyticsService]` 로그면 키 안 들어간 것 |
+| 이벤트가 안 옴 | API Key 미주입 (Debug 폴백) | 콘솔에서 `[Analytics]` 로그면 키 안 들어간 것 (DebugAnalyticsService 폴백) |
 | EU 사용자 데이터인데 US 리전에 도착 | `POSTHOG_HOST` 미설정 | `POSTHOG_HOST=https://eu.i.posthog.com` 추가 |
 | 화면 전환 자동 추적 안 됨 | NavigatorObserver 미연결 | `lib/common/router/app_router.dart` 의 `observers:` 리스트 확인 |
 | 사용자 식별 안 됨 | `identify(userId)` 호출 안 함 | 로그인 직후 `analyticsProvider` 의 `identify(...)` 호출 |

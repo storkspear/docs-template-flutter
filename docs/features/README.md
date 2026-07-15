@@ -25,7 +25,7 @@
 | [`permissions_kit`](./permissions-kit.md) | 런타임 권한 요청 + 설정 유도 | 없음 | +0.5MB |
 | [`device_info_kit`](./device-info-kit.md) | 앱 버전 + 기기 정보 | 없음 | +0.3MB |
 
-**크기 영향** 은 대략 추정. 실제는 플랫폼 · 빌드 설정에 따라 다름.
+**크기 영향** 은 대략적인 추정이에요. 실제는 플랫폼 · 빌드 설정에 따라 달라요.
 
 > ⚠️ **Tree-shaking 은 Dart 코드만 제거해요**. 미활성 Kit 의 Dart 코드는 빌드에서 빠지지만, **네이티브 플러그인(.aar / CocoaPods)은 `pubspec.yaml` 에 선언되어 있는 한 APK/IPA 에 항상 포함**돼요. 사이즈를 진짜 줄이려면 비활성 Kit 의 패키지를 `pubspec.yaml` 에서도 제거하세요. (예시: 31MB APK 측정 중 `sqlite3_flutter_libs`/`sentry-android-ndk` 등이 ABI 별로 ~5MB 차지)
 
@@ -52,7 +52,7 @@
 
 ## 의존 관계
 
-```
+```text
 backend_api_kit (독립)
   ↑   ↑
 auth_kit  payment_kit
@@ -73,10 +73,10 @@ device_info_kit (독립)
 **규칙**:
 - `auth_kit` 와 `payment_kit` 가 `backend_api_kit` 에 의존 (`requires: [BackendApiKit]`)
 - 나머지 12개는 독립 — 자유롭게 on/off
-- Kit 간 직접 import 금지 ([`ADR-002`](../philosophy/adr-002-layered-modules.md)) — Provider 경유만
+- Kit 간 직접 import 는 원칙적으로 금지 ([`ADR-002`](../philosophy/adr-002-layered-modules.md)) — 인스턴스 접근은 Provider 경유. 단 `kit_manifest.requires` 에 **선언한** kit 의 타입 import (`ApiException`, `ErrorCode` 등) 는 허용해요 ([`kits.md` §3](../conventions/kits.md#3-kit-의존-관계-규칙))
 
 의존성 위반 시 `configure_app.dart --audit` 가 CI 에서 차단:
-```
+```text
 ✗ auth_kit requires backend_api_kit, which is not enabled
 ```
 

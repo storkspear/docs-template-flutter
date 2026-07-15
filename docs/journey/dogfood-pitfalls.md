@@ -75,11 +75,11 @@ flutter doctor --android-licenses
 
 **해결** (macOS 기준 — Linux 는 `sed -i` 로):
 ```bash
-# 수동으로 일괄 치환 (macOS BSD sed)
-grep -rl 'package:template' lib/ test/ | xargs sed -i '' 's|package:template|package:my_app|g'
+# 수동으로 일괄 치환 (macOS BSD sed) — 템플릿 sentinel 패키지명은 app_template
+grep -rl 'package:app_template' lib/ test/ | xargs sed -i '' 's|package:app_template|package:my_app|g'
 
 # 또는
-find . -name '*.dart' -exec sed -i '' 's|package:template|package:my_app|g' {} +
+find . -name '*.dart' -exec sed -i '' 's|package:app_template|package:my_app|g' {} +
 ```
 
 ---
@@ -136,12 +136,12 @@ class MainActivity : FlutterFragmentActivity()
 
 **증상**: 빌드는 성공. 앱 launch 후 "구글로 로그인" 탭 시 `signInWithOptions:` 호출 직후 크래시. Info.plist 에 `GIDClientID = (GID_CLIENT_ID)` 또는 비어있음.
 
-**원인**: `AppEnv-<env>.xcconfig` 의 `GID_CLIENT_ID` 가 빈 채로 빌드됨. `<env> link-oauth` 실행이 누락됐거나, GoogleService-Info-<env>.plist 가 없거나, plist 에 CLIENT_ID 키가 빠짐 (Firebase Auth Google 사용 설정 안 한 경우).
+**원인**: `AppEnv-secrets-<env>.xcconfig` (gitignored, `AppEnv-<env>.xcconfig` 가 optional include) 가 없거나 `GID_CLIENT_ID` 가 빈 채로 빌드됨. `<env> link-oauth` 실행이 누락됐거나, GoogleService-Info-<env>.plist 가 없거나, plist 에 CLIENT_ID 키가 빠짐 (Firebase Auth Google 사용 설정 안 한 경우).
 
 **해결**:
 1. Firebase Console → Authentication → Google sign-in 활성화 확인
 2. plist 재다운로드 → `ios/Runner/GoogleService-Info-<env>.plist` 덮어쓰기
-3. `<repo> <env> link-oauth` 재실행 — `AppEnv-<env>.xcconfig` 의 GID_CLIENT_ID 자동 갱신
+3. `<repo> <env> link-oauth` 재실행 — `AppEnv-secrets-<env>.xcconfig` 생성/갱신
 4. `<repo> <env> link-oauth --check` 로 확인 — 값이 비어있지 않은지
 
 ---
@@ -162,7 +162,7 @@ gcloud projects delete <project-id> --quiet
 ```
 
 옵션 B — Firebase Console 에서 수동 (가장 빠름):
-```
+```text
 https://console.firebase.google.com/project/<project-id>/settings/general
   → 페이지 최하단 "이 프로젝트 삭제" → 프로젝트 ID 입력 → 종료
 ```
@@ -235,11 +235,11 @@ await AppKits.install([
 
 ### ❌ `dart run tool/configure_app.dart` 가 ISSUES FOUND
 
-**증상**: 빌드는 되지만 validator 가 불일치 지적.
+**증상**: 빌드는 되지만 validator 가 이슈를 지적.
 
-**원인**: `app_kits.yaml` 과 `lib/main.dart` 의 Kit 리스트가 다름.
+**원인**: `app_kits.yaml` 선언 자체의 문제예요 — Kit 이름이 `lib/kits/` 폴더에 없거나 (오타), `requires` 의존 Kit 이 비활성이거나, `auth_kit.providers` 에 지원 외 이름이 있는 경우. (이 도구는 `lib/main.dart` 를 읽지 않아요 — yaml ↔ main.dart 일치는 별도 수동 대조.)
 
-**해결**: 두 파일을 정확히 맞춤. YAML 은 선언 · Dart 는 인스턴스. 같은 Kit 이 양쪽에 있어야 해요.
+**해결**: 리포트의 `[!]` / `✗` / `⚠` 항목을 따라 `app_kits.yaml` 을 고쳐요. 이후 `lib/main.dart` 의 `AppKits.install([...])` 도 같은 구성인지 눈으로 맞춰요 — YAML 은 선언 · Dart 는 인스턴스.
 
 ---
 
@@ -430,7 +430,7 @@ cat fastlane_error.log
 ### ❌ release 빌드 시 `AppConfig.init() release 빌드 검증 실패` StateError
 
 **증상**: `flutter build apk --release` 또는 스토어 빌드 직후 앱이 즉시 죽음. 로그에 다음 메시지:
-```
+```text
 StateError: AppConfig.init() release 빌드 검증 실패:
   - baseUrl: "http://localhost:8080" — localhost 는 release 출시 금지
   - environment: Environment.dev — release 빌드는 staging/prod 로 호출하세요

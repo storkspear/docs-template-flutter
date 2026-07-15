@@ -7,7 +7,7 @@
 ## 개요
 
 - **앱 정보**: 버전 · 빌드 넘버 · 패키지 이름
-- **기기 정보**: OS · 모델 · 디바이스 ID
+- **기기 정보**: OS · 모델 (고유 식별자는 의도적으로 미수집)
 - **Diagnostic 용도**: 크래시 리포트 첨부 · 푸시 토큰 등록 시
 
 ---
@@ -76,7 +76,7 @@ await ref.read(crashServiceProvider).addBreadcrumb(
 
 - [ ] iOS: `Info.plist` 의 `CFBundleShortVersionString` · `CFBundleVersion`
 - [ ] Android: `android/app/build.gradle.kts` 의 `versionName` · `versionCode`
-- [ ] 개인정보 정책 업데이트: 기기 ID 수집 명시
+- [ ] (파생 레포에서 광고 식별자 등 고유 ID 를 **추가 수집하는 경우에만**) 개인정보 정책에 수집 항목 명시 — 이 kit 자체는 고유 식별자를 수집하지 않아요
 
 ---
 

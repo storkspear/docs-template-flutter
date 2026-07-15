@@ -14,11 +14,12 @@
 - [ ] **Xcode** (iOS 빌드용) — macOS 전용. App Store 에서 설치
 - [ ] **Android Studio** 또는 Android SDK Command-Line Tools
 - [ ] **CocoaPods** (iOS 의존성) — `sudo gem install cocoapods`
+- [ ] **node 18+** — `<repo> local init` 의 prereq 검증이 요구해요 (`brew install node`)
+- [ ] **gh CLI** + 로그인 — `gh auth login` 까지 마쳐야 `local init` 이 통과해요
 
 ### 권장
 
 - [ ] **VS Code** + Flutter extension 또는 **IntelliJ IDEA** + Flutter plugin
-- [ ] **gh CLI** — GitHub Secrets 업로드 시 유용
 - [ ] **jq** — JSON 파싱용 (스크립트에서 사용)
 
 ### 확인
@@ -138,6 +139,9 @@ cp recipes/local-notifier-app.yaml app_kits.yaml
 
 # 백엔드 연동 + 인증
 cp recipes/backend-auth-app.yaml app_kits.yaml
+
+# 소셜 로그인 중심 (Google/Apple/Kakao/Naver)
+cp recipes/social-auth-app.yaml app_kits.yaml
 ```
 
 ### main.dart 동기화
@@ -147,10 +151,10 @@ cp recipes/backend-auth-app.yaml app_kits.yaml
 예 (local-only-tracker):
 
 ```dart
-// lib/main.dart
+// lib/main.dart — prefsStorage 는 main.dart 상단에서 이미 생성돼 있어요
 await AppKits.install([
-  LocalDbKit(database: AppDatabase()),
-  OnboardingKit(steps: [...]),
+  LocalDbKit(database: () => AppDatabase()),
+  OnboardingKit(steps: [...], prefs: prefsStorage),
   NavShellKit(tabs: [...]),
   ChartsKit(),
 ]);
@@ -354,8 +358,10 @@ flutter doctor --android-licenses
 
 ### `dart run tool/configure_app.dart` 가 ISSUES FOUND
 
-- `app_kits.yaml` 의 Kit 이 `lib/main.dart` 의 `AppKits.install([...])` 와 일치하는지 확인
+- `app_kits.yaml` 의 Kit 이름이 `lib/kits/` 실제 폴더명과 일치하는지 확인 (오타 시 `not found in lib/kits/`)
 - `requires` 누락 확인 (예: `auth_kit` 쓰면 `backend_api_kit` 도 활성)
+- `auth_kit.providers` 에 지원 외 이름이 있는지 확인 (email/google/apple/kakao/naver 만)
+- 참고: 이 도구는 `lib/main.dart` 를 읽지 않아요 — `AppKits.install([...])` 와의 일치는 수동 대조가 필요해요
 
 더 많은 함정: [`Pitfalls`](./dogfood-pitfalls.md)
 

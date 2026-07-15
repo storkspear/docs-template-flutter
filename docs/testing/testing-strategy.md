@@ -6,7 +6,7 @@
 
 ## 레이어 개요
 
-```
+```text
 ┌─────────────────────────────────────────┐
 │  1. Unit (가장 많음)                       │
 │     Service · ViewModel · Util · Widget   │
@@ -256,6 +256,7 @@ await prefs.init();
 ```yaml
 - run: dart format --output=none --set-exit-if-changed lib/ test/
 - run: dart run tool/configure_app.dart --audit
+- run: bash tools/docs-check/docs-contract-test.sh   # Docs contract guard
 - run: flutter analyze
 - run: flutter test --reporter=expanded
 ```

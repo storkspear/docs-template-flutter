@@ -1,6 +1,6 @@
 # 통합 가이드 (Integrations)
 
-외부 서비스 (Sentry · PostHog · FCM · AdMob · Play Store 등) 연동 가이드 모음이에요. 파생 레포 셋업 시 README 체크리스트 §5~§12 가 이 폴더 문서를 참조해요.
+외부 서비스 (Sentry · PostHog · FCM · AdMob · Play Store 등) 연동 가이드 모음이에요. 파생 레포 셋업 시 README 체크리스트 §5~§8 · §13 이 이 폴더 문서를 참조해요.
 
 > **이 폴더의 책임**: "외부 서비스 콘솔에서 키 발급 → 앱에 주입 → 동작 확인" 까지의 운영 절차.
 > Kit 자체 사용법은 `docs/features/{kit_name}.md` 또는 `lib/kits/{kit_name}/README.md` 참조.

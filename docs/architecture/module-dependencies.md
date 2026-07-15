@@ -6,7 +6,7 @@
 
 ## 의존 다이어그램
 
-```
+```text
                           ┌────────┐
                           │ main.  │
                           │ dart   │
@@ -40,6 +40,8 @@
 
 **단방향**: `features → common → kits → core`
 
+> **예외**: `BootStep` 인터페이스 등 조립 계약이 `common/splash/` 에 있어서, `kits/`·`core/` 일부 파일이 `common/` 을 역방향 import 해요 (레거시 어댑터 이관 중 — CLAUDE.md §2 참조). 신규 코드에서는 이 역방향을 늘리지 않는 게 원칙이에요.
+
 ---
 
 ## 레이어별 역할
@@ -61,7 +63,7 @@
 
 ### `kits/` — 선택 14개 ([`Features 인덱스`](../features/README.md))
 
-```
+```text
 auth_kit, backend_api_kit, observability_kit, notifications_kit,
 local_db_kit, update_kit, onboarding_kit, nav_shell_kit,
 charts_kit, ads_kit, background_kit, permissions_kit, device_info_kit,
@@ -79,7 +81,7 @@ payment_kit
 
 ### `features/` — 파생 레포 도메인 영역
 
-템플릿은 **스텁만** — `home/` + `settings/`. 파생 레포가 채움.
+템플릿은 **스텁만** — `home/` + `settings/`. 파생 레포가 채워요.
 
 ---
 
@@ -88,7 +90,7 @@ payment_kit
 ### 금지
 
 - ❌ `core/` → `kits/` 또는 `features/` import
-- ❌ `kits/<A>` → `kits/<B>` 직접 import (Provider 경유만)
+- ❌ `kits/<A>` → **`requires` 에 미선언한** `kits/<B>` 의 cross-import — 그 recipe 에 B 가 빠지면 컴파일 실패 (상세 룰: [`kits.md §3`](../conventions/kits.md))
 - ❌ `features/<A>` → `features/<B>` 직접 import (라우터 경유 권장)
 
 ### 허용
@@ -96,7 +98,8 @@ payment_kit
 - ✅ `features/` → `common/` · `kits/` · `core/`
 - ✅ `common/` → `kits/` · `core/`
 - ✅ `kits/` → `core/`
-- ✅ `kits/<A>` → `kits/<B>` 의 **Provider 참조** (ref.watch/read) — import 아님
+- ✅ `kits/<A>` → `requires` 에 **선언한** `kits/<B>` 의 **type import** (`ApiException` 등 — 타입은 Provider 로 못 받아요. 인스턴스는 Provider 경유)
+- ✅ `kits/<A>` → `kits/<B>` 의 **Provider 참조** (ref.watch/read)
 - ✅ `kits/<A>` → `kits/<B>` 의 **`requires: [B]`** 선언 ([`ADR-003`](../philosophy/adr-003-featurekit-registry.md))
 
 ---
@@ -107,7 +110,7 @@ payment_kit
 
 `AppKits.install([...])` 시 `requires` 자동 검증. 누락 시 `StateError`:
 
-```
+```text
 ✗ auth_kit requires backend_api_kit, which is not enabled
 ```
 
@@ -121,19 +124,20 @@ dart run tool/configure_app.dart --audit
 
 ### 정적 분석
 
-`flutter analyze` 가 순환 import · unused import 감지. 현재는 **Kit 간 import 금지 linter 룰 없음** — 사람이 리뷰로 확인.
+`flutter analyze` 가 순환 import · unused import 감지. 현재는 **Kit 간 import 금지 linter 룰 없음** — 사람이 리뷰로 확인해요.
 
 ---
 
 ## tree-shaking
 
-미활성 Kit 의 코드는 **최종 바이너리에서 제거**. 전제:
+미활성 Kit 의 **Dart 코드** 는 최종 바이너리에서 제거돼요. 전제:
 
-- `main.dart` 의 `AppKits.install([...])` 에 해당 Kit 인스턴스가 **없어야 함**
-- `app_kits.yaml` 의 해당 항목이 **주석 처리** 돼야 함
-- 다른 코드에서 해당 Kit 의 클래스 · Provider 를 **import 하지 말아야 함**
+- `main.dart` 의 `AppKits.install([...])` 에 해당 Kit 인스턴스가 **없어야** 해요
+- `app_kits.yaml` 의 해당 항목이 **주석 처리** 돼 있어야 해요
+- 다른 코드에서 해당 Kit 의 클래스 · Provider 를 **import 하지 말아야** 해요
+- **네이티브 플러그인은 `pubspec.yaml` 에서 의존 자체를 제거해야** 해요 — tree-shaking 은 Dart 코드만 덜어내고, 플러그인의 네이티브 바이너리 (.aar 등) 는 pubspec 에 남아 있으면 그대로 APK/IPA 에 포함돼요 ([`features/README.md`](../features/README.md) 의 tree-shaking 주의 참조)
 
-이 덕분에 로컬 전용 앱은 Sentry SDK · sign_in_with_apple 등 수 MB 제거.
+이 전제가 다 갖춰지면 로컬 전용 앱은 Sentry SDK · sign_in_with_apple 등 수 MB 를 덜어낼 수 있어요.
 
 ---
 

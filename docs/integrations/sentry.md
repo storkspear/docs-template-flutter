@@ -76,7 +76,7 @@ GHA Secrets 에 `SENTRY_DSN` 추가 후 release workflow 에서:
       --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN }}
 ```
 
-Secrets 업로드 자동화는 [`scripts/upload-secrets-to-github.sh`](../../scripts/upload-secrets-to-github.sh) 참고.
+`SENTRY_DSN` 은 `gh secret set SENTRY_DSN` 으로 직접 등록해요 ([`scripts/upload-secrets-to-github.sh`](../../scripts/upload-secrets-to-github.sh) 는 `ANDROID_*` 4종만 자동 업로드 — Sentry/Play secret 은 수동 등록 안내만 출력).
 
 ---
 
@@ -97,7 +97,11 @@ ElevatedButton(
 
 ### 4-2. Observability Kit 의 Dogfooding 패널 활용
 
-`lib/kits/observability_kit/dogfooding_panel.dart` 가 dev 빌드에서만 노출되는 작은 패널을 제공해요. 거기서 "Send test event" 버튼을 누르면 Sentry 와 PostHog 둘 다 한 번에 검증 가능.
+`lib/kits/observability_kit/dogfooding_panel.dart` 가 검증용 패널을 제공해요 (`kDebugMode` 가드로 배치해 release 빌드에서 숨기는 걸 권장). 버튼 3개로 Sentry 와 PostHog 를 한 번에 검증할 수 있어요:
+
+- **📊 분석 이벤트 보내기** — PostHog 에 `dogfood_button_click` 이벤트 1건 전송
+- **🍞 Breadcrumb 추가** — Sentry 에 사용자 행동 한 줄 기록 (다음 크래시에 함께 전송)
+- **💥 테스트 크래시 발생** — 의도적 Exception throw → Sentry Issues 도착 확인
 
 ### 4-3. release 환경 분리
 
@@ -109,10 +113,9 @@ ElevatedButton(
 
 | 증상 | 원인 | 해결 |
 |---|---|---|
-| 크래시가 Sentry 에 안 옴 | DSN 미주입 (Debug 폴백) | 콘솔에서 `[DebugCrashService]` 로그 보이면 DSN 안 들어간 것. dart-define 확인 |
+| 크래시가 Sentry 에 안 옴 | DSN 미주입 (Debug 폴백) | 콘솔에서 `[Crash]` 로그 보이면 DSN 안 들어간 것 (DebugCrashService 폴백). dart-define 확인 |
 | 401 / "DSN was rejected" | DSN 오타 / quota 소진 | Sentry Settings → Client Keys 에서 DSN 재확인 |
 | 너무 많은 이벤트로 quota 폭발 | tracesSampleRate 너무 높음 | `main.dart` 의 `tracesSampleRate: 0.2` (현재 기본) 유지 또는 더 낮춤 |
-| iOS 만 안 옴 | Sentry iOS native init 누락 | `ios/Runner/AppDelegate.swift` 에서 SentryFlutter native 초기화 코드 확인 |
 
 ---
 
@@ -120,7 +123,7 @@ ElevatedButton(
 
 - [ ] Sentry 프로젝트 생성 + DSN 발급
 - [ ] `.env` 에 `SENTRY_DSN=` 라인 추가 (gitignore 확인)
-- [ ] GHA Secrets 에 `SENTRY_DSN` 등록 (`scripts/upload-secrets-to-github.sh` 활용 가능)
+- [ ] GHA Secrets 에 `SENTRY_DSN` 등록 (`gh secret set SENTRY_DSN` 수동 — upload-secrets 스크립트는 `ANDROID_*` 만 자동)
 - [ ] 릴리스 빌드 1회 실행 후 Issues 탭에 테스트 크래시 1건 도착 확인
 - [ ] release 환경 (`AppConfig.instance.environment = Environment.prod`) 으로 빌드한 후 prod 환경 필터에서 보이는지 확인
 

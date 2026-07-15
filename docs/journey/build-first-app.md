@@ -49,7 +49,7 @@ cp recipes/backend-auth-app.yaml app_kits.yaml
 await AppKits.install([
   BackendApiKit(),
   AuthKit(),
-  NotificationsKit(),
+  NotificationsKit(service: LocalScheduledAlertService()),
   DeviceInfoKit(),
   UpdateKit(service: NoUpdateAppUpdateService()),
 ]);
@@ -354,7 +354,7 @@ class _ItemListScreenState extends ConsumerState<ItemListScreen> {
     if (state.items.isEmpty) {
       return EmptyView(
         icon: Icons.inbox,
-        message: s.noItems,
+        title: s.noItems,
         action: TextButton(
           onPressed: () => _openAddDialog(context, vm),
           child: Text(s.addFirstItem),
@@ -435,8 +435,18 @@ GoRoute(
 
 ```dart
 NavShellKit(tabs: [
-  NavTab(path: '/items', icon: Icons.list, label: s.myItems),
-  NavTab(path: '/settings', icon: Icons.settings, label: s.settings),
+  NavTab(
+    path: '/items',
+    icon: Icons.list,
+    label: s.myItems,
+    builder: (context, state) => const ItemListScreen(),
+  ),
+  NavTab(
+    path: '/settings',
+    icon: Icons.settings,
+    label: s.settings,
+    builder: (context, state) => const SettingsScreen(),
+  ),
 ]),
 ```
 
