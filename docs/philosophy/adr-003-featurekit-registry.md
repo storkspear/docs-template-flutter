@@ -151,7 +151,7 @@ AppKits.attachContainer(container);                   // ← BootStep/Listenable
 - **의존성 검증 자동**: `AuthKit` 을 넣고 `BackendApiKit` 을 빼먹으면 `install` 시점에 `StateError: AuthKit requires BackendApiKit...` 로 바로 멈춤.
 - **tree-shaking 효과**: 미등록 Kit 의 SDK (`sign_in_with_apple`, `google_mobile_ads` 등) 가 최종 바이너리에서 제거됨. 로컬 전용 앱 크기가 10~15MB 작아져요.
 - **테스트 격리**: `AppKits.resetForTest()` 로 각 테스트가 독립 상태에서 시작. install 순서 버그도 테스트에서 재현 가능.
-- **3개 recipe 샘플**: `recipes/local-only-tracker.yaml` / `local-notifier-app.yaml` / `backend-auth-app.yaml` 로 첫 시작 시 복사 → 수정만 하면 돼요.
+- **4개 recipe 샘플**: `recipes/local-only-tracker.yaml` / `local-notifier-app.yaml` / `backend-auth-app.yaml` / `social-auth-app.yaml` 로 첫 시작 시 복사 → 수정만 하면 돼요.
 
 ### 부정적 결과
 
@@ -207,10 +207,11 @@ UpdateKit(1) · AuthKit(10) · OnboardingKit(50) 처럼 숫자를 띄워두니, 
 - [`recipes/local-only-tracker.yaml`](https://github.com/storkspear/template-flutter/blob/main/recipes/local-only-tracker.yaml)
 - [`recipes/local-notifier-app.yaml`](https://github.com/storkspear/template-flutter/blob/main/recipes/local-notifier-app.yaml)
 - [`recipes/backend-auth-app.yaml`](https://github.com/storkspear/template-flutter/blob/main/recipes/backend-auth-app.yaml)
+- [`recipes/social-auth-app.yaml`](https://github.com/storkspear/template-flutter/blob/main/recipes/social-auth-app.yaml)
 
 **관련 ADR**:
 - [`ADR-002 · 3계층 모듈 구조`](./adr-002-layered-modules.md) — core / kits / common / features 중 `kits/` 의 존재 이유
 - [`ADR-004 · YAML ↔ Dart 수동 동기화 + CI 검증`](./adr-004-manual-sync-ci-audit.md) — 두 곳 동기화의 위험을 기계가 잡음
 - [`ADR-008 · 부팅 단계 추상화`](./adr-008-boot-step.md) — Kit 이 기여하는 BootStep 이 어떻게 실행되는지
 - [`ADR-018 · Kit 별 라우팅 우선순위`](./adr-018-redirect-priority.md) — `redirectPriority` 사용법 상세
-- [`ADR-021 · Multi-Recipe 구성`](./adr-021-multi-recipe.md) — 3개 샘플 recipe 의 선택 기준
+- [`ADR-021 · Multi-Recipe 구성`](./adr-021-multi-recipe.md) — 4개 샘플 recipe 의 선택 기준

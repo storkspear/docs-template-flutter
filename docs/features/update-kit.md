@@ -6,8 +6,8 @@
 
 ## 개요
 
-- **라우팅 게이트**: 업데이트 필요 시 `/force-update` 강제 이동
-- **서비스 교체 가능**: 기본 `NoUpdateAppUpdateService` (항상 false). 실제 로직은 파생 레포에서
+- **오버레이 게이트**: 부팅 시 `check()` 결과가 강제 업데이트면 `forceUpdateInfoNotifier` 방출 → `MaterialApp.builder` 의 `_ForceUpdateGate` (`lib/app.dart`) 가 전체 화면 위에 `ForceUpdateDialog` 를 덮어씌워요 (별도 라우트 없음)
+- **서비스 교체 가능**: 기본 `NoUpdateAppUpdateService` (`check()` 가 항상 null). 실제 로직은 파생 레포에서
 - **Dialog**: 사용자에게 "스토어로 이동" 버튼 제공
 - **`url_launcher`**: 스토어 URL 오픈
 
@@ -39,7 +39,8 @@ await AppKits.install([
 | `AppUpdateService` | 추상. `init()` · `check()` → `UpdateInfo?` (null 이면 업데이트 불필요) |
 | `UpdateInfo` | `isForce` · `minVersion` · `latestVersion` · `message?` · `iosStoreUrl?` · `androidStoreUrl?` |
 | `NoUpdateAppUpdateService` | 기본 구현. `check()` 가 항상 null (업데이트 없음) |
-| `ForceUpdateDialog` | `/force-update` 화면 UI |
+| `ForceUpdateDialog` | 강제 업데이트 다이얼로그 (닫기 불가 `PopScope`) — `_ForceUpdateGate` 오버레이로 표시 |
+| `forceUpdateInfoNotifier` | `ValueNotifier<UpdateInfo?>` — BootStep 이 값 방출, `_ForceUpdateGate` 가 구독 |
 
 ---
 
@@ -107,7 +108,7 @@ class BackendUpdateService implements AppUpdateService {
 - [ ] 버전 비교 로직 구현 (semver 비교)
 - [ ] (선택) Firebase Remote Config 설정 or 자체 API 엔드포인트
 - [ ] `main.dart` 의 `UpdateKit(service: ...)` 를 실제 구현체로 교체
-- [ ] 테스트: `check()` 가 `UpdateInfo(isForce: true, ...)` 반환 시 `/force-update` 리다이렉트 확인
+- [ ] 테스트: `check()` 가 `UpdateInfo(isForce: true, ...)` 반환 시 `ForceUpdateDialog` 오버레이가 화면을 덮는지 확인
 
 ---
 

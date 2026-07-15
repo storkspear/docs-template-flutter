@@ -4,7 +4,7 @@
 
 ## 결론부터
 
-폰트는 **타이페이스 식별자 하나** (`AppTypeface.id`) 와 폰트 패밀리 (`fontFamily` + `fontFamilyFallback`) 만 선언하면 돼요. 사이즈/weight 스케일은 본 추상 클래스가 8 단계 기본 (`headlineLarge` … `labelLarge`) 으로 빌드해줘요. 여러 타이페이스를 [`AppTypefaceRegistry`](https://github.com/storkspear/template-flutter/blob/main/lib/core/theme/app_typeface_registry.dart) 에 등록하고 `ValueNotifier` 로 런타임 교체 가능. 파생 레포는 `MyAppTypeface` 하나만 정의 → `AppTypefaceRegistry.install(...)` 한 줄로 폰트 적용. 템플릿 기본값은 시스템 폰트 (`DefaultTypeface`) — 자산은 파생 레포가 결정.
+폰트는 **타이페이스 식별자 하나** (`AppTypeface.id`) 와 폰트 패밀리 (`fontFamily` + `fontFamilyFallback`) 만 선언하면 돼요. 사이즈/weight 스케일은 본 추상 클래스가 8 단계 기본 (`headlineLarge` … `labelLarge`) 으로 빌드해줘요. 여러 타이페이스를 `AppTypefaceRegistry` 에 등록하고 `ValueNotifier` 로 런타임 교체 가능. 파생 레포는 `MyAppTypeface` 하나만 정의 → `AppTypefaceRegistry.install(...)` 한 줄로 폰트 적용. 템플릿 기본값은 시스템 폰트 (`DefaultTypeface`) — 자산은 파생 레포가 결정.
 
 ## 왜 이런 고민이 시작됐나?
 

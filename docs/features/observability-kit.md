@@ -7,7 +7,7 @@
 ## 개요
 
 - **Sentry**: 크래시 · 에러 리포트 · 트레이싱 · 심볼 복원
-- **PostHog**: 이벤트 분석 · 화면 추적 · 세션 리플레이
+- **PostHog**: 이벤트 분석 · 화면 추적 (세션 리플레이는 템플릿 미구성 — 필요 시 파생 레포에서 옵션 활성화)
 - **Debug 폴백** ([`ADR-006`](../philosophy/adr-006-debug-fallback.md)): DSN 없으면 콘솔 출력만
 - **자동 화면 추적**: `AnalyticsNavigatorObserver` 가 go_router 경로 감지
 
@@ -35,8 +35,10 @@ await AppKits.install([
 flutter run \
   --dart-define=SENTRY_DSN=https://xxx@sentry.io/yyy \
   --dart-define=POSTHOG_KEY=phc_xxx \
-  --dart-define=POSTHOG_HOST=https://app.posthog.com
+  --dart-define=POSTHOG_HOST=https://us.i.posthog.com
 ```
+
+> `POSTHOG_HOST` 는 생략 가능 — 미주입 시 기본값이 `https://us.i.posthog.com` 이에요 (`observability_env.dart` 의 `defaultValue`). EU 프로젝트만 `https://eu.i.posthog.com` 으로 주입.
 
 **없으면** Debug 구현체로 동작 — 콘솔 로그만. 앱은 정상 부팅.
 
@@ -129,14 +131,29 @@ void main() async {
 
 ### 심볼 업로드 (난독화 스택 복원)
 
-```yaml
-# .github/workflows/release-android.yml
-- name: Build AAB with obfuscation
-  run: |
-    flutter build appbundle --obfuscate --split-debug-info=build/app/symbols
+실물은 fastlane lane 이에요 — `.github/workflows/release-android.yml` 이 `fastlane android beta` (빌드) 와 `fastlane android upload_sentry_mapping` (업로드) 을 순서대로 호출해요.
 
-- name: Upload symbols to Sentry
-  run: npx @sentry/cli upload-dif --org $ORG --project $PROJECT build/app/symbols
+```ruby
+# android/fastlane/Fastfile 발췌
+lane :build_release do
+  # --obfuscate + --split-debug-info: 원본 심볼 매핑을 build/symbols/ 에 저장
+  sh "cd ../.. && flutter build appbundle --release " \
+     "--obfuscate --split-debug-info=build/symbols " \
+     "#{defines.join(' ')}"
+end
+
+lane :upload_sentry_mapping do |options|
+  # 1) ProGuard mapping (R8) — 네이티브 스택 심볼화
+  # 2) Dart split-debug-info — 난독화된 Dart 프레임 심볼화
+  sh <<~SH
+    sentry-cli --auth-token #{auth_token} \
+      upload-proguard -o #{org} -p #{project} \
+      ../../build/app/outputs/mapping/release/mapping.txt
+    sentry-cli --auth-token #{auth_token} \
+      upload-dif -o #{org} -p #{project} \
+      ../../build/symbols
+  SH
+end
 ```
 
 ---
@@ -147,7 +164,7 @@ void main() async {
 
 ```bash
 --dart-define=POSTHOG_KEY=phc_xxx
---dart-define=POSTHOG_HOST=https://app.posthog.com
+--dart-define=POSTHOG_HOST=https://us.i.posthog.com   # 생략 시 이 값이 기본
 ```
 
 ### 자동 화면 추적

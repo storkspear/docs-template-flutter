@@ -9,7 +9,7 @@
 - **AdMob 배너**: `BannerAdWidget` 한 줄로 배치
 - **UMP (User Messaging Platform)**: GDPR 지역 자동 동의 폼
 - **ATT (App Tracking Transparency)**: iOS 14+ 자동 시스템 다이얼로그
-- **테스트 ID**: 기본값. 출시 전 실제 AdMob ID 로 교체 필수
+- **테스트 ID**: 개발 중엔 `AdConfig.testIds` 를 명시 전달 (`config` 는 필수 인자). 출시 전 실제 AdMob ID 로 교체 필수
 
 ---
 
@@ -34,7 +34,7 @@ await AppKits.install([
 ]);
 ```
 
-기본값은 **Google 테스트 ID** — 개발 · 테스트만. 출시 빌드엔 반드시 교체.
+`config` 는 **필수 인자** 예요 — 기본값이 없어요. 개발 · 테스트 중엔 `AdConfig.testIds` (Google 테스트 ID) 를 명시 전달하고, 출시 빌드엔 반드시 실제 ID 로 교체.
 
 ---
 

@@ -17,7 +17,7 @@
 | `<repo> test --with-build` | apk debug 빌드 포함 | 배포 직전 점검 |
 | `<repo> --help` | 명령 목록 + 사용법 | 항상 |
 
-env-verb dispatch — 첫 인자가 `local`/`prod`/`all` 이면 env, 아니면 default `local`. verb `test` 는 짝 백엔드 (`template-spring`) 와 동일 — 양쪽 운영 시 일관 명령어.
+env-verb dispatch — 첫 인자가 `local`/`dev`/`prod`/`all` 이면 env, 아니면 default `local`. verb `test` 는 짝 백엔드 (`template-spring`) 와 동일 — 양쪽 운영 시 일관 명령어.
 
 ---
 
@@ -26,14 +26,22 @@ env-verb dispatch — 첫 인자가 `local`/`prod`/`all` 이면 env, 아니면 d
 | 파일 | 용도 | 실행 시점 |
 |------|------|---------|
 | `lib/common.sh` | 공용 헬퍼 (info/ok/warn/fail/section) | factory 및 다른 sh 가 source |
-| `readiness-check.sh` | 개발 준비 7 step 검증 | factory 의 first verb |
+| `lib/init-common.sh` | init 3종 공용 (prereq 검증 · .env 생성 · REQUIRED 키 검증) | init-*.sh 가 source |
+| `lib/firebase.sh` | Firebase 프로젝트/앱 생성 · plist/json 다운로드 헬퍼 | init-dev/prod 가 source |
+| `lib/xcode-config.sh` | xcconfig 조작 헬퍼 | link-oauth 등이 source |
+| `readiness-check.sh` | 개발 준비 7 step 검증 | factory 의 `test` verb |
 | `setup.sh` | git hooks 활성화 | clone 직후 1회 |
 | `rename-app.sh` | 앱 이름 · Bundle ID 일괄 치환 | 파생 레포 생성 시 |
+| `init-local.sh` | rename + `.env` + `flutter pub get` 한 번에 | `<repo> local init` |
+| `init-dev.sh` | Firebase dev 프로젝트 + 앱 등록 + plist/json + link-oauth | `<repo> dev init` |
+| `init-prod.sh` | 동일 흐름의 prod 버전 (별도 Firebase 프로젝트) | `<repo> prod init` |
+| `start.sh` | flutter run 래퍼 (mock 자동 폴백 · flavor 라우팅) | `<repo> <env> start` |
+| `link-oauth.sh` | GoogleService-Info plist → AppEnv-secrets xcconfig 주입 | `<repo> <env> link-oauth` |
 | `regenerate-assets.sh` | 런처 아이콘 + 스플래시 재생성 | 아이콘 · 스플래시 변경 후 |
 | `coverage.sh` | 테스트 커버리지 측정 + HTML 리포트 | 월 1회 정기 점검 |
-| `generate-upload-keystore.sh` | Android 업로드 keystore 생성 | 첫 Android 배포 전 |
-| `batch-backup-keystores.sh` | 여러 앱 keystore 백업 | 정기 운영 |
-| `upload-secrets-to-github.sh` | keystore · 자격증명 GHA Secrets 업로드 | 첫 배포 전 · 키 갱신 시 |
+| `generate-upload-keystore.sh` | Android 업로드 keystore 생성 (비대화형) | 첫 Android 배포 전 |
+| `batch-backup-keystores.sh` | pending keystore 들을 암호화 7z 로 일괄 백업 | 정기 운영 |
+| `upload-secrets-to-github.sh` | Android 서명 Secrets 4종 GHA 업로드 | 첫 배포 전 · 키 갱신 시 |
 | `sync-docs.sh` | docs/ → docs-template-flutter mirror | docs 변경 push 시 (CI) |
 
 ---
@@ -42,7 +50,7 @@ env-verb dispatch — 첫 인자가 `local`/`prod`/`all` 이면 env, 아니면 d
 
 ### factory
 
-env-verb 패턴 통합 dispatcher (~250 LOC bash).
+env-verb 패턴 통합 dispatcher (340줄 bash).
 
 ```bash
 # 첫 사용 (clone 직후)
@@ -180,30 +188,34 @@ git config core.hooksPath .githooks
 ### 사용법
 
 ```bash
-./scripts/regenerate-assets.sh
+./scripts/regenerate-assets.sh                  # 아이콘 + 스플래시 둘 다
+./scripts/regenerate-assets.sh --dry-run        # 호출 명령만 출력
+./scripts/regenerate-assets.sh --skip-splash    # 아이콘만 (--skip-icons 도 있음)
 ```
 
 내부적으로:
 
 ```bash
-flutter pub get
-dart run flutter_launcher_icons
-dart run flutter_native_splash:create
+dart run flutter_launcher_icons -f flutter_launcher_icons.yaml
+dart run flutter_native_splash:create --path=flutter_native_splash.yaml
 ```
+
+전제: `assets/icon/app_icon.png` (1024×1024) · `assets/icon/app_icon_foreground.png` · `assets/splash/logo.png` 교체 완료.
 
 ### 커스터마이징
 
 아이콘 / 스플래시 이미지 경로는 각 YAML 파일에서:
 
 ```yaml
-# flutter_launcher_icons.yaml
+# flutter_launcher_icons.yaml 발췌
 flutter_launcher_icons:
+  image_path: "assets/icon/app_icon.png"  # ← 여기
   android: "launcher_icon"
-  ios: true
-  image_path: "assets/icons/app_icon.png"  # ← 여기
-  min_sdk_android: 21
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/icons/app_icon_foreground.png"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  min_sdk_android: 21
+  ios: true
+  remove_alpha_ios: true
 ```
 
 ---
@@ -217,17 +229,16 @@ Android 업로드 keystore 생성 (Play App Signing 에 등록할 키).
 ### 사용법
 
 ```bash
-./scripts/generate-upload-keystore.sh
+./scripts/generate-upload-keystore.sh <app-slug>   # slug 인자 필수
 ```
 
-대화형 입력:
-- 이름 · 조직 · 도시 등
-- keystore 비밀번호
-- 키 alias 비밀번호
+**완전 비대화형** — 물어보는 것 없이 keystore/key 비밀번호를 `openssl rand` 로 자동 생성하고, `-dname "CN=<app-slug>, ..."` 으로 keytool 을 바로 실행해요.
 
 ### 출력
 
-`android/app/upload-keystore.jks` — **커밋 금지** (이미 `.gitignore`)
+- `android/app/upload-keystore.jks` — **커밋 금지** (이미 `.gitignore`)
+- `android/key.properties` — fastlane 이 읽는 서명 설정 (이미 `.gitignore`)
+- `~/Documents/keystores-pending/<app-slug>/` — 원본 사본 + `passwords.txt` (임시 백업, `batch-backup-keystores.sh` 로 영구 이전)
 
 ### 백업 필수
 
@@ -242,7 +253,7 @@ Android 업로드 keystore 생성 (Play App Signing 에 등록할 키).
 
 ### 용도
 
-여러 앱의 keystore 를 한 번에 백업 (앱 공장 운영 시).
+`~/Documents/keystores-pending/` 에 쌓인 여러 앱의 keystore 를 한 번에 영구 백업 (앱 공장 운영 시).
 
 ### 사용법
 
@@ -250,7 +261,13 @@ Android 업로드 keystore 생성 (Play App Signing 에 등록할 키).
 ./scripts/batch-backup-keystores.sh ~/backup-keys
 ```
 
-`~/backup-keys/` 디렉토리에 각 앱 keystore 를 타임스탬프와 함께 복사.
+동작:
+
+1. pending 폴더의 앱들을 **암호화 7z 아카이브** (`keystores-<타임스탬프>.7z`, 비밀번호 자동 생성 + 헤더 암호화) 로 묶어 `<backup-dir>` 에 생성
+2. 아카이브 비밀번호를 화면에 출력 — **업무 노트에 저장 필수** (분실 시 복구 불가)
+3. 저장 확인 (y) 후 pending 폴더 비움
+
+의존성: `7z` (`brew install p7zip`).
 
 ---
 
@@ -258,22 +275,32 @@ Android 업로드 keystore 생성 (Play App Signing 에 등록할 키).
 
 ### 용도
 
-`.env` · keystore · 자격증명을 GitHub Secrets 에 일괄 업로드.
+Android **서명 Secrets 4종** 을 GHA Secrets 에 자동 업로드. (`.env` 파싱이나 Play JSON 자동 업로드는 하지 않아요.)
 
 ### 사용법
 
 ```bash
-./scripts/upload-secrets-to-github.sh
+./scripts/upload-secrets-to-github.sh <app-slug>   # slug 인자 필수
 ```
 
-내부:
-1. `.env` 파싱 → 각 키를 `gh secret set` 으로
-2. keystore 파일 base64 인코딩 → `ANDROID_KEYSTORE_BASE64`
-3. Play Console JSON 키 읽기 → `PLAY_STORE_JSON_KEY`
+내부 — `~/Documents/keystores-pending/<app-slug>/` 를 읽어:
+
+1. `upload-keystore.jks` base64 인코딩 → `ANDROID_KEYSTORE_BASE64`
+2. `passwords.txt` 에서 추출 → `ANDROID_KEYSTORE_PASSWORD` · `ANDROID_KEY_PASSWORD` · `ANDROID_KEY_ALIAS`
+
+나머지는 **수동 등록** 안내만 출력해요:
+
+```bash
+gh secret set PLAY_STORE_JSON_KEY   # Play Console service account JSON 내용
+gh secret set SENTRY_AUTH_TOKEN     # sentry-cli 용 Auth Token
+gh secret set SENTRY_ORG
+gh secret set SENTRY_PROJECT
+```
 
 ### 전제
 
-- `gh` CLI 설치 + `gh auth login` 완료
+- `./scripts/generate-upload-keystore.sh <app-slug>` 선행 (pending 폴더가 있어야 함)
+- `gh` CLI 설치 + `gh auth login` 완료 + 파생 레포 git 루트에서 실행
 - 레포에 write 권한
 
 ---
@@ -282,7 +309,7 @@ Android 업로드 keystore 생성 (Play App Signing 에 등록할 키).
 
 | 파일 | 용도 |
 |------|------|
-| `configure_app.dart` | `app_kits.yaml` ↔ `main.dart` 정합성 검증 |
+| `configure_app.dart` | `app_kits.yaml` 선언 · 의존 검증 (`main.dart` 는 읽지 않음 — 수동 대조) |
 
 ### configure_app.dart
 
@@ -294,9 +321,11 @@ dart run tool/configure_app.dart
 dart run tool/configure_app.dart --audit
 ```
 
+검증 범위는 **`app_kits.yaml` 선언 쪽** 이에요 — Kit 이름이 `lib/kits/` 에 실존하는지, `kit_manifest.yaml` 의 `requires` 의존이 모두 활성인지, `auth_kit.providers` 이름이 지원 목록에 있는지. `lib/main.dart` 의 `AppKits.install([...])` 은 읽지 않으니 yaml ↔ main.dart 일치는 수동 대조가 필요해요.
+
 출력 예:
 
-```
+```text
 === Configure App ===
 app.name  : Template App
 app.slug  : template
@@ -315,7 +344,7 @@ Status: OK
 
 ### 의존성 검증
 
-```
+```text
 --- Dependency Issues ---
   ✗ auth_kit requires backend_api_kit, which is not enabled
 Status: ISSUES FOUND

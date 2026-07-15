@@ -9,7 +9,6 @@
 - **go_router `StatefulShellRoute.indexedStack`** 사용 — 탭별 독립 네비게이션 스택 유지
 - **중앙 FAB** 옵션 — 주요 액션 (추가 · 녹음 등)
 - **아이콘 · 라벨** 커스터마이징
-- **탭 전환 애니메이션** — Material · Cupertino 자동 감지
 
 ---
 

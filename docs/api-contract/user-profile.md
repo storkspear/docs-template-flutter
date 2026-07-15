@@ -22,7 +22,7 @@
 
 ### Request
 
-```
+```http
 GET /api/apps/{slug}/users/me
 Authorization: Bearer <access_token>
 ```
@@ -56,7 +56,7 @@ Authorization: Bearer <access_token>
 
 ### Request
 
-```
+```http
 PATCH /api/apps/{slug}/users/me
 Authorization: Bearer <access_token>
 Content-Type: application/json
@@ -103,7 +103,7 @@ Content-Type: application/json
 
 ### Request
 
-```
+```http
 POST /api/apps/{slug}/users/me/activity
 Authorization: Bearer <access_token>
 ```
@@ -112,7 +112,7 @@ Authorization: Bearer <access_token>
 
 ### Response
 
-```
+```http
 204 No Content
 ```
 
@@ -129,11 +129,12 @@ Authorization: Bearer <access_token>
 ## 클라이언트 호출 패턴
 
 ```dart
-// 직접 ApiClient.dio 사용 (prefix 우회)
-final response = await apiClient.dio.get(ApiEndpoints.userMe);
-final profile = UserProfile.fromJson(
-  (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+// ApiClient.get — /api/apps/{slug} prefix 자동 적용 + fromData 디코드
+final response = await apiClient.get(
+  ApiEndpoints.userMe,
+  fromData: (data) => UserProfile.fromJson(data as Map<String, dynamic>),
 );
+final profile = response.data; // UserProfile
 ```
 
 > 실 코드는 `lib/features/profile/` 같은 도메인 layer 에서 wrap 해요. 이 문서는 계약만 정리.

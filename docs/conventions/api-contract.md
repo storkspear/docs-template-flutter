@@ -44,14 +44,14 @@ Spring `Page<T>` 와 1:1. 상세 → [`response-schema.md`](../api-contract/resp
 
 ### 4. 인증: JWT Bearer + appSlug 검증
 
-```
+```text
 Authorization: Bearer <accessToken>
 URL: /api/apps/{appSlug}/...
 ```
 
 - access token 만료 (`CMN_007`) → 인터셉터가 자동 refresh
 - refresh 실패 (`ATH_002`/`003`) → ViewModel 이 signOut 호출
-- URL 의 `{appSlug}` 와 JWT payload 의 `appSlug` 가 백엔드에서 비교 (불일치 시 401)
+- URL 의 `{appSlug}` 와 JWT payload 의 `appSlug` 가 백엔드에서 비교 (불일치 시 403)
 
 상세 → [`auth-flow.md`](../api-contract/auth-flow.md), [`ADR-012`](../philosophy/adr-012-per-app-user.md).
 
@@ -65,7 +65,7 @@ final request = SearchRequestBuilder()
   .sortBy('createdAt', SortDirection.desc)
   .build();
 
-// path 는 base 만 — '/search' suffix 는 ApiClient 가 자동 prepend
+// path 는 base 만 — '/search' suffix 는 ApiClient 가 자동 append
 final result = await api.search<Expense>(
   '/expenses',
   request: request,
@@ -73,31 +73,32 @@ final result = await api.search<Expense>(
 );
 ```
 
-11개 연산자 (`_eq`, `_not`, `_gte`, `_lte`, `_gt`, `_lt`, `_like`, `_in`, `_notIn`, `_isNull`, `_isNotNull` — between 은 gte+lte 조합). 상세 → [`search-request.md`](../api-contract/search-request.md).
+Flutter builder 가 노출하는 연산자는 11개 (`_eq`, `_ne`, `_gte`, `_lte`, `_gt`, `_lt`, `_like`, `_in`, `_notIn`, `_isNull`, `_isNotNull` — between 은 gte+lte 조합). 백엔드는 `_between` 등 추가 연산자도 인식해요. 상세 → [`search-request.md`](../api-contract/search-request.md).
 
 ---
 
 ## API 호출 패턴
 
 ```dart
-// GET 단일 객체
+// GET 단일 객체 — fromData 는 dynamic 을 받으므로 클로저로 캐스팅
 final user = await api.get<User>(
   '/users/me',
-  fromData: User.fromJson,
+  fromData: (data) => User.fromJson(data as Map<String, dynamic>),
 );
 
 // GET 목록 (페이지네이션)
 final page = await api.get<PageResponse<Expense>>(
   '/expenses',
   queryParameters: {'page': 0, 'size': 20},
-  fromData: (data) => PageResponse.fromJson(data, Expense.fromJson),
+  fromData: (data) =>
+      PageResponse.fromJson(data as Map<String, dynamic>, Expense.fromJson),
 );
 
 // POST 생성
 final created = await api.post<Expense>(
   '/expenses',
   data: {'amount': 1500, 'category': 'food'},
-  fromData: Expense.fromJson,
+  fromData: (data) => Expense.fromJson(data as Map<String, dynamic>),
 );
 
 // 검색 (path 는 base — ApiClient 가 '/search' suffix 자동 추가)

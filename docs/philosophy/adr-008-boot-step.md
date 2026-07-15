@@ -288,8 +288,8 @@ BootStep 이 실패해도 `crashService` 가 off 면 원인 모름. `[Splash] ru
 
 **BootStep 구현 예시**
 - [`lib/kits/auth_kit/auth_check_step.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/auth_check_step.dart) — 토큰 유효성 확인
-- [`lib/kits/observability_kit/posthog_init_step.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/observability_kit/posthog_init_step.dart) — PostHog 초기화 (존재하는 경우)
-- [`lib/kits/update_kit/force_update_step.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/update_kit/force_update_step.dart) — 강제 업데이트 체크 (존재하는 경우)
+- [`lib/kits/local_db_kit/db_migration_step.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/local_db_kit/db_migration_step.dart) — Drift 마이그레이션 선실행
+- [`lib/kits/ads_kit/att_permission_step.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/ads_kit/att_permission_step.dart) — iOS ATT 권한 요청
 
 **main.dart 통합**
 - [`lib/main.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/main.dart) — `SplashController(steps: AppKits.allBootSteps).run()`

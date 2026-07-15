@@ -35,7 +35,7 @@
      - Bundle ID: `com.<org>.<slug>`
      - 발급된 Client ID 의 **reversed 형태** 가 iOS URL Scheme 에 사용됨
    - **Web** (백엔드가 ID token 검증 시 사용):
-     - 백엔드의 OAuth callback URL (template-spring 에선 보통 `https://api.example.com/auth/google/callback` 형태)
+     - 백엔드는 OAuth callback 을 받지 않아요 (redirect 흐름 미사용) — Flutter 가 SDK 로 받은 idToken 을 `POST /api/apps/{slug}/auth/google` 로 전송하면, 백엔드가 idToken 의 `aud` claim 을 등록된 client ID 리스트와 비교 검증해요. 발급한 client ID 를 그 리스트에 등록하는 게 백엔드 측 작업의 전부 (아래 §1-5)
 5. 각 client ID 복사 — 형태:
    - Android: `1234567890-abc.apps.googleusercontent.com`
    - iOS: `1234567890-def.apps.googleusercontent.com`
@@ -90,7 +90,7 @@ reversed Client ID 를 URL Scheme 으로 등록:
 
 - **Android**: `google-services.json` 안에 OAuth client ID 가 포함되므로 별도 dart-define 불필요
 - **iOS**: `GoogleService-Info.plist` 안에 포함 → 동일하게 별도 주입 불필요
-- **백엔드 (template-spring)**: Web Client ID 를 `GOOGLE_CLIENT_ID` 환경변수로 주입 (백엔드가 ID token 검증 시 audience 비교)
+- **백엔드 (template-spring)**: client ID 를 `APP_CREDENTIALS_<SLUG>_GOOGLE_CLIENT_IDS_0` (플랫폼별로 여러 개면 `_1`, `_2` …) 환경변수로 주입 — `app.credentials.<slug>.google-client-ids` 리스트에 바인딩되고, 백엔드가 ID token 의 `aud` 를 이 리스트와 비교 검증해요
 
 ---
 
@@ -103,9 +103,9 @@ reversed Client ID 를 URL Scheme 으로 등록:
 3. 본인의 **App ID 선택** (없으면 새로 생성, Bundle ID = `com.<org>.<slug>`)
 4. **Capabilities** 에서 **Sign In with Apple** 활성화 → Save
 
-### 2-2. (선택, 백엔드 검증용) Service ID + Key 발급
+### 2-2. Service ID + Key 발급 — 현 백엔드 미사용 (건너뛰어도 돼요)
 
-JWT 검증을 백엔드에서 직접 한다면:
+Service ID + `.p8` Key 는 서버가 authorization code 를 Apple 토큰 엔드포인트와 직접 교환하는 흐름에서만 필요해요. **현 template-spring 은 Flutter 가 전달한 identity token 을 Apple JWKS 공개키 (RS256) 로 직접 검증**하므로 `.p8` 키가 필요 없어요. 나중에 서버 주도 교환 흐름으로 확장할 때만:
 
 1. **Identifiers** → 새 Service ID 생성 (예: `com.<org>.<slug>.signinservice`)
 2. **Sign In with Apple → Configure** → Primary App ID = 위 §2-1 App ID
@@ -120,21 +120,18 @@ JWT 검증을 백엔드에서 직접 한다면:
 
 ### 2-4. 키 주입 (백엔드)
 
-`.p8` 파일을 **백엔드 GHA Secrets** 에 등록 (Flutter 측은 SDK 가 처리하므로 키 주입 불필요):
+현 백엔드는 `.p8` 키 등록이 **필요 없어요** (JWKS 공개키 검증). 백엔드 설정은 `aud` 검증용 Bundle ID 하나뿐:
 
 ```bash
-# template-spring 측에서:
-gh secret set APPLE_PRIVATE_KEY < AuthKey_ABC123.p8
-gh secret set APPLE_TEAM_ID --body "ABCD1234"
-gh secret set APPLE_KEY_ID --body "ABC123"
-gh secret set APPLE_SERVICE_ID --body "com.org.slug.signinservice"
+# template-spring 측 환경변수 (app.credentials.<slug>.apple-bundle-id 바인딩)
+APP_CREDENTIALS_<SLUG>_APPLE_BUNDLE_ID=com.<org>.<slug>
 ```
 
-> Flutter 측은 Apple SDK 가 native 로 ID token 만 가져와서 백엔드에 전송. 백엔드가 JWKS + RS256 으로 검증.
+> Flutter 측은 Apple SDK 가 native 로 ID token 만 가져와서 백엔드에 전송. 백엔드가 JWKS + RS256 으로 iss/aud/exp 를 검증 — 이때 `aud` 를 위 Bundle ID 와 비교해요.
 
 ### 2-5. iOS-only 제약
 
-- **Android 에서는 Apple 로그인 작동 안 함** (Apple 이 iOS native API 만 제공). UI 에서도 자동으로 숨겨져야 함.
+- **Android 에서는 Apple 로그인이 작동하지 않아요** (Apple 이 iOS native API 만 제공). UI 에서도 자동으로 숨겨져야 해요.
 - 우리 템플릿: `social_login_bar.dart` 가 `Platform.isIOS` 체크 → iOS 에서만 Apple 버튼 노출.
 
 ---
@@ -237,15 +234,14 @@ authService.signInWithApple(identityToken: '...')
 - [ ] Android/iOS/Web Client ID 3개 발급 (사용 플랫폼만)
 - [ ] Android: `google-services.json` 배치 + SHA-1 등록 (release/debug)
 - [ ] iOS: `GoogleService-Info.plist` 배치 + Info.plist URL Scheme 등록
-- [ ] 백엔드 (`template-spring`): `GOOGLE_CLIENT_ID` (Web Client ID) 환경변수
+- [ ] 백엔드 (`template-spring`): `APP_CREDENTIALS_<SLUG>_GOOGLE_CLIENT_IDS_0` 환경변수 (`app.credentials` 리스트 — 플랫폼별 client ID 를 `_1`, `_2` … 로 추가)
 - [ ] `app_kits.yaml` + `main.dart` 에 `google` provider 활성화
 
 ### Apple
 - [ ] Apple Developer 멤버십 가입 ($99/year)
 - [ ] App ID Capabilities 에 Sign in with Apple 활성
-- [ ] (백엔드 검증용) Service ID + Key (.p8) + Team ID 발급
 - [ ] Xcode Capabilities → Sign in with Apple 추가
-- [ ] 백엔드: `APPLE_PRIVATE_KEY`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_SERVICE_ID` GHA Secrets 등록
+- [ ] 백엔드: `APP_CREDENTIALS_<SLUG>_APPLE_BUNDLE_ID` 환경변수 등록 (JWKS 검증 방식이라 Service ID / `.p8` 키는 불필요 — §2-2)
 - [ ] `app_kits.yaml` + `main.dart` 에 `apple` provider 활성화
 
 ---

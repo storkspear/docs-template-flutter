@@ -146,7 +146,7 @@ jobs:
 - [ ] App Store Connect 앱 등록
 - [ ] API Key 발급 → GitHub Secrets (`APP_STORE_KEY_ID` · `ISSUER_ID` · `KEY_CONTENT`)
 - [ ] `rename-app.sh` 로 Bundle ID 일괄 변경
-- [ ] 로컬에서 `bundle exec fastlane beta` 테스트
+- [ ] (iOS `Fastfile` 작성 후 — 위 "Fastlane 구성 (예정)" 참고) 로컬에서 `bundle exec fastlane beta` 테스트
 - [ ] TestFlight 에 빌드 업로드 확인
 
 ---

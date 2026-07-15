@@ -40,7 +40,7 @@ gitleaks detect --source .
 git check-ignore -v .env android/key.properties android/app/upload-keystore.jks
 ```
 
-세 파일 모두 ignored 상태여야 함.
+세 파일 모두 ignored 상태여야 해요.
 
 ### 1-3. GHA Secrets 명단 검사
 
@@ -73,21 +73,22 @@ R8 난독화 후엔 의미 있는 식별자가 거의 안 보여야 정상.
 **활성화**:
 
 ```bash
-# 백엔드 인증서의 SHA-256 핀 추출
-echo | openssl s_client -servername api.example.com -connect api.example.com:443 \
-  | openssl x509 -pubkey -noout \
-  | openssl pkey -pubin -outform DER \
+# 백엔드 leaf 인증서 "전체 DER" 의 SHA-256 핀 추출 (SPKI 아님)
+echo | openssl s_client -servername api.example.com -connect api.example.com:443 2>/dev/null \
+  | openssl x509 -outform der \
   | openssl dgst -sha256 -binary \
   | openssl enc -base64
 
-# 빌드 시 주입 (콤마 구분, 백업 핀 포함 권장)
+# 출력에 sha256/ prefix 를 붙여 주입 (콤마 구분, 백업 핀 포함 권장)
 flutter build apk --release \
-  --dart-define=SSL_PINS=AAA...=,BBB...=
+  --dart-define=SSL_PINS=sha256/AAA...=,sha256/BBB...=
 ```
 
+> ⚠️ 핀은 **leaf 인증서 전체 DER** 의 SHA256 이에요 — 런타임의 `SslPinning.computePinFromCert(cert.der)` 와 같은 방식. SPKI (`-pubkey`) 로 뽑은 핀은 **절대 일치하지 않아요** (통신 전면 차단). 상세는 [`docs/infra/security.md`](../infra/security.md) §5.
+
 **주의**:
-- 인증서 갱신 시 핀도 함께 갱신해야 함. 갱신 잊으면 모든 사용자 앱이 통신 불가 → 핫픽스 배포 필수.
-- 백업 핀 (intermediate / root) 1개 이상 함께 등록 권장.
+- 인증서 갱신 시 핀도 함께 갱신해야 해요 (전체 DER 방식이라 같은 키로 갱신해도 핀이 바뀜). 갱신 잊으면 모든 사용자 앱이 통신 불가 → 핫픽스 배포 필수.
+- 백업 핀 = **다음 발급 예정 인증서의 핀** 을 함께 등록. leaf 인증서만 검사하므로 intermediate / root 핀은 매칭되지 않아요.
 - 첫 출시 후 일정 기간 (1주일 ~ 1개월) 모니터링 후 단계적 활성화 권장.
 
 ---
@@ -106,7 +107,7 @@ flutter build apk --release \
 
 ## 4. 개인정보처리방침 (Privacy Policy)
 
-`AppConfig.privacyUrl` 에 등록한 URL 이 Play Console / App Store 의 개인정보처리방침 링크와 일치해야 함.
+`AppConfig.privacyUrl` 에 등록한 URL 이 Play Console / App Store 의 개인정보처리방침 링크와 일치해야 해요.
 
 명시 항목 (한국 기준):
 - 수집 항목 (이메일 / FCM 토큰 / 사용자 행동 데이터 등)

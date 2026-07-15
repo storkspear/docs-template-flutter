@@ -7,7 +7,7 @@
 ## AppKit 인터페이스 전체
 
 ```dart
-// lib/core/kits/app_kit.dart 전체
+// lib/core/kits/app_kit.dart 발췌
 abstract class AppKit {
   String get name;                                     // 디버그 이름
   List<Type> get requires => const [];                 // 의존 Kit 타입
@@ -151,7 +151,7 @@ class AppKits {
 
 ## 호출 순서 (main.dart)
 
-```
+```text
 1. WidgetsFlutterBinding.ensureInitialized()
 2. AppPaletteRegistry.install(DefaultPalette())
    AppTypefaceRegistry.install(DefaultTypeface())

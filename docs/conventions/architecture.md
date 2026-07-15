@@ -10,7 +10,7 @@ MVVM 패턴 · 모듈 의존 방향 · 에러 처리. **코드 작성 시 따라
 
 ### 1-1. 3계층 구조
 
-```
+```text
 Screen (ConsumerWidget)
   │  ref.watch(viewModelProvider)
   ▼
@@ -134,7 +134,7 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
 
   String _localizedError(String code, S s) {
     switch (code) {
-      case ErrorCode.unauthorized: return s.errorSessionExpired;
+      case ErrorCode.notFound: return s.errorLoadFailed;
       case 'NETWORK_ERROR': return s.errorNetworkUnavailable;
       default: return s.errorUnknown;
     }
@@ -184,7 +184,7 @@ final expenseDetailProvider = FutureProvider.family<Expense, int>((ref, id) => .
 
 ### 3-1. 3계층 변환
 
-```
+```text
 Dio → DioException → ErrorInterceptor → ApiException → ViewModel.catch
                                                           ↓
                                                   state.errorCode/Message
@@ -193,7 +193,7 @@ Dio → DioException → ErrorInterceptor → ApiException → ViewModel.catch
 ```
 
 - **API 계층**: `ApiException` (서버 코드 또는 NETWORK/TIMEOUT/UNKNOWN)
-- **ViewModel 계층**: `safeErrorCode(e, fallback: '...')` 로 안전한 코드 추출
+- **ViewModel 계층**: `safeErrorCode(e, fallbackCode: '...')` 로 안전한 코드 추출
 - **UI 계층**: `errorCode` → i18n 매핑 → 사용자 메시지
 
 ### 3-2. ApiException 분기 처리
@@ -243,7 +243,7 @@ try {
 
 ## 4. 모듈 의존 방향
 
-```
+```text
 features/  →  common/  →  kits/  →  core/
 ```
 
@@ -267,7 +267,7 @@ features/  →  common/  →  kits/  →  core/
 
 ### 5-1. 디렉토리 생성
 
-```
+```text
 lib/features/expense/
 ├── list/
 │   ├── expense_list_screen.dart
@@ -378,7 +378,7 @@ flutter gen-l10n
 
 ### 5-7. 테스트
 
-```
+```text
 test/features/expense/
 ├── expense_list_view_model_test.dart    # ViewModel 단위 테스트
 └── models/expense_test.dart              # fromJson 테스트

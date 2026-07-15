@@ -8,7 +8,7 @@
 
 ## 0. 배포 파이프라인 한눈에
 
-```
+```text
 git tag v1.0.0 → GitHub Actions → fastlane build (AAB) → Play Console Internal
 ```
 

@@ -6,7 +6,7 @@
 
 ## 개요
 
-```
+```text
 로컬 개발 완료
   ↓
 외부 서비스 자격증명 발급 (Sentry · PostHog · Firebase · 소셜 · 스토어)
@@ -57,10 +57,10 @@ iOS TestFlight 수동 배포            (fastlane beta 또는 Xcode Archive)
 ### 1. 업로드 keystore 생성
 
 ```bash
-./scripts/generate-upload-keystore.sh
+./scripts/generate-upload-keystore.sh <app-slug>
 ```
 
-생성: `android/app/upload-keystore.jks`
+생성: `android/app/upload-keystore.jks` + `android/key.properties` (둘 다 gitignore). 비밀번호는 자동 생성돼 `~/Documents/keystores-pending/<app-slug>/passwords.txt` 에 임시 백업돼요.
 
 **중요**: `.gitignore` 확인. 절대 커밋 금지. [Bitwarden](https://bitwarden.com/) 같은 매니저에 백업.
 
@@ -151,47 +151,35 @@ App Store Connect → TestFlight → Internal Testing → 본인 Apple ID 추가
 
 ## §4 GitHub Secrets 등록 (20분)
 
-`.env` 로컬 파일에 먼저 모으고:
+### 1. Android 서명 Secrets — 스크립트 자동 업로드
+
+`generate-upload-keystore.sh` 가 만들어 둔 `~/Documents/keystores-pending/<app-slug>/` 를 읽어 서명 관련 4종만 자동 등록해요:
 
 ```bash
-# .env (커밋 금지)
-SENTRY_DSN=https://xxx@sentry.io/yyy
-SENTRY_AUTH_TOKEN=...
-SENTRY_ORG=my-org
-SENTRY_PROJECT=my-app
-
-POSTHOG_KEY=phc_xxx
-POSTHOG_HOST=https://app.posthog.com
-
-ANDROID_KEYSTORE_PASSWORD=...
-ANDROID_KEY_ALIAS=upload
-ANDROID_KEY_PASSWORD=...
-
-PLAY_STORE_JSON_KEY='{"type":"service_account", ...}'
-
-APP_STORE_KEY_ID=...
-APP_STORE_ISSUER_ID=...
-APP_STORE_KEY_CONTENT='-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----'
+./scripts/upload-secrets-to-github.sh <app-slug>
+# [1/4] ANDROID_KEYSTORE_BASE64   (jks → base64)
+# [2/4] ANDROID_KEYSTORE_PASSWORD
+# [3/4] ANDROID_KEY_PASSWORD
+# [4/4] ANDROID_KEY_ALIAS
 ```
 
-일괄 업로드:
+전제: gh CLI 설치 + `gh auth login` + 파생 레포 git 루트에서 실행.
+
+### 2. 나머지 Secrets — `gh secret set` 수동 등록
+
+Play Console JSON 키 · Sentry · PostHog 값은 스크립트가 다루지 않아요. 발급받은 값을 직접 등록해요:
 
 ```bash
-./scripts/upload-secrets-to-github.sh
+gh secret set PLAY_STORE_JSON_KEY < service-account.json   # Play Console 서비스 계정 JSON
+gh secret set SENTRY_AUTH_TOKEN    # sentry-cli 용 Auth Token (심볼 업로드)
+gh secret set SENTRY_ORG           # 예: my-org
+gh secret set SENTRY_PROJECT       # 예: my-app
+gh secret set SENTRY_DSN           # 릴리스 빌드 --dart-define 주입용
+gh secret set POSTHOG_KEY
+gh secret set POSTHOG_HOST
 ```
 
-또는 수동:
-
-```bash
-gh secret set SENTRY_DSN --body "$SENTRY_DSN"
-# ...
-```
-
-keystore base64:
-
-```bash
-base64 -i android/app/upload-keystore.jks | gh secret set ANDROID_KEYSTORE_BASE64
-```
+iOS (TestFlight) 는 §3 처럼 로컬 fastlane 으로 진행하므로 GHA Secrets 등록이 필요 없어요.
 
 ---
 

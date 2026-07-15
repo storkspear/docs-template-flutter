@@ -38,17 +38,26 @@ buildTypes {
 플러그인별 `-keep` 규칙 유지. 주요 규칙:
 
 ```proguard
-# Flutter 기본
--keep class io.flutter.embedding.** { *; }
--keep class io.flutter.plugin.** { *; }
+# android/app/proguard-rules.pro 발췌
+# Flutter 공식 권장 규칙 (기본)
+-keep class io.flutter.** { *; }
+-keep class io.flutter.plugin.**  { *; }
+-dontwarn io.flutter.embedding.**
 
-# JSON 직렬화 (Serializable 구현체)
--keep class * implements java.io.Serializable { *; }
+# Dio / OkHttp (간접 의존)
+-keep class okhttp3.** { *; }
+-dontwarn okhttp3.**
 
-# 플러그인별 keep (예: sqlite3_flutter_libs, sentry_flutter)
--keep class com.tekartik.sqflite.** { *; }
+# Sentry
 -keep class io.sentry.** { *; }
+-dontwarn io.sentry.**
+
+# Kakao Login (kakao_flutter_sdk_user) — SDK 가 GSON/Retrofit 리플렉션 사용
+-keep class com.kakao.sdk.** { *; }
+-dontwarn com.kakao.sdk.**
 ```
+
+실물 파일엔 이 밖에도 Drift · AdMob · Naver Login · flutter_local_notifications · workmanager · flutter_secure_storage 등 플러그인별 규칙이 더 있어요. 파생 레포에서 새 의존성 추가 시 이 파일에 규칙을 보강하세요 (누락 시 release 빌드에서 `NoClassDefFoundError` 가능).
 
 ### 검증
 
@@ -101,11 +110,18 @@ bundle exec fastlane android upload_sentry_mapping version:1.2.3
 `android/app/src/main/res/xml/network_security_config.xml`:
 
 ```xml
-<?xml version="1.0" encoding="utf-8"?>
+<!-- network_security_config.xml 발췌 -->
 <network-security-config>
-  <base-config cleartextTrafficPermitted="false" />
+    <!-- Release: cleartext 전면 차단 (HTTPS만 허용) -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
 </network-security-config>
 ```
+
+실물 파일엔 추가로 debug 빌드 전용 `<debug-overrides>` (user 인증서 신뢰 — 로컬 API 개발용) 와, dev 서버가 http 일 때 도메인을 허용하는 **주석 처리된** `<domain-config>` 블록이 있어요 (파생 레포에서 필요 시 주석 해제).
 
 `android/app/src/main/AndroidManifest.xml`:
 

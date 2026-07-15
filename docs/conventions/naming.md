@@ -15,7 +15,7 @@
 | 서비스 | `{domain}_service.dart` | `auth_service.dart` |
 | 모델 · DTO | `{name}.dart` | `current_user.dart` · `expense.dart` |
 | 인터페이스 | `{기능}_service.dart` 또는 `{기능}_store.dart` | `analytics_service.dart` · `cache_store.dart` |
-| 구현체 | `{구현방식}_{인터페이스}.dart` | `debug_analytics_service.dart` · `memory_cache_store.dart` |
+| 구현체 | `{구현방식}_{인터페이스}.dart` | `debug_payment_service.dart` · `memory_cache_store.dart` |
 | Provider 모음 | `providers.dart` | `common/providers.dart` · `features/<domain>/providers.dart` |
 | 공통 위젯 | `app_{이름}.dart` 또는 `{역할}_view.dart` | `app_dialog.dart` · `loading_view.dart` |
 | 유틸 | `{기능}.dart` | `form_validators.dart` · `debouncer.dart` |
@@ -57,7 +57,7 @@ Dart 관용은 `lowerCamelCase`. Provider 는 접미사로 종류 표시.
 | StreamProvider · FutureProvider | `{name}StreamProvider` · `{name}FutureProvider` | `authStreamProvider` |
 | private 필드 | `_camelCase` | `_apiClient` · `_tokenStorage` |
 | 지역 상수 | `camelCase` | `buttonHeight` · `maxRetries` |
-| 전역 상수 | `camelCase` (Dart 관용, `UPPER_SNAKE_CASE` 아님) | `AppSpacing.md` · `ErrorCode.tokenExpired` |
+| 전역 상수 | `camelCase` (Dart 관용, `UPPER_SNAKE_CASE` 아님) | `AppSpacing.md` · `ErrorCode.accessTokenExpired` |
 | i18n 접근 변수 (지역) | `s` | `final s = S.of(context);` |
 | BuildContext 파라미터 | `context` | `(context, state) => ...` |
 | WidgetRef 파라미터 | `ref` | `(context, ref) => ref.watch(...)` |
@@ -68,7 +68,7 @@ Dart 관용은 `lowerCamelCase`. Provider 는 접미사로 종류 표시.
 
 3계층 + features ([`ADR-002`](../philosophy/adr-002-layered-modules.md) 참조):
 
-```
+```text
 lib/
 ├── core/             # 모든 앱 필수 기반 (46 파일)
 │   ├── analytics/    # AnalyticsService · CrashService 추상 + Debug
@@ -118,7 +118,7 @@ lib/
 |------|--------|------|
 | 일반 UI 텍스트 | 없음 | `login` · `signUp` · `settings` |
 | 검증 에러 | `validation` | `validationEmailRequired` · `validationPasswordTooShort` |
-| 네트워크 · 앱 에러 | `error` | `errorTimeout` · `errorUnknown` · `errorTokenExpired` |
+| 네트워크 · 앱 에러 | `error` | `errorTimeout` · `errorUnknown` · `errorNetworkUnavailable` |
 | 상대 시간 | `relativeTime` | `relativeTimeMinutes` · `relativeTimeDays` |
 | 확인 · 취소 류 | 없음 | `confirm` · `cancel` · `retry` |
 | 스낵바 · 토스트 | `toast` | `toastCopied` · `toastSaved` |
@@ -146,7 +146,7 @@ factory Expense.fromJson(Map<String, dynamic> json) => Expense(
 ## 파일 · 클래스 명명의 관용 예시
 
 ✅ **좋은 예**:
-```
+```text
 login_screen.dart       → class LoginScreen
 login_view_model.dart   → class LoginViewModel + class LoginState
 auth_service.dart       → class AuthService
@@ -155,7 +155,7 @@ debug_crash_service.dart → class DebugCrashService implements CrashService
 ```
 
 ❌ **피할 예**:
-```
+```text
 LoginScreen.dart         → 파일명이 PascalCase (관용 위반)
 login_vm.dart            → 축약 ViewModel → ViewModel 로 풀어쓰기
 auth.dart                → 뭐에 대한 파일인지 불명확

@@ -33,7 +33,7 @@
    - **iOS**: Bundle ID (`ios/Runner.xcodeproj` 의 PRODUCT_BUNDLE_IDENTIFIER)
 5. **카카오 로그인 활성화** (제품 설정 → 카카오 로그인):
    - 활성화 ON
-   - **OpenID Connect 활성화 권장** (백엔드가 ID token 검증 시 사용)
+   - OpenID Connect 활성화는 선택 — 현 백엔드는 ID token 이 아니라 **access token 검증 방식** (`/v1/user/access_token_info` 로 app_id 확인 + `/v2/user/me` 로 email 조회) 이라 OIDC 없이도 동작해요
    - **동의항목** 설정 — 이메일 (필수 여부 결정), 닉네임 등
 6. **개인정보 동의 항목**: "이메일" 을 **필수 동의** 로 설정 권장 (백엔드가 email 없이는 처리 어려움)
 
@@ -100,7 +100,7 @@ dart run tool/configure_app.dart
 
 ### 4-1. Kakao SDK 초기화 (Flutter 측)
 
-`lib/main.dart` 의 `_bootstrap()` 안 (AppKits.install 전):
+`lib/main.dart` 의 `main()` 안, `AppConfig.init` 직후 (주석 처리된 템플릿이 이미 있어요 — 주석 해제 후 사용):
 
 ```dart
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
@@ -128,7 +128,7 @@ KakaoSdk.init(
 </activity>
 ```
 
-> 보안: native key 는 base64 등으로 한 번 더 가리는 게 좋아요. 다만 Kakao SDK 가 native key 만으로는 임의 작업이 안 되도록 설계되어 있어서 노출돼도 치명적이진 않음.
+> 보안: native key 는 base64 등으로 한 번 더 가리는 게 좋아요. 다만 Kakao SDK 가 native key 만으로는 임의 작업이 안 되도록 설계되어 있어서 노출돼도 치명적이진 않아요.
 
 ### 4-3. iOS — `Info.plist`
 
@@ -187,7 +187,7 @@ GHA Secrets:
 ```bash
 gh secret set KAKAO_NATIVE_KEY
 gh secret set NAVER_CLIENT_ID
-gh secret set NAVER_CLIENT_SECRET   # 백엔드 측에서 사용
+gh secret set NAVER_CLIENT_SECRET   # Flutter FlutterNaverLogin.initSdk 인자 (spring 백엔드는 미사용)
 ```
 
 ---
@@ -205,9 +205,9 @@ Kakao SDK: 카카오톡 앱 또는 웹뷰 OAuth → access token 획득
   ↓
 authService.signInWithKakao(accessToken: '...')
   ↓
-백엔드: POST /api/apps/{slug}/auth/kakao { accessToken, appSlug }
+백엔드: POST /api/apps/{slug}/auth/kakao { accessToken } — appSlug 는 URL path 에서 derive
   ↓
-백엔드: kapi.kakao.com/v2/user/me 로 token 재검증 + email 추출
+백엔드: kapi.kakao.com /v1/user/access_token_info 로 app_id 검증 + /v2/user/me 로 email 추출
   ↓
 백엔드: 우리 JWT 발급 (AuthResponse — user + tokens nested)
   ↓
@@ -245,11 +245,11 @@ AuthService._handleAuthResponse → 토큰 저장 + authenticated 상태
 - [ ] Android 패키지명 + iOS Bundle ID 등록
 - [ ] 이메일 제공 정보 필수 설정
 - [ ] `Info.plist` 에 `LSApplicationQueriesSchemes` + URL Scheme 등록
-- [ ] `.env` + GHA Secrets 에 `NAVER_CLIENT_ID` (백엔드는 추가로 `NAVER_CLIENT_SECRET`)
+- [ ] `.env` + GHA Secrets 에 `NAVER_CLIENT_ID` · `NAVER_CLIENT_SECRET` (둘 다 Flutter `FlutterNaverLogin.initSdk` 인자 — spring 백엔드는 secret 미사용)
 - [ ] `app_kits.yaml` + `main.dart` 에 `naver` provider 활성화
 
 ### 백엔드 (template-spring)
-- [ ] `KakaoOidcVerifier` / `NaverProfileFetcher` 환경변수 주입 (Kakao app_id, Naver client_id+secret)
+- [ ] `KakaoSignInService` / `NaverSignInService` 용 환경변수 주입 — `APP_CREDENTIALS_<SLUG>_KAKAO_APP_ID` (Kakao 앱 ID, 숫자), `APP_CREDENTIALS_<SLUG>_NAVER_CLIENT_ID`
 - [ ] `/api/apps/{slug}/auth/kakao` 와 `/auth/naver` endpoint 가 응답 정상
 
 ---

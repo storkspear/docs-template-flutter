@@ -1,6 +1,6 @@
 # Layered_Modules
 
-**Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 line 수 갱신. `lib/` 하위 4개 최상위 폴더 (`core/` · `kits/` · `common/` · `features/`). `core/` 46 파일, `kits/` 14개 Kit · 77 파일.
+**Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-07-15 수치 재실측. `lib/` 하위 4개 최상위 폴더 (`core/` · `kits/` · `common/` · `features/`). `core/` 46 파일, `kits/` 14개 Kit · 80 파일.
 
 > **2026-05-06 명확화**: 본문 곳곳에 "kit 간 직접 import 금지" 표현이 있지만, 실제 적용 룰은 다음과 같아요:
 > - `kit_manifest.requires` 에 **선언한 kit** 의 **type import** 는 허용 (`ApiException` · `ErrorCode` 같은 타입은 provider 로 접근 불가)
@@ -198,7 +198,7 @@ lib/features/
 
 **디렉토리 구조**
 - [`lib/core/`](https://github.com/storkspear/template-flutter/tree/main/lib/core) — 46 파일 기반 레이어
-- [`lib/kits/`](https://github.com/storkspear/template-flutter/tree/main/lib/kits) — 14개 Kit · 77 파일
+- [`lib/kits/`](https://github.com/storkspear/template-flutter/tree/main/lib/kits) — 14개 Kit · 80 파일
 - [`lib/common/`](https://github.com/storkspear/template-flutter/tree/main/lib/common) — providers · router · splash
 - [`lib/features/`](https://github.com/storkspear/template-flutter/tree/main/lib/features) — 파생 레포 영역 (스텁 `home/` + `settings/`)
 
