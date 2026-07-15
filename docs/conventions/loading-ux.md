@@ -141,7 +141,7 @@ PrimaryButton(
 Column(
   children: [
     PrimaryButton(
-      text: s.submit,
+      text: s.confirm,
       isLoading: state.isSubmitting,
       onPressed: vm.submit,
     ),

@@ -146,7 +146,7 @@ Widget build(BuildContext context) {
            - asset: assets/fonts/Pretendard-Black.ttf
              weight: 900
    ```
-3. **`MyAppTypeface`** 정의 (`lib/theme/my_app_typeface.dart`).
+3. **`MyAppTypeface`** 정의 (`lib/core/theme/my_app_typeface.dart`).
    ```dart
    class MyAppTypeface extends AppTypeface {
      @override String get id => 'pretendard';

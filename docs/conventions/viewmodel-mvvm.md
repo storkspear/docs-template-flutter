@@ -6,7 +6,7 @@ Screen 은 UI 만, ViewModel 은 로직만. 상태 관리는 `StateNotifier<TSta
 
 ## 기본 구조
 
-```
+```text
 features/<domain>/
 ├── <domain>_screen.dart         # UI 전용
 ├── <domain>_view_model.dart     # State 클래스 + ViewModel 클래스 + Provider
@@ -150,14 +150,29 @@ final authStateProvider = Provider<AuthStateNotifier>((ref) {
 
 ## Screen 구조
 
-`ConsumerWidget`. `ref.watch` 로 상태 구독, `ref.read` 로 액션 호출.
+`ConsumerWidget` 이 기본. `ref.watch` 로 상태 구독, `ref.read` 로 액션 호출. 아래 예시는 `TextEditingController` 가 필요해서 `ConsumerStatefulWidget` 이에요 (아래 Screen 규칙 4번).
 
 ```dart
-class LoginScreen extends ConsumerWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(loginViewModelProvider);
     final vm = ref.read(loginViewModelProvider.notifier);
     final s = S.of(context);
@@ -173,15 +188,19 @@ class LoginScreen extends ConsumerWidget {
               ErrorBanner(message: _localizedError(context, state.errorCode!)),
 
             // 입력 필드
-            AppTextField(controller: _emailController, label: s.email),
-            AppTextField(controller: _passwordController, label: s.password, obscureText: true),
+            AppTextField(controller: _emailController, labelText: s.email),
+            AppTextField(
+              controller: _passwordController,
+              labelText: s.password,
+              obscureText: true,
+            ),
 
             const SizedBox(height: 16),
 
             // 버튼 (로딩 상태 전달)
             PrimaryButton(
-              label: s.signIn,
-              loading: state.isLoading,                    // ← state 구독
+              text: s.login,
+              isLoading: state.isLoading,                  // ← state 구독
               onPressed: () => vm.signInWithEmail(         // ← action 호출
                 _emailController.text,
                 _passwordController.text,
@@ -196,8 +215,9 @@ class LoginScreen extends ConsumerWidget {
   String _localizedError(BuildContext context, String code) {
     final s = S.of(context);
     switch (code) {
-      case 'LOGIN_FAILED': return s.loginFailed;
-      case 'ATH_001': return s.invalidCredentials;          // ErrorCode.invalidCredentials
+      case 'LOGIN_FAILED':
+      case 'ATH_001':                                      // ErrorCode.invalidCredentials
+        return s.loginFailed;
       case 'NETWORK_ERROR': return s.errorNetworkUnavailable;
       default: return s.errorUnknown;
     }
@@ -270,7 +290,7 @@ final authServiceProvider = Provider<AuthService>((ref) {
 
 ## 전체 흐름 예시 (로그인)
 
-```
+```text
 LoginScreen 의 PrimaryButton onPressed
   ↓
 ref.read(loginViewModelProvider.notifier).signInWithEmail(...)
@@ -288,7 +308,7 @@ LoginViewModel 로 복귀 → state = copyWith(isLoading: false)
 ```
 
 에러 시:
-```
+```text
 AuthService 가 ApiException(code: 'ATH_001') throw  ← Spring AuthError.INVALID_CREDENTIALS
   ↓
 LoginViewModel catch → state = copyWith(errorCode: 'ATH_001', errorMessage: '...')

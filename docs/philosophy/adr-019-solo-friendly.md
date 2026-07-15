@@ -1,6 +1,6 @@
 # Solo_Friendly
 
-**Status**: Accepted. 현재 유효. 2026-04-24 기준 이 ADR 은 모든 다른 ADR 의 **상위 기준**. 구체 구현은 ADR-001 ~ ADR-021 에 분산.
+**Status**: Accepted. 현재 유효. 2026-04-24 기준 이 ADR 은 모든 다른 ADR 의 **상위 기준**. 구체 구현은 ADR-001 ~ ADR-023 에 분산.
 
 ## 결론부터
 

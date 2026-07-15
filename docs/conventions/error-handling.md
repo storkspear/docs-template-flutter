@@ -6,16 +6,16 @@
 
 ## 에러 흐름 (High-Level)
 
-```
+```text
 서버 응답 / 네트워크 실패
   ↓
 Dio 의 DioException
   ↓
-ErrorInterceptor → ApiException 으로 변환
-  ↓
 AuthInterceptor → 401 이면 refresh 시도 (성공 시 재시도, 실패 시 원 에러)
   ↓
-LoggingInterceptor → `AppConfig.isDev` (dev/staging) 만 콘솔 출력 (prod 무음)
+ErrorInterceptor → ApiException 으로 변환
+  ↓
+LoggingInterceptor → `AppConfig.isDev` (dev 만) 콘솔 출력 (staging/prod 무음)
   ↓
 ViewModel 의 try/catch 블록에서 수신
   ↓
@@ -156,18 +156,13 @@ switch 쓰지 않는 이유: Dart enum 이 아니라 static const String. switch
 ViewModel 은 code 만, Screen 이 번역. [`ADR-016 · i18n 처음부터`](../philosophy/adr-016-i18n-from-start.md) 참조.
 
 ```dart
-// Screen 의 helper
+// Screen 의 helper — 케이스를 세분화하려면 ARB 양쪽에 키부터 추가 (i18n.md 참조)
 String _localizedError(BuildContext context, String code) {
   final s = S.of(context);
   switch (code) {
     case ErrorCode.invalidCredentials:    // ATH_001
-      return s.errorInvalidCredentials;
-    case ErrorCode.accessTokenExpired:    // CMN_007
-    case ErrorCode.refreshTokenExpired:   // ATH_002
-      return s.errorSessionExpired;
-    case ErrorCode.conflict:              // CMN_003 (이메일 중복 등은 details.field 로 구분)
-      return s.errorConflict;
-    case 'LOGIN_FAILED': return s.errorLoginFailed;
+    case 'LOGIN_FAILED':
+      return s.loginFailed;
     case 'NETWORK_ERROR': return s.errorNetworkUnavailable;
     case 'TIMEOUT': return s.errorTimeout;
     default: return s.errorUnknown;
@@ -201,7 +196,7 @@ Text(state.errorCode != null ? _localizedError(context, state.errorCode!) : '')
 
 [`ADR-010`](../philosophy/adr-010-queued-interceptor.md) 참조.
 
-```
+```text
 ApiClient.get('/users/me')
   ↓ Authorization: Bearer <access>
   ↓ 서버 응답 401
@@ -213,7 +208,7 @@ onTokenRefresh() 호출 → authService.refreshToken() 실행
   ↓ 실패: 원 401 전파 → ViewModel 이 수신
 ```
 
-ViewModel 은 **401 / refresh 실패를 구분 안 함** — `ApiException(code: 'UNAUTHORIZED')` 으로 받으면 signOut 결정.
+ViewModel 은 **401 / refresh 실패를 구분 안 함** — `e.isUnauthorized` 가 true 인 `ApiException` 으로 받으면 signOut 결정.
 
 ```dart
 // 일반 API 호출은 토큰 걱정 없음 — 인터셉터가 자동
@@ -243,7 +238,7 @@ Future<void> loadProfile() async {
 _dio.interceptors.addAll([
   AuthInterceptor(...),    // 1. 토큰 첨부 + 401 refresh
   ErrorInterceptor(),      // 2. DioException → ApiException
-  LoggingInterceptor(),    // 3. 항상 설치 — 내부에서 AppConfig.isDev 분기 (dev/staging만 출력)
+  LoggingInterceptor(),    // 3. 항상 설치 — 내부에서 AppConfig.isDev 분기 (dev 만 출력)
 ]);
 ```
 
@@ -296,7 +291,7 @@ if (state.errorMessage?.contains('invalid') ?? false) {
 **올바르게**: code 로 분기.
 ```dart
 if (state.errorCode == ErrorCode.invalidCredentials) {
-  Text(s.errorInvalidCredentials);
+  Text(s.loginFailed);
 }
 ```
 
@@ -324,7 +319,7 @@ switch (errorCode) {
 **올바르게**:
 ```dart
 switch (errorCode) {
-  case ErrorCode.invalidCredentials: return s.errorInvalidCredentials;
+  case ErrorCode.invalidCredentials: return s.loginFailed;
   // ...
   default: return s.errorUnknown;
 }

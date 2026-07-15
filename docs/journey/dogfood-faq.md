@@ -18,7 +18,7 @@
 
 ### Q. 왜 Kit 이 나눠져 있나요?
 
-**A.** 앱마다 필요 기능이 다름. 로컬 전용 앱에 Sentry SDK · Apple Sign In 플러그인이 박혀 있으면 바이너리 낭비 + 스토어 리뷰 문제. 근거: [`ADR-003`](../philosophy/adr-003-featurekit-registry.md).
+**A.** 앱마다 필요 기능이 달라요. 로컬 전용 앱에 Sentry SDK · Apple Sign In 플러그인이 박혀 있으면 바이너리 낭비 + 스토어 리뷰 문제가 생겨요. 근거: [`ADR-003`](../philosophy/adr-003-featurekit-registry.md).
 
 ### Q. `<repo> local init` 과 `<repo> dev init` 차이가 뭐예요?
 
@@ -26,7 +26,7 @@
 
 | verb | 하는 일 | 외부 자격 필요 |
 |---|---|---|
-| `local init` | rename + `.env` + `flutter pub get` | 없음 (백엔드/Firebase 없이도 OK) |
+| `local init` | rename + `.env` + `flutter pub get` | node 18+ · gh CLI 로그인 (prereq 검증) — 백엔드/Firebase 는 불필요 |
 | `dev init` | Firebase dev project 생성 + iOS/Android 앱 등록 + plist/json 다운 + link-oauth | `firebase login` 1회 |
 | `prod init` | 동일 흐름의 prod (별도 Firebase project) | 동일 |
 
@@ -178,7 +178,7 @@ class MyPalette extends AppPalette {
 
 ### Q. ViewModel 에서 번역 문자열을 쓸 수 있나요?
 
-**A.** 안 됨. ViewModel 은 `BuildContext` 가 없어 `S.of(context)` 접근 불가. **code 만 state 에 저장**, Screen 에서 번역.
+**A.** 안 돼요. ViewModel 은 `BuildContext` 가 없어 `S.of(context)` 접근이 불가해요. **code 만 state 에 저장** 하고, Screen 에서 번역해요.
 
 ### Q. 새 언어 추가는 어떻게?
 
@@ -190,7 +190,7 @@ class MyPalette extends AppPalette {
 
 ### Q. 모든 Kit 에 대해 계약 테스트를 써야 하나요?
 
-**A.** 네. `{kit_name}_contract_test.dart` 가 필수. [`Contract Testing`](../testing/contract-testing.md).
+**A.** 아니요. 핵심 Kit (`auth_kit` · `backend_api_kit` · `payment_kit`) 의 `{kit_name}_contract_test.dart` 를 우선하고, 메타가 단순한 Kit 은 통합 테스트로 흡수해요. 정책: [`Testing Strategy`](../testing/testing-strategy.md), 작성법: [`Contract Testing`](../testing/contract-testing.md).
 
 ### Q. ViewModel 테스트에 Kit 설치 필요한가요?
 
@@ -198,7 +198,7 @@ class MyPalette extends AppPalette {
 
 ### Q. Golden 이미지 테스트 필요한가요?
 
-**A.** 권장 아님 (유지 비용 큼). 복잡한 UI 만 선택적으로. 대부분은 위젯 테스트로 충분.
+**A.** 권장하지 않아요 (유지 비용이 커요). 복잡한 UI 만 선택적으로 써요. 대부분은 위젯 테스트로 충분해요.
 
 ---
 
@@ -230,7 +230,7 @@ npx @sentry/cli upload-dif --org $ORG --project $PROJECT build/app/symbols
 
 ### Q. 백엔드가 꺼지면 앱이 안 돼요. 어떻게?
 
-**A.** 백엔드 연동 앱은 그럼. `CachedRepository.networkFirst` 정책으로 **오프라인 fallback** 제공하거나, 상태 페이지 알림 (Downtime banner). 단 완전한 오프라인 우선 앱은 `backend_api_kit` 빼고 `local_db_kit` 만 쓰는 유형.
+**A.** 백엔드 연동 앱은 그래요. `CachedRepository.networkFirst` 정책으로 **오프라인 fallback** 을 제공하거나, 상태 페이지 알림 (Downtime banner) 을 써요. 단 완전한 오프라인 우선 앱은 `backend_api_kit` 빼고 `local_db_kit` 만 쓰는 유형이에요.
 
 ---
 

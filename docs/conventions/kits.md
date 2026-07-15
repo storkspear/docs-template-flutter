@@ -48,7 +48,7 @@ abstract class AppKit {
 
 Kit 활성화는 **3곳**에서 일치시켜야 해요:
 
-```
+```text
 app_kits.yaml          ←→     lib/main.dart                    →    tool/configure_app.dart
 (선언적 의도)                  (실제 코드)                          (CI 검증)
    │                              │                                   │
@@ -69,7 +69,7 @@ app_kits.yaml          ←→     lib/main.dart                    →    tool/c
 
 **불일치 시 출력 예** (의존성 문제):
 
-```
+```text
 --- Dependency Issues ---
   ✗ auth_kit requires backend_api_kit, which is not enabled
 Status: ISSUES FOUND
@@ -83,12 +83,12 @@ Status: ISSUES FOUND
 
 ## 3. Kit 의존 관계 규칙
 
-기본 14개 kit 중 의존 관계가 있는 건 **1개뿐**:
+기본 14개 kit 중 의존 관계가 있는 건 **2개** (auth · payment):
 
-```
+```text
 backend_api_kit (독립)
-  ↑
-auth_kit (requires: BackendApiKit)
+  ↑           ↑
+auth_kit    payment_kit    (둘 다 requires: backend_api_kit)
 ```
 
 나머지 11개는 모두 독립.
@@ -139,81 +139,81 @@ manifest `requires` 에 적지 않은 kit 을 import 하면 **다른 recipe 로 
 
 ## 4. 새 Kit 만들기 (파생 레포에서)
 
-도메인 특화 기능을 kit 으로 분리하고 싶을 때. 예: 결제 (`payment_kit`), 위치 추적 (`location_kit`).
+도메인 특화 기능을 kit 으로 분리하고 싶을 때. 예: 위치 추적 (`location_kit`), 바코드 스캔 (`scanner_kit`). 아래는 **가상의 `location_kit`** 을 만드는 예시예요 (결제는 이미 기본 [`payment_kit`](../features/payment-kit.md) 이 있어요).
 
 ### 4-1. 디렉토리 구조
 
-```
-lib/kits/payment_kit/
-├── payment_kit.dart                # AppKit 구현 (필수)
-├── kit_manifest.yaml               # 메타데이터 (필수)
-├── README.md                       # 표준 양식 (필수)
-├── payment_service.dart            # 도메인 서비스 인터페이스
-├── stripe_payment_service.dart     # 실제 구현체
-├── debug_payment_service.dart      # Debug 폴백 (Sentry 패턴 따라)
+```text
+lib/kits/location_kit/
+├── location_kit.dart                  # AppKit 구현 (필수)
+├── kit_manifest.yaml                  # 메타데이터 (필수)
+├── README.md                          # 표준 양식 (필수)
+├── location_service.dart              # 도메인 서비스 인터페이스
+├── geolocator_location_service.dart   # 실제 구현체
+├── debug_location_service.dart        # Debug 폴백 (observability kit 패턴 따라)
 └── ui/
-    ├── checkout_screen.dart
-    └── checkout_view_model.dart
+    ├── location_history_screen.dart
+    └── location_history_view_model.dart
 ```
 
 ### 4-2. `kit_manifest.yaml` 표준 양식
 
 ```yaml
-name: payment_kit
-description: 결제 (Stripe 통합) + 영수증 화면
+name: location_kit
+description: 위치 추적 + 이동 기록 화면
 dependencies:
-  - http
-  - stripe_sdk
+  - geolocator
 requires:
-  - BackendApiKit         # 결제 결과 백엔드 동기화 필요
+  - backend_api_kit         # 위치 기록 백엔드 동기화 필요
 ```
 
-> `requires` 는 사람이 읽기 위한 메타데이터. 실제 검증은 Dart 코드의 `AppKit.requires` getter 가 담당. 두 곳을 일치시켜요.
+> `requires` 는 **두 곳에서 기계 검증**돼요 — manifest 쪽은 `tool/configure_app.dart` 가 (`--audit` 시 불일치 `exit 1`), Dart 쪽 `AppKit.requires` getter 는 install 시점에 `AppKits` 가 검증. 두 곳을 일치시켜요.
 
-### 4-3. `payment_kit.dart` 골격
+### 4-3. `location_kit.dart` 골격
 
 ```dart
 import 'package:app_template/core/kits/app_kit.dart';
 import 'package:app_template/kits/backend_api_kit/backend_api_kit.dart';
-import 'package:app_template/kits/payment_kit/payment_service.dart';
+import 'package:app_template/kits/location_kit/location_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-export 'payment_service.dart';
+export 'location_service.dart';
 
-/// Provider — Debug 폴백이 default. PaymentKit 이 실구현으로 override.
-final paymentServiceProvider = Provider<PaymentService>(
-  (_) => DebugPaymentService(),  // DSN 미주입 시 콘솔만
+/// Provider — Debug 폴백이 default. LocationKit 이 실구현으로 override.
+final locationServiceProvider = Provider<LocationService>(
+  (_) => DebugLocationService(),  // 실구현 미주입 시 콘솔 로그만
 );
 
-class PaymentKit extends AppKit {
-  PaymentKit({required this.stripePublishableKey});
-  final String stripePublishableKey;
+class LocationKit extends AppKit {
+  LocationKit({this.distanceFilterMeters = 50});
+  final int distanceFilterMeters;
 
   @override
-  String get name => 'PaymentKit';
+  String get name => 'LocationKit';
 
   @override
   List<Type> get requires => const [BackendApiKit];
 
   @override
   List<Override> get providerOverrides => [
-    paymentServiceProvider.overrideWithValue(
-      StripePaymentService(publishableKey: stripePublishableKey),
+    locationServiceProvider.overrideWithValue(
+      GeolocatorLocationService(distanceFilterMeters: distanceFilterMeters),
     ),
   ];
 
   @override
   List<RouteBase> get routes => [
     GoRoute(
-      path: '/checkout',
-      builder: (_, __) => const CheckoutScreen(),
+      path: '/location-history',
+      builder: (_, __) => const LocationHistoryScreen(),
     ),
   ];
 
   @override
   Future<void> onInit() async {
-    Stripe.publishableKey = stripePublishableKey;
-    await Stripe.instance.applySettings();
+    // 위치 스트림 준비 등 kit 전역 초기화
+    await GeolocatorLocationService.warmUp();
   }
 }
 ```
@@ -223,7 +223,7 @@ class PaymentKit extends AppKit {
 기본 구조 (기존 kit README 따라):
 
 ```markdown
-# payment_kit
+# location_kit
 
 한 줄 요약 + 의존 kit 명시.
 
@@ -258,16 +258,14 @@ class PaymentKit extends AppKit {
 1. `app_kits.yaml`:
    ```yaml
    kits:
-     payment_kit:
-       publishable_key: pk_test_xxx  # 또는 dart-define 으로
+     location_kit:
+       distance_filter_meters: 50
    ```
 2. `lib/main.dart`:
    ```dart
    await AppKits.install([
      BackendApiKit(),
-     PaymentKit(
-       stripePublishableKey: const String.fromEnvironment('STRIPE_KEY'),
-     ),
+     LocationKit(distanceFilterMeters: 50),
      // ...
    ]);
    ```
@@ -275,12 +273,12 @@ class PaymentKit extends AppKit {
 
 ### 4-6. 테스트
 
-- **계약 테스트** (`test/kits/payment_kit/payment_kit_contract_test.dart`):
+- **계약 테스트** (`test/kits/location_kit/location_kit_contract_test.dart`):
   - `name`, `requires`, `redirectPriority` 같은 메타가 변경되지 않는지 확인
-- **서비스 테스트** (`test/kits/payment_kit/stripe_payment_service_test.dart`):
-  - HTTP mock 으로 결제 흐름 검증
+- **서비스 테스트** (`test/kits/location_kit/geolocator_location_service_test.dart`):
+  - 위치 플러그인 mock 으로 기록 흐름 검증
 - **위젯 테스트**:
-  - CheckoutScreen 의 로딩 / 성공 / 에러 상태
+  - LocationHistoryScreen 의 로딩 / 성공 / 에러 상태
 
 ---
 

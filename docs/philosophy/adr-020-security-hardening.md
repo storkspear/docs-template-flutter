@@ -108,23 +108,28 @@ buildTypes {
 
 ### 방어선 2 — Dart 심볼 난독화 + Sentry 업로드
 
-```yaml
-# .github/workflows/release-android.yml 발췌
-- name: Build AAB with obfuscation
-  run: |
-    flutter build appbundle \
-      --release \
-      --obfuscate \
-      --split-debug-info=build/app/symbols \
-      --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN }} \
-      --dart-define=POSTHOG_KEY=${{ secrets.POSTHOG_KEY }}
+난독화 빌드와 심볼 업로드는 fastlane lane 으로 구현돼 있고, `.github/workflows/release-android.yml` 이 이 lane 들을 호출해요.
 
-- name: Upload debug symbols to Sentry
-  run: |
-    npx @sentry/cli upload-dif \
-      --org ${{ secrets.SENTRY_ORG }} \
-      --project ${{ secrets.SENTRY_PROJECT }} \
-      build/app/symbols
+```ruby
+# android/fastlane/Fastfile 발췌
+lane :build_release do
+  # --obfuscate: Dart 클래스/함수 이름 축약, --split-debug-info: 심볼 매핑 보존
+  # defines: SENTRY_DSN · POSTHOG_KEY 등을 ENV → --dart-define 으로 주입
+  sh "cd ../.. && flutter build appbundle --release " \
+     "--obfuscate --split-debug-info=build/symbols " \
+     "#{defines.join(' ')}"
+end
+
+lane :upload_sentry_mapping do |options|
+  sh <<~SH
+    sentry-cli --auth-token #{auth_token} \
+      upload-proguard -o #{org} -p #{project} \
+      ../../build/app/outputs/mapping/release/mapping.txt
+    sentry-cli --auth-token #{auth_token} \
+      upload-dif -o #{org} -p #{project} \
+      ../../build/symbols
+  SH
+end
 ```
 
 효과:
@@ -184,12 +189,15 @@ class SslPinningEnv {
 
 ```dart
 // lib/kits/backend_api_kit/ssl_pinning.dart 발췌
-// HttpClient 의 badCertificateCallback 을 활용해 SHA-256 공개키 핀 검증
+// leaf 인증서 전체 DER 의 SHA-256 핀 검증 (SPKI 아님 — Dart 표준 라이브러리로는
+// X.509 파싱 없이 SPKI 추출이 안 돼 의존성 추가를 피함)
 class SslPinning {
-  static HttpClientAdapter createAdapter(List<String> pins) {
-    // dio 의 HttpClientAdapter 를 override 하여
-    // 서버 인증서의 SHA-256 해시가 핀 리스트에 있는지 확인
-    // 불일치 시 요청 실패
+  /// [dio]의 HttpClientAdapter 를 핀닝 래퍼로 교체. [pins] 비어있으면 no-op.
+  /// IOHttpClientAdapter.validateCertificate 훅으로, 기본 TLS 검증을
+  /// **통과한** 인증서에 대해 핀 일치를 강제. 불일치 시 badCertificate 로 거부.
+  static void applyTo(Dio dio, {required List<String> pins}) {
+    if (pins.isEmpty) return;
+    // ...
   }
 }
 ```
@@ -305,7 +313,8 @@ Android keystore · Play store JSON key · Apple p12 등은 `.gitignore` + GitHu
 - [`lib/core/storage/secure_storage.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/storage/secure_storage.dart)
 
 **CI · 배포**
-- [`.github/workflows/release-android.yml`](https://github.com/storkspear/template-flutter/blob/main/.github/workflows/release-android.yml) — 난독화 + 심볼 업로드
+- [`android/fastlane/Fastfile`](https://github.com/storkspear/template-flutter/blob/main/android/fastlane/Fastfile) — `build_release` (난독화 빌드) + `upload_sentry_mapping` (심볼 업로드) lane
+- [`.github/workflows/release-android.yml`](https://github.com/storkspear/template-flutter/blob/main/.github/workflows/release-android.yml) — 위 fastlane lane 호출
 - [`scripts/upload-secrets-to-github.sh`](https://github.com/storkspear/template-flutter/blob/main/scripts/upload-secrets-to-github.sh) — Secrets 관리
 
 **관련 ADR**:

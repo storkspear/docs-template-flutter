@@ -21,7 +21,7 @@ Flutter 측 호출은 [`lib/kits/backend_api_kit/device_registration.dart`](../.
 
 ### Request
 
-```
+```http
 POST /api/apps/{appSlug}/devices
 Authorization: Bearer <access_token>
 Content-Type: application/json
@@ -51,13 +51,19 @@ Content-Type: application/json
 {
   "data": {
     "id": 101,
+    "userId": 42,
+    "appSlug": "habit-tracker",
     "platform": "ios",
     "pushToken": "fcm-or-apns-token-string",
-    "deviceName": "iPhone 15"
+    "deviceName": "iPhone 15",
+    "lastSeenAt": "2026-04-15T03:21:00Z",
+    "createdAt": "2026-04-15T03:21:00Z"
   },
   "error": null
 }
 ```
+
+> 필드는 짝 백엔드 `DeviceDto` record 의 8필드 그대로예요 — 계약 변경 시 이 record 가 진실의 출처.
 
 응답의 `id` 를 클라가 보관해두면 향후 DELETE 시 그대로 사용 가능 (보통 로그아웃 직전 unregister 호출).
 
@@ -67,7 +73,7 @@ Content-Type: application/json
 
 ### Request
 
-```
+```http
 DELETE /api/apps/{appSlug}/devices/{id}
 Authorization: Bearer <access_token>
 ```
@@ -76,7 +82,7 @@ Authorization: Bearer <access_token>
 
 ### Response
 
-```
+```http
 204 No Content
 ```
 
@@ -104,7 +110,7 @@ await deviceRegistration.unregister(savedDeviceId);
 
 디바이스가 등록돼야 백엔드가 푸시를 보낼 대상을 결정해요. 알림 채널 (push/email) 별 toggle 은 [`notification-settings.md`](./notification-settings.md) 참조.
 
-```
+```text
 NotificationsKit.init()
   → FCM 토큰 획득
     → DeviceRegistration.register(pushToken)        ← 본 문서

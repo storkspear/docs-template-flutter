@@ -16,7 +16,7 @@
 
 Figma 의 **Local styles → Color** 에 시맨틱 이름으로 정의:
 
-```
+```text
 Brand/Primary       #6366F1
 Brand/Secondary     #8B5CF6
 
@@ -38,7 +38,7 @@ Border/Strong       #D1D5DB
 
 ### 1-2. Text Styles 정의
 
-```
+```text
 Display/Large       Pretendard 32px Bold     -0.5 letterSpacing
 Display/Medium      Pretendard 28px Bold
 
@@ -60,7 +60,7 @@ Label/Medium        Pretendard 12px Medium
 
 Figma 의 **Local variables → Number** 에:
 
-```
+```text
 spacing/xs     4
 spacing/sm     8
 spacing/md     16
@@ -238,33 +238,31 @@ return Container(color: colors.success);
 
 ### 2-4. Spacing → AppSpacing
 
-이미 `lib/core/theme/spacing.dart` 에 표준 값이 있으면 그 위에 매핑. 없으면 `AppSpacing` 같은 const 클래스:
+`lib/core/theme/app_spacing.dart` 에 표준 토큰이 이미 있어요 — 새 클래스를 만들지 말고 Figma 토큰을 기존 상수에 매핑해요:
 
 ```dart
-// lib/core/theme/app_spacing.dart
-
+// lib/core/theme/app_spacing.dart 발췌
 class AppSpacing {
   static const double xs = 4;
   static const double sm = 8;
   static const double md = 16;
   static const double lg = 24;
   static const double xl = 32;
-  static const double xl2 = 48;
-}
+  static const double xxl = 48;
 
-class AppRadius {
-  static const double sm = 4;
-  static const double md = 8;
-  static const double lg = 12;
-  static const double xl = 16;
-  static const double full = 9999;
+  static const double radiusSm = 8;
+  static const double radiusMd = 12;
+  static const double radiusLg = 16;
+  static const double radiusFull = 999;
 }
 ```
+
+Figma 쪽 스케일이 다르면 (예: radius 4/8/12) 상수 값을 바로 바꾸기보다 디자이너와 스케일을 맞추는 쪽을 먼저 검토해요 — 앱 전체가 이 상수를 쓰고 있어서 값 변경은 전 화면에 파급돼요.
 
 사용:
 ```dart
 Padding(padding: const EdgeInsets.all(AppSpacing.md), ...);
-ClipRRect(borderRadius: BorderRadius.circular(AppRadius.md), ...);
+ClipRRect(borderRadius: BorderRadius.circular(AppSpacing.radiusMd), ...);
 ```
 
 ---
@@ -281,7 +279,7 @@ ClipRRect(borderRadius: BorderRadius.circular(AppRadius.md), ...);
 - [ ] `MyAppPalette` 클래스 (`lib/core/theme/`)
 - [ ] (커스텀 폰트면) `MyAppTypeface` 클래스 + `assets/fonts/` 배치 + `pubspec.yaml` fonts
 - [ ] (시맨틱 색이 Material 3 밖이면) `StateColors` ThemeExtension
-- [ ] `AppSpacing` / `AppRadius` const 클래스
+- [ ] Spacing/Radius 토큰을 기존 `AppSpacing` 상수 (`xs`~`xxl` · `radius*`) 에 매핑
 - [ ] `lib/main.dart` 에서 모두 install
 - [ ] (선택) Figma 컴포넌트 → 우리 `core/widgets/` 매핑 표 작성
 

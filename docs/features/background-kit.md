@@ -6,7 +6,7 @@
 
 ## 개요
 
-- **주기 태스크**: 15분 간격 (iOS 최소) · Android 제한 없음
+- **주기 태스크**: 최소 15분 간격 (Android WorkManager 제약) · iOS 는 시스템이 실행 시점을 결정 (보장 없음)
 - **1회성 태스크**: 지연 실행 (예: 10분 후)
 - **제약 조건**: 네트워크 연결 · 충전 중 · Wi-Fi 만 등
 - **플랫폼 차이**: iOS 는 background fetch API, Android 는 WorkManager
@@ -87,7 +87,7 @@ await ref.read(backgroundTaskSchedulerProvider).cancelAll();
 ## 파생 레포 체크리스트
 
 - [ ] iOS: `ios/Runner/Info.plist` 의 `UIBackgroundModes` 에 `fetch` · `processing` 추가
-- [ ] iOS: `UIBackgroundTaskIdentifier` 등록 (Info.plist · AppDelegate)
+- [ ] iOS: `Info.plist` 의 `BGTaskSchedulerPermittedIdentifiers` 에 workmanager 태스크 식별자 등록
 - [ ] Android: `AndroidManifest.xml` 의 permission 확인 (대부분 workmanager 자동)
 - [ ] `@pragma('vm:entry-point')` 어노테이션 (Dart AOT 최적화 방지)
 

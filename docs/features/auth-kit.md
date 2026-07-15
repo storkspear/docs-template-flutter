@@ -143,7 +143,7 @@ if (current.isAuthenticated) { /* ... */ }
 
 `AuthKit.buildRedirect()`:
 
-```
+```text
 상태 = unknown (부팅 중)
   → splash 로 유지 (홈 깜빡임 방지)
 
@@ -152,7 +152,7 @@ if (current.isAuthenticated) { /* ... */ }
   → 그 외 경로 접근 시 /login 으로
 
 상태 = authenticated
-  → /login · /forgot-password 접근 시 /home 으로 리다이렉트
+  → /login · /forgot-password 접근 시 homePath (기본 '/') 로 리다이렉트
   → /verify-email 은 인증 후에도 접근 허용 (보안 이벤트)
 ```
 
@@ -222,7 +222,8 @@ class ProfileScreen extends ConsumerWidget {
     return auth.when(
       data: (state) {
         if (state.user == null) return const SizedBox();
-        return Text('Hi, ${state.user!.displayName}');
+        // CurrentUser 는 JWT 클레임 기반 4필드: userId · email · appSlug · role
+        return Text('Hi, ${state.user!.email}');
       },
       loading: () => const LoadingView(),
       error: (e, _) => Text('Error: $e'),

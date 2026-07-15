@@ -55,7 +55,7 @@ Flutter 측 호출은 [`lib/kits/backend_api_kit/notification_settings.dart`](..
 
 ### Request
 
-```
+```http
 GET /api/apps/{appSlug}/me/notification-settings
 Authorization: Bearer <access_token>
 ```
@@ -80,7 +80,7 @@ Authorization: Bearer <access_token>
 
 ### Request
 
-```
+```http
 PATCH /api/apps/{appSlug}/me/notification-settings/RENEWAL_SUCCEEDED
 Authorization: Bearer <access_token>
 Content-Type: application/json
@@ -101,7 +101,7 @@ Content-Type: application/json
 
 ### Response
 
-```
+```http
 204 No Content
 ```
 

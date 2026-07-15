@@ -156,30 +156,42 @@ class TokenStorage {
 
 ### 부팅 시 복구 흐름
 
-```dart
-// lib/kits/auth_kit/auth_check_step.dart 맥락
-class AuthCheckStep implements BootStep {
-  @override
-  Future<void> execute() async {
-    // 1. 반쪽 상태 복구
-    await _tokenStorage.repairIfPartial();
+> **2026-07-15 정정**: 이 절은 부팅 시 서버 `/users/me` 검증으로 서술돼 있었지만, 실코드는 **서버 왕복 없는 로컬 JWT 파싱** 이에요. 현행 구현 기준으로 다시 썼어요.
 
-    // 2. 정상 토큰 있는지 확인
-    if (!await _tokenStorage.hasTokens()) {
-      _authState.emit(const AuthState.unauthenticated());
+부팅 시 `AuthCheckStep` (ADR-008) 이 `AuthService.checkAuthStatus()` 를 1회 호출해요.
+
+```dart
+// lib/kits/auth_kit/auth_service.dart 발췌
+Future<void> checkAuthStatus() async {
+  // 1. 반쪽 상태 복구
+  await _tokenStorage.repairIfPartial();
+
+  // 2. 정상 토큰 있는지 확인
+  final hasTokens = await _tokenStorage.hasTokens();
+  if (!hasTokens) {
+    _authState.emit(const AuthState.unauthenticated());
+    return;
+  }
+
+  // 3. 로컬 JWT 파싱으로 유효성 확인 (exp 만료 검사 — 서버 호출 없음)
+  final accessToken = await _tokenStorage.getAccessToken();
+  if (accessToken != null) {
+    final user = _parseJwtUser(accessToken);
+    if (user != null) {
+      _authState.emit(AuthState.authenticated(user));
       return;
     }
+  }
 
-    // 3. 서버에 유효성 확인 (/users/me 호출)
-    try {
-      final user = await _authService.fetchCurrentUser();
-      _authState.emit(AuthState.authenticated(user));
-    } catch (_) {
-      _authState.emit(const AuthState.unauthenticated());
-    }
+  // 4. 만료 · 파싱 실패 → refresh 시도, 그것도 실패하면 unauthenticated
+  final refreshed = await refreshToken();
+  if (!refreshed) {
+    _authState.emit(const AuthState.unauthenticated());
   }
 }
 ```
+
+부팅 검증은 **로컬에서만** 끝나요 — 서버 왕복이 없어 스플래시가 빨라요. 서버가 토큰을 취소 (revoke) 한 경우는 부팅에선 못 잡지만, 이후 첫 API 호출이 401 을 받으면 ADR-010 의 자동 refresh 경로가 처리해요. `AuthCheckStep` 은 `checkAuthStatus()` 가 예외를 던지면 non-fatal 리포트 후 `unauthenticated` 로 복귀시켜 부팅이 멈추지 않게 해요.
 
 ### PrefsStorage (일반 설정)
 
@@ -276,7 +288,8 @@ access 삭제가 실패해도 refresh 삭제는 **반드시** 시도. 두 토큰
 - [`lib/core/storage/prefs_storage.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/storage/prefs_storage.dart) — SharedPreferences 래퍼
 
 **부팅 복구 호출**
-- [`lib/kits/auth_kit/auth_check_step.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/auth_check_step.dart) — `repairIfPartial` → `hasTokens` → `fetchCurrentUser`
+- [`lib/kits/auth_kit/auth_check_step.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/auth_check_step.dart) — 부팅 시 `checkAuthStatus()` 호출 + 실패 격리
+- [`lib/kits/auth_kit/auth_service.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/auth_service.dart) — `repairIfPartial` → `hasTokens` → 로컬 JWT 파싱 → 필요 시 refresh
 
 **테스트**
 - [`test/core/storage/token_storage_test.dart`](https://github.com/storkspear/template-flutter/blob/main/test/core/storage/token_storage_test.dart) — 원자성 · 복구 시나리오

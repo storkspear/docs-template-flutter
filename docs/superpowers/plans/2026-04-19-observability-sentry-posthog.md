@@ -990,8 +990,8 @@ Expected: BUILD SUCCESSFUL (DSN/Key 없이도 빌드 성공, Debug 구현체로 
 Run:
 ```bash
 flutter build apk --debug \
-  --dart-define=SENTRY_DSN=https://fbd7598cb819313853fa06f47570b4f7@o4511243821056000.ingest.us.sentry.io/4511243834556416 \
-  --dart-define=POSTHOG_KEY=phc_sgGPNh4q6bcVeoYhcmyVGZuZCoQwXsrjCrtVL8WheCZm
+  --dart-define=SENTRY_DSN=https://<KEY>@<ORG>.ingest.us.sentry.io/<PROJECT_ID> \
+  --dart-define=POSTHOG_KEY=phc_<YOUR_POSTHOG_KEY>
 ```
 Expected: BUILD SUCCESSFUL
 
@@ -1018,8 +1018,8 @@ git commit -m "feat(observability): integrate Sentry+PostHog in main.dart with s
 Run:
 ```bash
 flutter run \
-  --dart-define=SENTRY_DSN=https://fbd7598cb819313853fa06f47570b4f7@o4511243821056000.ingest.us.sentry.io/4511243834556416 \
-  --dart-define=POSTHOG_KEY=phc_sgGPNh4q6bcVeoYhcmyVGZuZCoQwXsrjCrtVL8WheCZm
+  --dart-define=SENTRY_DSN=https://<KEY>@<ORG>.ingest.us.sentry.io/<PROJECT_ID> \
+  --dart-define=POSTHOG_KEY=phc_<YOUR_POSTHOG_KEY>
 ```
 
 - [ ] **Step 2: 고의 크래시 발생 (dev 빌드에서만 일시적으로)**

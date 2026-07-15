@@ -4,7 +4,7 @@
 
 > **이 문서의 위상**: `docs/` 안의 모든 문서가 참조하는 메타 문서. 새 문서 쓸 때 이 가이드를 따르고, 예외가 필요하면 "왜 이 경우에 예외인가" 를 본 문서에 추가.
 
-> **template-spring 과의 관계**: 짝이 되는 백엔드 템플릿의 [`STYLE_GUIDE`](https://github.com/storkspear/template-spring/blob/main/docs/STYLE_GUIDE.md) 와 정합성을 유지해요. 독자 레벨 분류 (Level 0~3), ADR 8섹션, 해요체, 상대경로 링크 규칙이 공통. Flutter 고유 사항 (Dart 코드 블록, AppKit 용어) 만 차이.
+> **template-spring 과의 관계**: 짝이 되는 백엔드 템플릿의 [`STYLE_GUIDE`](https://github.com/storkspear/template-spring/blob/main/docs/reference/STYLE_GUIDE.md) 와 정합성을 유지해요. 독자 레벨 분류 (Level 0~3), ADR 8섹션, 해요체, 상대경로 링크 규칙이 공통. Flutter 고유 사항 (Dart 코드 블록, AppKit 용어) 만 차이.
 
 ---
 
@@ -90,7 +90,7 @@
 - 명령조 (`~하라`) 금지. 규칙을 서술할 때도 `~해요`, `~따라요`.
 - 학술 톤 (`~하여야 한다`, `~이며`) 회피.
 
-> ⚠️ **CLAUDE.md 와의 차이**: 레포 루트의 `CLAUDE.md` 는 합쇼체 (`~합니다`) 를 지시하지만, `docs/` 하위는 **해요체가 우선** 이에요. `CLAUDE.md` 는 AI 에이전트용 운영 지침이고, `docs/` 는 파생 레포 독자용 설명서라서 톤이 달라요. 불가피하게 자연스럽지 않을 때만 `~합니다` 혼용 허용.
+> ⚠️ **CLAUDE.md 와의 관계**: 레포 루트 `CLAUDE.md` §10 도 `docs/` 하위 문서에 해요체를 지시해요 — 두 문서의 톤 규칙이 같아요. 불가피하게 자연스럽지 않을 때만 `~합니다` 혼용 허용.
 
 ### 섹션명 자연 한국어
 
@@ -126,7 +126,7 @@
 
 ## 4. 용어집 (Glossary)
 
-프로젝트 특유 용어는 **표기를 고정**. 흔들리면 검색 · 치환이 안 됨.
+프로젝트 특유 용어는 **표기를 고정** 해요. 흔들리면 검색 · 치환이 안 돼요.
 
 | 용어 | 표기 | 설명 |
 |---|---|---|
@@ -135,7 +135,7 @@
 | 짝 백엔드 템플릿 | `template-spring` | 함께 쓰이는 백엔드 레포 |
 | Kit / AppKit | `AppKit`, `auth_kit`, `backend_api_kit` 등 | 기능 단위 플러그인. `AppKit` 추상 클래스 계약 |
 | Kit 조립 | — | `app_kits.yaml` + `lib/main.dart` 에 Kit 선언해서 활성화 |
-| Recipe | `recipes/*.yaml` | 3가지 샘플 앱 유형 (local-only / local-notifier / backend-auth) |
+| Recipe | `recipes/*.yaml` | 4가지 샘플 앱 유형 (local-only / local-notifier / backend-auth / social-auth) |
 | BootStep | `BootStep` | 스플래시 중 실행되는 단계 (AuthCheckStep 등) |
 | ViewModel | `*ViewModel` | `StateNotifier<*State>` 를 상속한 로직 객체 |
 | Provider | `Provider`, `provider` | Riverpod 의 DI 노드. 본 프로젝트는 영문 `Provider` 유지 |
@@ -279,7 +279,7 @@ Code References 마지막에 `**관련 ADR**:` 블록으로 수렴:
 
 ## 7. 문서 규모별 1 세션 작업량
 
-경험 기반 기준. 무리하면 밀도가 떨어짐.
+경험 기반 기준. 무리하면 밀도가 떨어져요.
 
 | 규모 | 예시 | 1 세션 분량 |
 |---|---|---|
@@ -313,7 +313,7 @@ Code References 마지막에 `**관련 ADR**:` 블록으로 수렴:
 - [ ] Code References 의 파일 경로가 실존 (`ls` 확인)
 - [ ] 두 레포 (`template-flutter` + `docs-template-flutter`) 동기화 (`scripts/sync-docs.sh` 실행 — `rsync` 기반. `.github/workflows/sync-docs.yml` 가 미러 PR 자동 생성)
 - [ ] `docs-template-flutter/docs/manifest.json` 의 사이드바 엔트리 추가 (새 문서인 경우)
-- [ ] 특정 앱 / 회사 / Bundle ID 노출 없음 (`grep -r 'gymlog\|sumtally\|com\.twosun' docs/`)
+- [ ] 특정 앱 / 회사 / Bundle ID 노출 없음 (`grep -r 'gymlog\|sumtally\|com\.twosun' docs/`) — 단, **실존 테스트 파일명 인용** (예: `testing-strategy.md` 의 회귀 테스트 파일명) 은 예외
 - [ ] 커밋 메시지 Conventional Commits 포맷 + subject 72자 이하
 
 ---
@@ -322,7 +322,7 @@ Code References 마지막에 `**관련 ADR**:` 블록으로 수렴:
 
 ### 귀납이 우선, 연역은 금지
 
-이 가이드의 모든 규칙은 **구체 샘플에서 추출**. 추상 원칙을 먼저 쓰고 "이렇게 쓰자" 선언하지 않음.
+이 가이드의 모든 규칙은 **구체 샘플에서 추출** 해요. 추상 원칙을 먼저 쓰고 "이렇게 쓰자" 선언하지 않아요.
 
 - 새 규칙 추가 시 `philosophy/*.md` 또는 다른 완성 문서에서 근거 샘플 제시 필수
 - 샘플 없는 규칙은 "아이디어" 로만 보존 — 실제 문서 작성 시 검증되면 본문 이동

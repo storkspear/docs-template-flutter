@@ -64,10 +64,10 @@ flutter run \
   --dart-define=POSTHOG_KEY=$(grep POSTHOG_KEY .env | cut -d= -f2)
 ```
 
-또는 스크립트로:
+또는 스크립트로 (아래는 최소 패턴 예시 — 템플릿의 실제 래퍼는 [`scripts/start.sh`](../../scripts/start.sh) 로, flavor 라우팅 + Mock 자동 폴백까지 처리해요. `<repo> <env> start` 로 호출):
 
 ```bash
-# scripts/run.sh
+# 최소 패턴 예시 (레포에 없는 파일 — 실물은 scripts/start.sh)
 #!/bin/bash
 set -a && source .env && set +a
 flutter run \
@@ -200,7 +200,7 @@ git filter-branch --force --index-filter \
   --prune-empty --tag-name-filter cat -- --all
 ```
 
-그리고 **해당 키 즉시 무효화 + 재발급**. Force push 만으론 캐시 · mirror 에 남을 수 있음.
+그리고 **해당 키 즉시 무효화 + 재발급**. Force push 만으론 캐시 · mirror 에 남을 수 있어요.
 
 ---
 
@@ -221,6 +221,8 @@ BASE_URL=https://staging-api.example.com
 SENTRY_DSN=https://prod-dsn@sentry.io/...
 BASE_URL=https://api.example.com
 ```
+
+> ⚠️ 템플릿 기본 `.gitignore` 는 `.env` · `.env.local` · `.env.dev` · `.env.prod` · `.env.production` · `.env.*.local` 만 커버해요 — **`.env.staging` 은 포함되지 않아요**. staging 파일을 만들기 전에 `.gitignore` 에 `.env.staging` 라인을 먼저 추가하세요 (커밋 유출 방지).
 
 ### 빌드 타입별 주입
 

@@ -6,9 +6,9 @@
 
 ## 전제
 
-- 파생 레포는 **Use this template** 으로 생성됨 — fork 아님
-- 템플릿과 git 히스토리가 **끊어진** 독립 레포
-- 자동 merge 안 함 — **수동 cherry-pick** 만
+- 파생 레포는 **Use this template** 으로 생성돼요 — fork 가 아니에요
+- 템플릿과 git 히스토리가 **끊어진** 독립 레포예요
+- 자동 merge 는 안 해요 — **수동 cherry-pick** 만 해요
 
 ---
 
@@ -38,7 +38,7 @@ git log template/main --oneline --not main
 
 예시 출력:
 
-```
+```text
 a1b2c3d feat(kit): add charts_kit donut gauge
 d4e5f6g fix(auth): handle refresh race condition
 h7i8j9k chore(docs): update error handling convention
@@ -94,7 +94,7 @@ git cherry-pick --abort
 | 월 1회 | 보안 패치 · 중요 버그 수정 cherry-pick |
 | 필요 시 | 새 Kit · 주요 기능 |
 
-자동화 도구는 아직 없음. 수동 운영 (솔로 친화적).
+자동화 도구는 아직 없어요. 수동으로 운영해요 (솔로 친화적).
 
 ---
 
@@ -118,13 +118,13 @@ git cherry-pick --abort
 - 🤔 ViewModel 패턴 변경 — 파생 레포의 ViewModel 들 대거 수정 필요 가능
 - 🤔 AppKit 계약 변경 — 모든 Kit 영향
 
-이런 건 **담당 커밋을 신중히 리뷰** 후 결정. 때론 수동 리팩터가 더 나음.
+이런 건 **담당 커밋을 신중히 리뷰** 한 뒤 결정해요. 때론 수동 리팩터가 더 나아요.
 
 ---
 
 ## 오래된 파생 레포
 
-1년 이상 템플릿과 gap 이 크면 cherry-pick 이 현실적이지 않음. 이땐:
+1년 이상 템플릿과 gap 이 크면 cherry-pick 이 현실적이지 않아요. 이땐:
 
 1. 해당 개선의 **개념만 참고** (파일 그대로 X)
 2. 파생 레포에 맞게 **수동 리팩터**

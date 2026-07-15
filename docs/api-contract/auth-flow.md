@@ -11,7 +11,7 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
 
 ## 이메일 로그인 시퀀스
 
-```
+```text
 클라이언트                                         백엔드
    │                                                │
    │ POST /api/apps/{slug}/auth/email/signin        │  ← API endpoint
@@ -54,7 +54,7 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
 
 ## 일반 API 요청 (인증 필요)
 
-```
+```text
 클라이언트                                         백엔드
    │                                                │
    │ GET /api/apps/{slug}/users/me                  │
@@ -74,7 +74,7 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
 
 ## 토큰 만료 → 자동 refresh ([`ADR-010`](../philosophy/adr-010-queued-interceptor.md))
 
-```
+```text
 클라이언트                                         백엔드
    │                                                │
    │ GET /api/apps/{slug}/users/me                  │
@@ -84,7 +84,7 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
    │ 401 { error: { code: "CMN_007" } }              │  ← access token 만료
    │ ◀─────────────────────────────────────────────  │
    │                                                │
-   │ AuthInterceptor 감지 (isAccessTokenExpired)     │
+   │ AuthInterceptor 가 HTTP 401 수신 감지            │
    │ onTokenRefresh 콜백 실행                         │
    │                                                │
    │ POST /api/apps/{slug}/auth/refresh             │
@@ -136,7 +136,7 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
 
 이메일/소셜 로그인이 **2FA enabled user** 인 경우 1단계 응답에 정식 access token 대신 `twoFactorToken` (임시 JWT, TTL 5분, type=`2fa_pending`) 이 내려와요. 클라이언트는 **6자리 TOTP 코드 (또는 backup code)** 를 받아 2단계 로그인을 수행해요.
 
-```
+```text
 클라이언트                                         백엔드
    │                                                │
    │ POST /api/apps/{slug}/auth/email/signin        │  ← 1단계
@@ -149,10 +149,9 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
    │ 200 OK                                         │
    │ {                                              │
    │   "data": {                                    │
-   │     "twoFactorToken": "eyJ..." ,               │  ← 임시, 5분 TTL
-   │     "tokens": null                             │
-   │   },                                           │
-   │   "error": null                                │
+   │     "twoFactorToken": "eyJ..."                 │  ← 임시, 5분 TTL
+   │   },                                           │    (user/tokens 는 NON_NULL
+   │   "error": null                                │     직렬화라 필드 자체 생략)
    │ }                                              │
    │ ◀─────────────────────────────────────────────  │
    │                                                │
@@ -179,7 +178,7 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
 
 **짝 백엔드 DTO**: `TotpLoginRequest{ twoFactorToken, code }`. `code` 는 6자리 TOTP 또는 8자리 backup code 모두 허용 (백엔드가 자동 분기).
 
-**TOTP 등록 (Setup)**: 백엔드엔 이미 setup (`POST /me/2fa/setup`) · verify (`POST /me/2fa/verify`) · disable (`POST /me/2fa/disable`) **HTTP 엔드포인트가 노출돼 있어요** (모두 인증 필요). 다만 **Flutter 표준 화면 / `AuthService` 메서드는 미구현** — 표준 제공은 `/2fa/login` 2단계 로그인 흐름까지예요. TOTP 등록 UI + 위 엔드포인트 호출은 파생 레포에서 추가.
+**TOTP 등록 (Setup)**: 백엔드엔 이미 setup (`POST /auth/me/2fa/setup`) · verify (`POST /auth/me/2fa/verify`) · disable (`POST /auth/me/2fa/disable`) **HTTP 엔드포인트가 노출돼 있어요** (모두 인증 필요). 다만 **Flutter 표준 화면 / `AuthService` 메서드는 미구현** — 표준 제공은 `/2fa/login` 2단계 로그인 흐름까지예요. TOTP 등록 UI + 위 엔드포인트 호출은 파생 레포에서 추가.
 
 ---
 
@@ -187,7 +186,7 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
 
 > ⚠️ **백엔드에 로그아웃 endpoint 가 없어요** (의도적 결정). 로그아웃은 **클라단 동작**이에요. 서버 측 토큰 무효화는 refresh 시도 시 자연스럽게 일어나거나, 회원 탈퇴(`/auth/withdraw`) 시 일괄 처리.
 
-```
+```text
 사용자가 "로그아웃" 버튼 누름
   ↓
 authService.signOut() 호출
@@ -206,7 +205,7 @@ AuthKit.buildRedirect → /login 라우터 경로로 이동
 
 ## Refresh 실패 → signOut
 
-```
+```text
 원 요청 401 (CMN_007) → AuthInterceptor 가 자동 refresh 시도
   ↓
 refresh 응답: 401 { error: { code: "ATH_002" or "ATH_003" } }
@@ -266,7 +265,7 @@ TokenStorage.clearTokens() + authState.emit(unauthenticated)
 
 백엔드 `AppSlugVerificationFilter`:
 
-```
+```text
 1. 요청 URL 에서 {appSlug} 추출: /api/apps/{appSlug}/...
 2. JWT payload.appSlug 추출
 3. 비교
@@ -285,7 +284,7 @@ TokenStorage.clearTokens() + authState.emit(unauthenticated)
 
 ### 흐름 (provider 무관 공통)
 
-```
+```text
 1. 클라이언트: provider SDK 로 사용자 로그인 → 토큰 획득
 2. 클라이언트: POST /api/apps/{slug}/auth/{provider}
    Body: { ... provider 별 토큰 필드 ... }
@@ -333,9 +332,11 @@ Apple 사용자가 "Hide My Email" 을 선택하면 첫 로그인 후 identity t
 | `requestPasswordReset` | `POST /api/apps/{slug}/auth/password-reset/request` | 재설정 메일 발송 (204) |
 | `confirmPasswordReset` | `POST /api/apps/{slug}/auth/password-reset/confirm` | 토큰으로 재설정 (204) |
 | `withdraw` | `POST /api/apps/{slug}/auth/withdraw` | 회원 탈퇴 (인증 필요, 204) |
-| _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/me/2fa/setup` | TOTP 등록 시작 (인증 필요, 200) |
-| _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/me/2fa/verify` | TOTP 코드 검증 + 활성화 (인증 필요, 200) |
-| _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/me/2fa/disable` | 2FA 해제 (인증 필요, 204) |
+| _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/auth/me/2fa/setup` | TOTP 등록 시작 (인증 필요, 200) |
+| _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/auth/me/2fa/verify` | TOTP 코드 검증 + 활성화 (인증 필요, 200) |
+| _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/auth/me/2fa/disable` | 2FA 해제 (인증 필요, 204) |
+| _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/auth/phone/request` | 휴대폰 OTP 발송 (public, `{data:{devCode}}` — devCode 는 non-prod 만) |
+| _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/auth/phone/verify` | OTP 검증 + 토큰 발급 (public, 유저 find-or-create) |
 
 > 백엔드 `PATCH /api/apps/{slug}/auth/password` (인증 비번 변경) 는 contract에 있지만 `AuthService` 메서드는 미구현 (파생 레포에서 필요 시 직접 호출).
 

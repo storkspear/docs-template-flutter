@@ -6,7 +6,7 @@
 
 ## 전체 흐름
 
-```
+```text
 ┌─────────────────────────────────────────┐
 │  main() 진입                              │
 └──────────────────┬──────────────────────┘
@@ -90,20 +90,20 @@
                  ▼
 10. SplashController(steps: AppKits.allBootSteps).run()
    │
-   ├─ AuthKit 이 기여한 AuthCheckStep
+   ├─ AuthKit 이 기여한 AuthCheckStep → authService.checkAuthStatus()
    │    │
    │    ├─ tokenStorage.repairIfPartial()     (반쪽 상태 복구)
    │    ├─ tokenStorage.hasTokens()
-   │    │   ├─ true  → authService.fetchCurrentUser()
-   │    │   │          ├─ 성공 → authState.emit(authenticated)
-   │    │   │          └─ 실패 → authState.emit(unauthenticated)
+   │    │   ├─ true  → access token 로컬 JWT 파싱 (서버 호출 없음)
+   │    │   │          ├─ 파싱 성공 → authState.emit(authenticated)
+   │    │   │          └─ 파싱 실패 → refreshToken() 시도, 실패 시 unauthenticated
    │    │   └─ false → authState.emit(unauthenticated)
    │    
    ├─ ObservabilityKit 의 _PostHogInitStep
    │    └─ PostHog SDK 초기화 (POSTHOG_KEY 주입 시)
    │
    ├─ UpdateKit 의 _ForceUpdateStep
-   │    └─ service.isUpdateRequired() 확인 → AppUpdateNotifier 갱신
+   │    └─ service.init() → check() → isForce 면 forceUpdateInfoNotifier 갱신
    │
    └─ (기타 활성 Kit 의 BootStep)
                  │
@@ -177,7 +177,7 @@ ADR-003 의 3단계 패턴:
 
 ### 7. 첫 리다이렉트
 
-initialLocation `/splash` → refreshListenable 이 곧 초기 notify → `_composedRedirect` 실행 → AuthKit rule 이 상태에 따라 `/home` 또는 `/login` 반환 → 이동.
+initialLocation `/splash` → refreshListenable 이 곧 초기 notify → `_composedRedirect` 실행 → AuthKit rule 이 상태에 따라 `/` (homePath 기본값) 또는 `/login` 반환 → 이동.
 
 ---
 

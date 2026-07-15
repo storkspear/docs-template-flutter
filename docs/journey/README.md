@@ -17,9 +17,9 @@
 빠른 시작에서 하는 일:
 
 - `Use this template` 으로 파생 레포 생성 및 클론
-- `scripts/rename-app.sh` 로 앱 이름 · 번들 ID 일괄 치환
-- `flutter pub get` + `dart run tool/configure_app.dart` 로 의존성 · 구성 검증
-- `flutter run` 으로 첫 실행 확인
+- `./factory install` 로 `~/.local/bin/<repo>` 명령어 등록 (1회)
+- `<repo> local init <slug> <bundle_id>` 로 rename + `.env` 생성 + `flutter pub get` 한 번에
+- `<repo> local start` 로 첫 실행 확인 (mock 자동 폴백 — 백엔드 없이 시연)
 
 이 책은 빠른 시작이 끝났다는 가정에서 시작해요.
 
@@ -36,7 +36,7 @@
    - ADR-001 · GitHub Template Repository 패턴 (히스토리가 끊긴 독립 레포 생성 방식)
    - ADR-002 · 3계층 모듈 구조 (core / kits / common / features)
 
-2. [`architecture.md`](./architecture.md) 의 **§ 모듈 구조 한눈 요약** 한 섹션만 읽어주세요. FeatureKit 아키텍처의 큰 그림이 있어요.
+2. [`architecture.md`](./architecture.md) 의 **§ 큰 그림** 한 섹션만 읽어주세요. FeatureKit 아키텍처의 큰 그림이 있어요.
 
 여기까지 읽으면 "이 템플릿이 뭘 하려는 도구인지" 감이 잡혀요. 더 깊은 ADR 카드들은 나중에 필요할 때 돌아오세요.
 
@@ -69,11 +69,12 @@
 읽을 문서:
 
 1. [`Philosophy 인덱스`](../philosophy/README.md) 의 **ADR-003 · FeatureKit 동적 레지스트리** + **ADR-021 · Multi-Recipe 구성** 을 읽어주세요.
-2. [`Features 인덱스`](../features/README.md) 의 **§ Kit 의존 관계도** 로 의존성 체인 파악
+2. [`Features 인덱스`](../features/README.md) 의 **§ 의존 관계** 로 의존성 체인 파악
 3. [`Recipes`](../reference/recipes.md) 에서 본인 앱에 맞는 **recipe** 고르기
    - `local-only-tracker` — 완전 로컬 앱 (서버 없음)
    - `local-notifier-app` — 로컬 알림 중심 앱
    - `backend-auth-app` — 백엔드 연동 + 로그인 필요 앱
+   - `social-auth-app` — 소셜 로그인 (Google/Apple/Kakao/Naver) 중심 앱
 
 수행하는 일:
 
@@ -146,8 +147,9 @@ dart run tool/configure_app.dart   # 정합성 검증
 수행하는 일 (Android 기준):
 
 ```bash
-./scripts/generate-upload-keystore.sh    # 업로드 키스토어 생성
-./scripts/upload-secrets-to-github.sh    # keystore + Play JSON key → GitHub Secrets
+./scripts/generate-upload-keystore.sh <app-slug>    # 업로드 키스토어 생성 (slug 인자 필수)
+./scripts/upload-secrets-to-github.sh <app-slug>    # keystore 서명 Secrets 4종 자동 업로드
+# PLAY_STORE_JSON_KEY 는 `gh secret set PLAY_STORE_JSON_KEY` 로 수동 등록
 ```
 
 여기까지 마치면 `git tag v1.0.0 && git push --tags` 만으로 Play Internal 배포가 돌아가요.
@@ -191,7 +193,7 @@ git push --tags
 | 배포 / CI/CD / 보안 | [`Android Deployment`](../infra/android-deployment.md) | Fastlane · GHA · 난독화 (Infra 폴더 진입점) |
 | 테스트 전략 | [`Testing Strategy`](../testing/testing-strategy.md) | resetForTest · Provider override |
 | 스크립트 사용법 | [`Scripts`](../reference/scripts.md) | `scripts/*.sh` 전체 |
-| Recipe 선택 기준 | [`Recipes`](../reference/recipes.md) | local-only / notifier / backend-auth |
+| Recipe 선택 기준 | [`Recipes`](../reference/recipes.md) | local-only / notifier / backend-auth / social-auth |
 | 용어 사전 | [`Glossary`](../reference/glossary.md) | 파생 레포 · Kit · BootStep 등 |
 | 템플릿 → 파생 동기화 | [`Migration from Template`](../reference/migration-from-template.md) | cherry-pick 전파 |
 

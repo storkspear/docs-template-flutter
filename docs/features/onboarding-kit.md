@@ -9,7 +9,7 @@
 - **라우팅 게이트**: 온보딩 미완료면 `/onboarding` 강제 이동
 - **완료 플래그**: `SharedPreferences` 에 저장 → 재시작 시에도 유지
 - **다단계 위자드**: `OnboardingStep` 인터페이스로 페이지 추가 가능
-- **Skip 버튼**: 선택 제공 (권장 기능 온보딩 시)
+- **Skip 버튼**: `OnboardingScaffold` 가 `onSkip` 콜백을 지원하지만, kit 의 기본 라우트는 이를 전달하지 않아요 — 쓰려면 파생 레포에서 커스텀 라우트로 `OnboardingScaffold(onSkip: ...)` 를 직접 구성해야 해요
 
 ---
 
@@ -22,13 +22,16 @@ kits:
 ```
 
 ```dart
-// lib/main.dart
+// lib/main.dart — prefsStorage 는 main.dart 상단에서 이미 init 된 PrefsStorage 인스턴스
 await AppKits.install([
-  OnboardingKit(steps: [
-    WelcomeStep(),
-    PermissionRequestStep(),
-    NotificationSetupStep(),
-  ]),
+  OnboardingKit(
+    prefs: prefsStorage,
+    steps: [
+      WelcomeStep(),
+      PermissionRequestStep(),
+      NotificationSetupStep(),
+    ],
+  ),
 ]);
 ```
 
@@ -69,7 +72,7 @@ class WelcomeStep extends OnboardingStep {
 ## 파생 레포 체크리스트
 
 - [ ] `OnboardingStep` 구현체들 작성 (최소 3 ~ 5개)
-- [ ] `main.dart` 의 `OnboardingKit(steps: [...])` 등록
+- [ ] `main.dart` 의 `OnboardingKit(prefs: prefsStorage, steps: [...])` 등록
 - [ ] 완료 플래그 리셋 방법 고민 (예: 개발자 설정 메뉴)
 - [ ] (선택) 다크모드 대응 · 애니메이션
 
