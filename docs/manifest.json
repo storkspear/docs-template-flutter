@@ -348,8 +348,8 @@
           "desc": "푸시 대상 기기 등록 / 해제 (FCM 토큰)"
         },
         {
-          "path": "api-contract/notification-preferences.md",
-          "title": "Notification Preferences",
+          "path": "api-contract/notification-settings.md",
+          "title": "Notification Settings",
           "desc": "kind 별 push / email 채널 toggle (ADR-031)"
         }
       ]
@@ -512,6 +512,11 @@
     {
       "name": "Reference",
       "files": [
+        {
+          "path": "reference/environment-ui.md",
+          "title": "Environment UI",
+          "desc": "기술 스택 한눈 다이어그램 (아이콘)"
+        },
         {
           "path": "reference/scripts.md",
           "title": "Scripts",
