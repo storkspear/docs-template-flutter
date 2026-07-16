@@ -283,9 +283,12 @@ async function loadDoc(docPath) {
     let md = await res.text();
     md = md.replace(/```\n\[개발자 맥북\][\s\S]*?```/g, '\n%%LOCAL_DEV_DIAGRAM%%\n');
     md = md.replace(/```\n\[인터넷 사용자\][\s\S]*?```/g, '\n%%PROD_DIAGRAM%%\n');
+    md = md.replace(/```text\n┌─[\s\S]*?main\.dart \+ app\.dart[\s\S]*?\n```/g, '\n%%ARCH_OVERVIEW_DIAGRAM%%\n');
     let html = transformEmoji(marked.parse(md));
     html = html.replace(/<p>%%LOCAL_DEV_DIAGRAM%%<\/p>/g, DIAGRAMS['LOCAL_DEV']);
     html = html.replace(/<p>%%PROD_DIAGRAM%%<\/p>/g, DIAGRAMS['PROD']);
+    html = html.replace(/<p>%%ARCH_OVERVIEW_DIAGRAM%%<\/p>/g, DIAGRAMS['ARCH_OVERVIEW']);
+    html = html.replace(/<p>%%TECH_STACK_DIAGRAM%%<\/p>/g, DIAGRAMS['TECH_STACK']);
 
     const contentEl = document.getElementById('content');
     contentEl.innerHTML = html;

@@ -182,3 +182,93 @@ DIAGRAMS['PROD'] = `
     <span class="legend-item obs">Observability</span>
   </div>
 </div>`;
+
+DIAGRAMS['ARCH_OVERVIEW'] = `
+<div class="aws-diagram" id="arch-overview-diagram">
+  <div class="aws-diagram-title">FeatureKit 아키텍처 — 4 계층</div>
+  <div class="arch-col">
+    <div class="aws-node" style="min-width:240px"><div class="aws-icon" style="background:#0f172a"><img src="https://cdn.simpleicons.org/dart/2CB7F6" width="24" height="24" alt="Dart"></div><div class="aws-name">main.dart + app.dart</div><div class="aws-sub">엔트리포인트 · MaterialApp</div></div>
+    <div class="stack-arrow" style="margin-left:0">▼</div>
+    <div class="arch-row">
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#7c3aed"><span class="stack-chip">F</span></div><div class="aws-name sm">features/</div><div class="aws-sub">도메인 화면 — 파생 레포가 채움</div></div>
+      <div class="arch-link">→</div>
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#0369a1"><span class="stack-chip">C</span></div><div class="aws-name sm">common/</div><div class="aws-sub">DI · 라우터 · 스플래시</div></div>
+      <div class="arch-link">→</div>
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#166534"><span class="stack-chip">K</span></div><div class="aws-name sm">kits/</div><div class="aws-sub">14개 기능 Kit — 선택 조립</div></div>
+    </div>
+    <div class="stack-arrow" style="margin-left:0">▼&nbsp;&nbsp;세 계층 모두 core 를 사용해요&nbsp;&nbsp;▼</div>
+    <div class="aws-node" style="min-width:300px"><div class="aws-icon" style="background:#042B59"><img src="https://cdn.simpleicons.org/flutter/54C5F8" width="24" height="24" alt="core"></div><div class="aws-name">core/</div><div class="aws-sub">theme · storage · cache · i18n · widgets · kits 계약</div></div>
+  </div>
+</div>`;
+
+DIAGRAMS['TECH_STACK'] = `
+<div class="aws-diagram" id="tech-stack-diagram">
+  <div class="aws-diagram-title">기술 스택 한눈 보기 — template-flutter</div>
+
+  <div class="stack-row">
+    <div class="stack-label" style="background:#042B59">코어</div>
+    <div class="stack-nodes">
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#042B59"><img src="https://cdn.simpleicons.org/flutter/54C5F8" width="18" height="18" alt="Flutter"></div><div class="aws-name sm">Flutter</div><div class="aws-sub">멀티플랫폼 UI</div></div>
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#0f172a"><img src="https://cdn.simpleicons.org/dart/2CB7F6" width="18" height="18" alt="Dart"></div><div class="aws-name sm">Dart</div><div class="aws-sub">언어</div></div>
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#1e40af"><span class="stack-chip">Rv</span></div><div class="aws-name sm">Riverpod 2.6</div><div class="aws-sub">StateNotifier MVVM</div></div>
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#0369a1"><span class="stack-chip">Go</span></div><div class="aws-name sm">GoRouter 14.8</div><div class="aws-sub">ShellRoute · redirect 게이트</div></div>
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#0e7490"><span class="stack-chip">Dio</span></div><div class="aws-name sm">Dio 5.x</div><div class="aws-sub">인터셉터 3종 · SSL 핀닝</div></div>
+    </div>
+  </div>
+
+  <div class="stack-row">
+    <div class="stack-label" style="background:#1e40af">저장</div>
+    <div class="stack-nodes">
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#312e81"><span class="stack-chip">Dr</span></div><div class="aws-name sm">Drift 2.23</div><div class="aws-sub">로컬 SQLite DB</div></div>
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#334155"><span class="stack-chip">SS</span></div><div class="aws-name sm">SecureStorage</div><div class="aws-sub">토큰 (Keychain/Keystore)</div></div>
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#334155"><span class="stack-chip">SP</span></div><div class="aws-name sm">SharedPreferences</div><div class="aws-sub">일반 설정</div></div>
+    </div>
+  </div>
+
+  <div class="stack-row">
+    <div class="stack-label" style="background:#166534">인증</div>
+    <div class="stack-nodes">
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#f8fafc"><img src="https://cdn.simpleicons.org/google/4285F4" width="18" height="18" alt="Google"></div><div class="aws-name sm">Google</div><div class="aws-sub">Sign-In SDK</div></div>
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#0f172a"><img src="https://cdn.simpleicons.org/apple/ffffff" width="18" height="18" alt="Apple"></div><div class="aws-name sm">Apple</div><div class="aws-sub">Sign in with Apple</div></div>
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#FEE500"><img src="https://cdn.simpleicons.org/kakao/000000" width="18" height="18" alt="Kakao"></div><div class="aws-name sm">Kakao</div><div class="aws-sub">SDK 1.9</div></div>
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#03C75A"><span class="stack-chip">N</span></div><div class="aws-name sm">Naver</div><div class="aws-sub">SDK 2.1</div></div>
+    </div>
+  </div>
+
+  <div class="stack-row">
+    <div class="stack-label" style="background:#9a3412">플랫폼</div>
+    <div class="stack-nodes">
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#ea580c"><span class="stack-chip">Ad</span></div><div class="aws-name sm">AdMob 5.3</div><div class="aws-sub">ATT · UMP 동의 자동</div></div>
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#7c2d12"><span class="stack-chip">WM</span></div><div class="aws-name sm">WorkManager 0.9</div><div class="aws-sub">백그라운드 작업</div></div>
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#b45309"><span class="stack-chip">LN</span></div><div class="aws-name sm">로컬 알림 18</div><div class="aws-sub">FCM 은 provider 교체형</div></div>
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#0e7490"><span class="stack-chip">FC</span></div><div class="aws-name sm">fl_chart 0.70</div><div class="aws-sub">차트</div></div>
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#475569"><span class="stack-chip">SK</span></div><div class="aws-name sm">skeletonizer 1.4</div><div class="aws-sub">로딩 UX 규약</div></div>
+    </div>
+  </div>
+
+  <div class="stack-row">
+    <div class="stack-label" style="background:#6d28d9">관측성 (옵션)</div>
+    <div class="stack-nodes">
+      <div class="aws-node mini optional"><div class="aws-icon sm" style="background:#362d59"><img src="https://cdn.simpleicons.org/sentry/ffffff" width="18" height="18" alt="Sentry"></div><div class="aws-name sm">Sentry 8.9</div><div class="aws-sub">크래시 — 키 주입 시 활성</div></div>
+      <div class="aws-node mini optional"><div class="aws-icon sm" style="background:#f8fafc"><img src="https://cdn.simpleicons.org/posthog/1D4AFF" width="18" height="18" alt="PostHog"></div><div class="aws-name sm">PostHog 4.10</div><div class="aws-sub">제품 분석 — 키 주입 시 활성</div></div>
+    </div>
+  </div>
+
+  <div class="stack-row">
+    <div class="stack-label" style="background:#475569">품질 · 배포</div>
+    <div class="stack-nodes">
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#334155"><span class="stack-chip">VG</span></div><div class="aws-name sm">very_good_analysis</div><div class="aws-sub">린트 룰셋</div></div>
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#f8fafc"><img src="https://cdn.simpleicons.org/fastlane/00F200" width="18" height="18" alt="fastlane"></div><div class="aws-name sm">fastlane</div><div class="aws-sub">Android 4-lane 배포</div></div>
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#eff6ff"><img src="https://cdn.simpleicons.org/githubactions/2088FF" width="18" height="18" alt="GitHub Actions"></div><div class="aws-name sm">GitHub Actions</div><div class="aws-sub">CI · release</div></div>
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#0f172a"><span class="stack-chip">F</span></div><div class="aws-name sm">factory CLI</div><div class="aws-sub">local/dev/prod 셋업 · 검증</div></div>
+    </div>
+  </div>
+
+  <div class="stack-arrow">▼&nbsp;&nbsp;REST <code>{data,error}</code> 계약&nbsp;&nbsp;▼</div>
+  <div class="stack-row">
+    <div class="stack-label" style="background:#166534">백엔드 짝</div>
+    <div class="stack-nodes">
+      <div class="aws-node mini"><div class="aws-icon sm" style="background:#f1f8f4"><img src="https://cdn.simpleicons.org/springboot/6DB33F" width="18" height="18" alt="Spring Boot"></div><div class="aws-name sm">template-spring</div><div class="aws-sub">1:1 계약 · contract test 동기</div></div>
+    </div>
+  </div>
+</div>`;
