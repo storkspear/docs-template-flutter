@@ -53,7 +53,9 @@ jobs:
         with: {distribution: temurin, java-version: '17'}
       - uses: subosito/flutter-action@v2
       - run: flutter pub get
-      - run: flutter build apk --debug
+      # google-services.json 은 gitignored — CI 는 placeholder 를 생성해 빌드 가능성만 검증
+      - run: <placeholder google-services.json 생성 (ci.yml 참고)>
+      - run: flutter build apk --debug --flavor dev
 
   build-ios:
     needs: [analyze-and-test]
@@ -62,7 +64,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
       - run: flutter pub get
-      - run: flutter build ios --debug --no-codesign
+      - run: flutter build ios --debug --no-codesign --flavor dev
 ```
 
 ### 단계 순서
@@ -185,12 +187,12 @@ flutter analyze
 dart run tool/configure_app.dart --audit
 flutter test
 
-# Android 빌드
-flutter build apk --debug
+# Android 빌드 (dev/prod 플레이버 구성이라 --flavor 필수)
+flutter build apk --debug --flavor dev
 
 # iOS 빌드 (macOS)
 cd ios && pod install && cd ..
-flutter build ios --debug --no-codesign
+flutter build ios --debug --no-codesign --flavor dev
 ```
 
 CI 가 실패할 때 가장 빠른 디버깅은 로컬 재현.
