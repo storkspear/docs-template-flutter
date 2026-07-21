@@ -19,7 +19,7 @@
 ┌────▼────┐         ┌────▼────┐         ┌────▼────┐
 │features/│         │ common/ │         │  kits/  │
 │         │────────▶│         │────────▶│         │
-│ 도메인    │         │ DI · 라우터 │      │ 14개 기능 │
+│ 도메인    │         │ DI · 라우터 │      │ 15개 기능 │
 │ (파생)    │         │ · 스플래시 │       │ (선택 조립)│
 └────┬────┘         └────┬────┘         └────┬────┘
      │                   │                   │
@@ -57,11 +57,11 @@
 | `utils/` | FormValidators · Debouncer |
 | `review/` | 인앱 리뷰 트리거 |
 
-### `kits/` (선택 14개)
+### `kits/` (선택 15개)
 
 앱마다 켜고 끄는 기능 단위. [`Features 인덱스`](../features/README.md) 상세.
 
-- **인프라**: `backend_api_kit`, `observability_kit`, `local_db_kit`, `notifications_kit`, `background_kit`, `update_kit`, `permissions_kit`, `device_info_kit`
+- **인프라**: `backend_api_kit`, `file_kit`, `observability_kit`, `local_db_kit`, `notifications_kit`, `background_kit`, `update_kit`, `permissions_kit`, `device_info_kit`
 - **UI · UX**: `nav_shell_kit`, `onboarding_kit`, `charts_kit`, `ads_kit`
 - **도메인**: `auth_kit` (JWT · 소셜 로그인), `payment_kit` (결제 골격 — 파생 레포에서 SDK 추가)
 

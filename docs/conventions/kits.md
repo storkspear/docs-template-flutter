@@ -1,8 +1,8 @@
 # Kits 컨벤션
 
-FeatureKit 작성·제거·동기화 가이드. 14개 기본 kit + 파생 레포에서 자체 kit 추가하는 워크플로우.
+FeatureKit 작성·제거·동기화 가이드. 15개 기본 kit + 파생 레포에서 자체 kit 추가하는 워크플로우.
 
-> 빠른 인덱스: [14개 kit 목록 + 의존 관계도](../features/README.md). 본 문서는 **kit 을 만드는 사람** 입장의 컨벤션이에요.
+> 빠른 인덱스: [15개 kit 목록 + 의존 관계도](../features/README.md). 본 문서는 **kit 을 만드는 사람** 입장의 컨벤션이에요.
 
 ---
 
@@ -83,12 +83,12 @@ Status: ISSUES FOUND
 
 ## 3. Kit 의존 관계 규칙
 
-기본 14개 kit 중 의존 관계가 있는 건 **2개** (auth · payment):
+기본 15개 kit 중 의존 관계가 있는 건 **3개** (auth · payment · file):
 
 ```text
 backend_api_kit (독립)
-  ↑           ↑
-auth_kit    payment_kit    (둘 다 requires: backend_api_kit)
+  ↑         ↑          ↑
+auth_kit  payment_kit  file_kit    (셋 다 requires: backend_api_kit)
 ```
 
 나머지 11개는 모두 독립.
@@ -405,7 +405,7 @@ CLAUDE.md §7 의 함정과 동일. 본 문서에서 강조:
 
 ## 9. 관련 문서
 
-- [`features/README.md`](../features/README.md) — 14개 kit 목록 + 의존 관계도 + 활성화 가이드
+- [`features/README.md`](../features/README.md) — 15개 kit 목록 + 의존 관계도 + 활성화 가이드
 - [`architecture/featurekit-contract.md`](../architecture/featurekit-contract.md) — AppKit 인터페이스 전체 명세
 - [`ADR-002 · Layered Modules`](../philosophy/adr-002-layered-modules.md) — 의존 방향
 - [`ADR-003 · FeatureKit Registry`](../philosophy/adr-003-featurekit-registry.md) — 동적 레지스트리 설계

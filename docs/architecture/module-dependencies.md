@@ -61,10 +61,10 @@
 | `utils/` | FormValidators · Debouncer 등 순수 헬퍼 |
 | `widgets/` | PrimaryButton · LoadingView · SkeletonLoading 등 12개 |
 
-### `kits/` — 선택 14개 ([`Features 인덱스`](../features/README.md))
+### `kits/` — 선택 15개 ([`Features 인덱스`](../features/README.md))
 
 ```text
-auth_kit, backend_api_kit, observability_kit, notifications_kit,
+auth_kit, backend_api_kit, file_kit, observability_kit, notifications_kit,
 local_db_kit, update_kit, onboarding_kit, nav_shell_kit,
 charts_kit, ads_kit, background_kit, permissions_kit, device_info_kit,
 payment_kit

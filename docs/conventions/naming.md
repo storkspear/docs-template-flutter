@@ -82,7 +82,7 @@ lib/
 │   ├── utils/        # 순수 헬퍼
 │   └── widgets/      # PrimaryButton · AppTextField 등 12개
 │
-├── kits/             # 선택 Kit 14개
+├── kits/             # 선택 Kit 15개
 │   └── {kit_name}/
 │       ├── {kit_name}.dart       # AppKit 구현 + export
 │       ├── kit_manifest.yaml     # 의존성 선언

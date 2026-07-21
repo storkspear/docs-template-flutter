@@ -23,6 +23,7 @@
 | [`auth-flow.md`](./auth-flow.md) | 로그인 · 토큰 갱신 · 2FA TOTP · 소셜 인증 시퀀스 |
 | [`user-profile.md`](./user-profile.md) | `/api/apps/{slug}/users/me` GET / PATCH + 활동 ping(POST, app-scoped `/users/me/activity`) |
 | [`devices.md`](./devices.md) | 푸시 대상 기기 등록 / 해제 (FCM 토큰) |
+| [`file-api.md`](./file-api.md) | 파일 업로드(presigned POST policy) / 조회(presigned GET) + 게시물 첨부 |
 | [`notification-settings.md`](./notification-settings.md) | kind 별 push / email 채널 toggle (ADR-031) |
 
 ---
