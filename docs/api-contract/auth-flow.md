@@ -327,7 +327,7 @@ Apple 사용자가 "Hide My Email" 을 선택하면 첫 로그인 후 identity t
 | `signInWithNaver` | `POST /api/apps/{slug}/auth/naver` | Naver access token 검증 |
 | `refreshToken` | `POST /api/apps/{slug}/auth/refresh` | 토큰 회전 (ADR-010) |
 | `loginWith2faCode` | `POST /api/apps/{slug}/auth/2fa/login` | 2FA 2단계 로그인 (TOTP/backup) |
-| `verifyEmail` | `POST /api/apps/{slug}/auth/verify-email` | 이메일 인증 토큰 검증 (204) |
+| `verifyEmail` | `POST /api/apps/{slug}/auth/verify-email` | 이메일 인증 토큰 검증 (body 에 `email` + `token` 필수, 204) |
 | `resendEmailVerification` | `POST /api/apps/{slug}/auth/resend-verification` | 인증 메일 재발송 (인증 필요, 204) |
 | `requestPasswordReset` | `POST /api/apps/{slug}/auth/password-reset/request` | 재설정 메일 발송 (204) |
 | `confirmPasswordReset` | `POST /api/apps/{slug}/auth/password-reset/confirm` | 토큰으로 재설정 (204) |
