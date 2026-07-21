@@ -41,8 +41,18 @@
 | `ATH_003` | 401 | `ErrorCode.refreshTokenInvalid` | refresh / reset / verification 토큰 무효 (revoked, replay 감지 등) |
 | `ATH_004` | 401 | `ErrorCode.socialAuthFailed` | Apple/Google/Kakao/Naver 소셜 검증 실패. `details.provider` 권장 |
 | `ATH_005` | 401 | `ErrorCode.emailNotVerified` | 이메일 인증 미완료 유저 |
+| `ATH_007` | 401 | `ErrorCode.totpVerificationFailed` | 2FA TOTP 코드 불일치 또는 backup code 매칭 실패 |
+| `ATH_008` | 409 | `ErrorCode.totpAlreadyEnabled` | 이미 활성인데 2FA setup 재시도 |
+| `ATH_009` | 409 | `ErrorCode.totpNotEnabled` | 미활성 상태에서 verify/disable 호출 |
+| `ATH_010` | 401 | `ErrorCode.totpRequired` | 2FA 필요 유저가 1단계만으로 토큰 발급 시도 (보통은 pending 응답으로 처리) |
+| `ATH_011` | 401 | `ErrorCode.invalidVerificationCode` | verify-before-signup 인증 코드 불일치/만료 |
+| `ATH_012` | 401 | `ErrorCode.verificationProofInvalid` | verify-before-signup proofToken 무효 |
+| `ATH_013` | 429 | `ErrorCode.verificationRateLimited` | 인증 코드 요청 rate limit 초과 |
+| `ATH_014` | 429 | `ErrorCode.accountLocked` | 로그인 실패 누적으로 계정 일시 잠금 (brute-force 방어). `ATH_006` 은 역사적 결번 |
 
-> 서버엔 추가로 `ATH_007`~`ATH_010` (2FA TOTP: 코드 불일치 401 / 이미 활성 409 / 미활성 409 / 필요 401) 과 `ATH_011`~`ATH_013` (verify-before-signup: 인증 코드 불일치·만료 401 / proofToken 무효 401 / 재발송 rate limit 429) 이 있어요 — 클라엔 아직 미매핑.
+> **ATH_006 결번**: 역사적으로 비어 있고 재사용하지 않아요 (`ACCOUNT_LOCKED` 는 `ATH_014`).
+>
+> **2FA 로그인 흐름**: 2FA enabled 유저의 1단계(email/social) 응답은 에러가 아니라 `{twoFactorToken}` (user/tokens 없음) 을 내려요. 클라이언트는 `ATH_007` 등을 2단계(`/2fa/login`) 및 관리 화면에서 만나요. 자세한 흐름은 [`auth-flow.md`](./auth-flow.md).
 >
 > **이메일 발송 실패는 ATH 가 아니라 별도 `EmailError`**: `EMAIL_001`(502, 발송 실패) · `EMAIL_002`(503, 설정 누락). 클라 `ErrorCode.emailDeliveryFailed` 는 `EMAIL_001` 에 매핑돼요.
 
@@ -128,6 +138,15 @@ class ErrorCode {
   static const refreshTokenInvalid = 'ATH_003'; // 401
   static const socialAuthFailed = 'ATH_004'; // 401
   static const emailNotVerified = 'ATH_005'; // 401
+  // ATH_006 은 역사적 결번 (ACCOUNT_LOCKED 는 ATH_014).
+  static const totpVerificationFailed = 'ATH_007'; // 401
+  static const totpAlreadyEnabled = 'ATH_008'; // 409
+  static const totpNotEnabled = 'ATH_009'; // 409
+  static const totpRequired = 'ATH_010'; // 401
+  static const invalidVerificationCode = 'ATH_011'; // 401
+  static const verificationProofInvalid = 'ATH_012'; // 401
+  static const verificationRateLimited = 'ATH_013'; // 429
+  static const accountLocked = 'ATH_014'; // 429
 
   // ─── 이메일 도메인 (Spring EmailError) ───────────────────────────────────
   static const emailDeliveryFailed = 'EMAIL_001'; // 502

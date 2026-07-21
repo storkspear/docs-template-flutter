@@ -11,7 +11,7 @@
 - **401 자동 refresh**: `AuthInterceptor` 가 투명 처리 ([`ADR-010`](../philosophy/adr-010-queued-interceptor.md))
 - **부팅 시 토큰 검증**: `AuthCheckStep` BootStep
 - **라우팅 게이트**: `redirectPriority: 10` ([`ADR-018`](../philosophy/adr-018-redirect-priority.md))
-- **제공 화면**: `/login`, `/forgot-password`, `/verify-email`
+- **제공 화면**: `/login`, `/forgot-password`, `/verify-email`, `/login/2fa` (+ `twoFactorEnabled` 시 `/settings/2fa` 관리 3종)
 
 ---
 
@@ -131,13 +131,15 @@ if (current.isAuthenticated) { /* ... */ }
 
 ## 라우팅
 
-`auth_kit` 이 기여하는 3개 라우트:
+`auth_kit` 이 기여하는 라우트:
 
 | 경로 | 화면 | 용도 |
 |------|------|------|
 | `/login` | `LoginScreen` | 이메일/소셜 로그인 · 가입 토글 |
 | `/forgot-password` | `PasswordResetScreen` | 비번 재설정 요청 |
 | `/verify-email` | `VerifyEmailScreen` | 이메일 인증 (가입 후) |
+| `/login/2fa` | `TwoFactorLoginScreen` | 2FA 2단계 로그인 (서버 결정 — 상시 등록) |
+| `/settings/2fa`(+`/setup`·`/disable`·`/backup-codes`) | `TwoFactor*Screen` | 2FA 관리 (**`twoFactorEnabled: true`** 일 때만) |
 
 ### 리다이렉트 규칙
 
@@ -148,11 +150,11 @@ if (current.isAuthenticated) { /* ... */ }
   → splash 로 유지 (홈 깜빡임 방지)
 
 상태 = unauthenticated
-  → 인증 흐름 (/login · /forgot-password · /verify-email) 만 허용
+  → 인증 흐름 (/login · /forgot-password · /verify-email · /login/2fa) 만 허용
   → 그 외 경로 접근 시 /login 으로
 
 상태 = authenticated
-  → /login · /forgot-password 접근 시 homePath (기본 '/') 로 리다이렉트
+  → /login · /forgot-password · /login/2fa 접근 시 homePath (기본 '/') 로 리다이렉트
   → /verify-email 은 인증 후에도 접근 허용 (보안 이벤트)
 ```
 
