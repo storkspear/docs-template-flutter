@@ -97,8 +97,8 @@ await authService.signInWithNaver(accessToken: naverAccessToken);
 await authService.requestPasswordReset(email: 'x@y.com');
 await authService.confirmPasswordReset(token: 'token-from-email', newPassword: 'new');
 
-// 이메일 인증 / 재발송
-await authService.verifyEmail(token: 'token-from-email');
+// 이메일 인증 / 재발송 — email 은 인증 대상 계정 이메일 (세션 프로필 값)
+await authService.verifyEmail(email: 'x@y.com', token: 'token-from-email');
 await authService.resendEmailVerification();
 
 // 로그아웃 — 클라단 동작 (백엔드 endpoint 없음)
