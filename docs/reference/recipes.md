@@ -272,5 +272,5 @@ Status: OK 확인.
 - [`ADR-021 · Multi-Recipe`](../philosophy/adr-021-multi-recipe.md)
 - [`ADR-003 · FeatureKit`](../philosophy/adr-003-featurekit-registry.md)
 - [`ADR-004 · YAML ↔ Dart 동기화`](../philosophy/adr-004-manual-sync-ci-audit.md)
-- [`Features 인덱스`](../features/README.md) — Kit 14개 상세
+- [`Features 인덱스`](../features/README.md) — Kit 15개 상세
 - [`scripts.md`](./scripts.md) — `rename-app.sh`

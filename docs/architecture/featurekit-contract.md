@@ -230,4 +230,4 @@ class MyKit extends AppKit {
 - [`ADR-008 · BootStep`](../philosophy/adr-008-boot-step.md) — bootSteps 상세
 - [`ADR-018 · redirectPriority`](../philosophy/adr-018-redirect-priority.md)
 - [`boot-sequence.md`](./boot-sequence.md) — 실제 부팅 흐름
-- [`Features 인덱스`](../features/README.md) — 14개 Kit 구현체
+- [`Features 인덱스`](../features/README.md) — 15개 Kit 구현체

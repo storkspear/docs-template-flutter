@@ -1,6 +1,6 @@
 # FeatureKit_Registry
 
-**Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 line 수 갱신. `lib/core/kits/app_kit.dart` (54줄 계약) + `lib/core/kits/app_kits.dart` (184줄 레지스트리) + 14개 Kit 구현.
+**Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 line 수 갱신. `lib/core/kits/app_kit.dart` (54줄 계약) + `lib/core/kits/app_kits.dart` (184줄 레지스트리) + 15개 Kit 구현.
 
 ## 결론부터
 

@@ -1,17 +1,18 @@
 # FeatureKit 가이드
 
-14 개의 **FeatureKit** 이 `lib/kits/` 에 있어요. 각 Kit 은 **독립 플러그인** 으로, `app_kits.yaml` + `lib/main.dart` 에서 활성화를 선택해요. 이 문서는 전체 목록 · 의존 관계 · 활성화 방법의 한눈 인덱스예요.
+15 개의 **FeatureKit** 이 `lib/kits/` 에 있어요. 각 Kit 은 **독립 플러그인** 으로, `app_kits.yaml` + `lib/main.dart` 에서 활성화를 선택해요. 이 문서는 전체 목록 · 의존 관계 · 활성화 방법의 한눈 인덱스예요.
 
 > **왜 선택 조립?** → [`ADR-003 · FeatureKit 동적 레지스트리`](../philosophy/adr-003-featurekit-registry.md)
 
 ---
 
-## Kit 목록 (14개)
+## Kit 목록 (15개)
 
 | Kit | 목적 | 의존 | 바이너리 크기 영향 |
 |-----|------|------|----------------|
 | [`backend_api_kit`](./backend-api-kit.md) | Dio HTTP 클라이언트 + 3 인터셉터 | 없음 | +1MB |
 | [`auth_kit`](./auth-kit.md) | JWT + 소셜 로그인 (Google · Apple) | `backend_api_kit` | +3MB |
+| [`file_kit`](./file-kit.md) | 파일 업로드(presigned POST policy) + 조회 | `backend_api_kit` | +0MB (dio 공유) |
 | [`payment_kit`](./payment-kit.md) | 결제 (Stripe 통합 골격, 의도적 SDK 미주입) | `backend_api_kit` | +0MB (template), derived 시 +SDK |
 | [`observability_kit`](./observability-kit.md) | Sentry 크래시 + PostHog 분석 | 없음 | +4MB |
 | [`notifications_kit`](./notifications-kit.md) | 로컬 알림 · 푸시 · 타임존 | 없음 | +2MB |
@@ -54,8 +55,8 @@
 
 ```text
 backend_api_kit (독립)
-  ↑   ↑
-auth_kit  payment_kit
+  ↑   ↑   ↑
+auth_kit  file_kit  payment_kit
 
 observability_kit (독립)
 notifications_kit (독립)
@@ -71,8 +72,8 @@ device_info_kit (독립)
 ```
 
 **규칙**:
-- `auth_kit` 와 `payment_kit` 가 `backend_api_kit` 에 의존 (`requires: [BackendApiKit]`)
-- 나머지 12개는 독립 — 자유롭게 on/off
+- `auth_kit` · `file_kit` · `payment_kit` 가 `backend_api_kit` 에 의존 (`requires: [BackendApiKit]`)
+- 나머지 11개는 독립 — 자유롭게 on/off
 - Kit 간 직접 import 는 원칙적으로 금지 ([`ADR-002`](../philosophy/adr-002-layered-modules.md)) — 인스턴스 접근은 Provider 경유. 단 `kit_manifest.requires` 에 **선언한** kit 의 타입 import (`ApiException`, `ErrorCode` 등) 는 허용해요 ([`kits.md` §3](../conventions/kits.md#3-kit-의존-관계-규칙))
 
 의존성 위반 시 `configure_app.dart --audit` 가 CI 에서 차단:

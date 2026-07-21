@@ -4,7 +4,7 @@
 
 ## 결론부터
 
-상태 관리는 **`StateNotifier` + `ConsumerWidget` + `Provider.autoDispose`** 조합 하나로 통일해요. Screen 은 UI 만, ViewModel 은 로직만, `state` 는 **불변 데이터 클래스 + `copyWith`** 로 다뤄요. 전역 DI 는 `lib/common/providers.dart` 에 모아두고 Kit 이 필요 시 `providerOverrides` 로 교체 (ADR-003). 이 한 벌의 규약이 **14개 Kit + 파생 레포 N 개** 전부에서 똑같이 돌아가게 하는 게 목표예요.
+상태 관리는 **`StateNotifier` + `ConsumerWidget` + `Provider.autoDispose`** 조합 하나로 통일해요. Screen 은 UI 만, ViewModel 은 로직만, `state` 는 **불변 데이터 클래스 + `copyWith`** 로 다뤄요. 전역 DI 는 `lib/common/providers.dart` 에 모아두고 Kit 이 필요 시 `providerOverrides` 로 교체 (ADR-003). 이 한 벌의 규약이 **15개 Kit + 파생 레포 N 개** 전부에서 똑같이 돌아가게 하는 게 목표예요.
 
 ## 왜 이런 고민이 시작됐나?
 
