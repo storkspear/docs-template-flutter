@@ -178,7 +178,28 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
 
 **짝 백엔드 DTO**: `TotpLoginRequest{ twoFactorToken, code }`. `code` 는 6자리 TOTP 또는 8자리 backup code 모두 허용 (백엔드가 자동 분기).
 
-**TOTP 등록 (Setup)**: 백엔드엔 이미 setup (`POST /auth/me/2fa/setup`) · verify (`POST /auth/me/2fa/verify`) · disable (`POST /auth/me/2fa/disable`) **HTTP 엔드포인트가 노출돼 있어요** (모두 인증 필요). 다만 **Flutter 표준 화면 / `AuthService` 메서드는 미구현** — 표준 제공은 `/2fa/login` 2단계 로그인 흐름까지예요. TOTP 등록 UI + 위 엔드포인트 호출은 파생 레포에서 추가.
+**클라이언트 처리(핵심)**: 1단계 응답을 공통 처리하는 `AuthService._handleAuthResponse` 가
+`tokens`/root `accessToken` 이 모두 없고 `twoFactorToken` 만 있으면 **저장/emit 없이 그 토큰을
+반환**해요. `signInWith*` (email + 소셜 4종, 5개 호출자) 는 이 값을 `String?` 로 그대로 올려주고,
+`LoginViewModel` 이 pending 이면 `twoFactorRequired=true` 로 전이 → `LoginScreen` 이 `/login/2fa`
+(라우터 경로) 로 push → `TwoFactorLoginScreen` 이 `loginWith2faCode` 를 호출해요. `/login/2fa` 는
+`computeRedirect` 화이트리스트에 있어 **미인증 pending 상태에서도 접근** 가능해요. 이 수용 로직은
+**서버 결정**이라 `AuthKit(twoFactorEnabled:)` 관리 플래그와 무관하게 항상 동작해요.
+
+### TOTP 등록 · 해제 · 백업코드 재발급 (설정 > 보안)
+
+`AuthKit(twoFactorEnabled: true)` 일 때 설정 > 보안에 "2단계 인증" 항목 + 관리 화면·라우트가
+노출돼요 (`app_kits.yaml` 의 `auth_kit.two_factor_enabled` 와 동기화). `false` 면 흔적이 완전히
+사라져요(하위호환 기본값). `AuthService` 메서드 4종:
+
+| 클라 메서드 | 엔드포인트 | Body → 응답 |
+|---|---|---|
+| `setupTotp()` | `POST /auth/me/2fa/setup` | (없음) → `{secret, otpAuthUrl}` |
+| `verifyAndEnableTotp(code)` | `POST /auth/me/2fa/verify` | `{code}` → `{backupCodes:[8]}` (1회) |
+| `disableTotp(currentPassword, code)` | `POST /auth/me/2fa/disable` | `{currentPassword, code}` → 204 |
+| `regenerateBackupCodes(password, totpCode)` | `POST /auth/me/2fa/backup-codes/regenerate` | `{password, totpCode}` → `{backupCodes:[8]}` |
+
+backup code 8개는 발급 시 1회만 노출돼요 — 화면이 즉시 표시 + 복사 안내를 제공해요.
 
 ---
 
@@ -332,9 +353,10 @@ Apple 사용자가 "Hide My Email" 을 선택하면 첫 로그인 후 identity t
 | `requestPasswordReset` | `POST /api/apps/{slug}/auth/password-reset/request` | 재설정 메일 발송 (204) |
 | `confirmPasswordReset` | `POST /api/apps/{slug}/auth/password-reset/confirm` | 토큰으로 재설정 (204) |
 | `withdraw` | `POST /api/apps/{slug}/auth/withdraw` | 회원 탈퇴 (인증 필요, 204) |
-| _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/auth/me/2fa/setup` | TOTP 등록 시작 (인증 필요, 200) |
-| _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/auth/me/2fa/verify` | TOTP 코드 검증 + 활성화 (인증 필요, 200) |
-| _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/auth/me/2fa/disable` | 2FA 해제 (인증 필요, 204) |
+| `setupTotp` | `POST /api/apps/{slug}/auth/me/2fa/setup` | TOTP 등록 시작 (인증 필요, 200 `{secret, otpAuthUrl}`) |
+| `verifyAndEnableTotp` | `POST /api/apps/{slug}/auth/me/2fa/verify` | TOTP 코드 검증 + 활성화 (인증 필요, 200 `{backupCodes}`) |
+| `disableTotp` | `POST /api/apps/{slug}/auth/me/2fa/disable` | 2FA 해제 (인증 필요, 204) |
+| `regenerateBackupCodes` | `POST /api/apps/{slug}/auth/me/2fa/backup-codes/regenerate` | 백업코드 재발급 (인증 필요, 200 `{backupCodes}`) |
 | _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/auth/phone/request` | 휴대폰 OTP 발송 (public, `{data:{devCode}}` — devCode 는 non-prod 만) |
 | _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/auth/phone/verify` | OTP 검증 + 토큰 발급 (public, 유저 find-or-create) |
 
