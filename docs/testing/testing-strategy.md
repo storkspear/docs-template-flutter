@@ -275,7 +275,7 @@ flutter test --coverage
 - run: flutter test --reporter=expanded
 ```
 
-> 커버리지 측정 / Codecov 업로드는 CI 에 **없어요** — 로컬에서 `./scripts/coverage.sh` 로 측정해요 (게이트 아님, 월 1회 권장).
+> 커버리지 측정 / Codecov 업로드는 CI 에 **없어요** — 로컬에서 `./scripts/verify/coverage.sh` 로 측정해요 (게이트 아님, 월 1회 권장).
 
 ---
 

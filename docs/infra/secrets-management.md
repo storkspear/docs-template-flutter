@@ -64,10 +64,10 @@ flutter run \
   --dart-define=POSTHOG_KEY=$(grep POSTHOG_KEY .env | cut -d= -f2)
 ```
 
-또는 스크립트로 (아래는 최소 패턴 예시 — 템플릿의 실제 래퍼는 [`scripts/start.sh`](../../scripts/start.sh) 로, flavor 라우팅 + Mock 자동 폴백까지 처리해요. `<repo> <env> start` 로 호출):
+또는 스크립트로 (아래는 최소 패턴 예시 — 템플릿의 실제 래퍼는 [`scripts/run/start.sh`](../../scripts/run/start.sh) 로, flavor 라우팅 + Mock 자동 폴백까지 처리해요. `<repo> <env> start` 로 호출):
 
 ```bash
-# 최소 패턴 예시 (레포에 없는 파일 — 실물은 scripts/start.sh)
+# 최소 패턴 예시 (레포에 없는 파일 — 실물은 scripts/run/start.sh)
 #!/bin/bash
 set -a && source .env && set +a
 flutter run \
@@ -86,7 +86,7 @@ Repository → Settings → Secrets and variables → Actions → New repository
 또는 스크립트로 일괄 업로드:
 
 ```bash
-./scripts/upload-secrets-to-github.sh <app-slug>
+./scripts/signing/upload-secrets-to-github.sh <app-slug>
 # → ~/Documents/keystores-pending/<app-slug>/ 의 키스토어 + passwords.txt 를 읽어
 #   ANDROID_KEYSTORE_* 4종을 gh secret set. (Play/Sentry secret 은 수동 등록 안내 출력)
 ```
@@ -271,7 +271,7 @@ flutter build appbundle \
 - [ ] `.gitignore` 에 모든 비밀 파일 패턴 확인
 - [ ] `.env.example` 에 필요 키 이름 · 설명 (값 없이)
 - [ ] 팀 `.env` 공유 수단 (Bitwarden 등) 결정
-- [ ] `scripts/upload-secrets-to-github.sh` 실행 → GHA Secrets 설정
+- [ ] `scripts/signing/upload-secrets-to-github.sh` 실행 → GHA Secrets 설정
 - [ ] 주기적 키 갱신 일정 설정
 
 ---

@@ -311,7 +311,7 @@ Code References 마지막에 `**관련 ADR**:` 블록으로 수렴:
 - [ ] 옛 섹션명 본문 참조 없음 (`grep -E 'Context|Consequences|Lessons Learned' docs/`)
 - [ ] 링크가 실제 파일에 도달 (내부 · 외부 모두)
 - [ ] Code References 의 파일 경로가 실존 (`ls` 확인)
-- [ ] 두 레포 (`template-flutter` + `docs-template-flutter`) 동기화 (`scripts/sync-docs.sh` 실행 — `rsync` 기반. `.github/workflows/sync-docs.yml` 가 미러 PR 자동 생성)
+- [ ] 두 레포 (`template-flutter` + `docs-template-flutter`) 동기화 (`scripts/docs/sync-docs.sh` 실행 — `rsync` 기반. `.github/workflows/sync-docs.yml` 가 미러 PR 자동 생성)
 - [ ] `docs-template-flutter/docs/manifest.json` 의 사이드바 엔트리 추가 (새 문서인 경우)
 - [ ] 특정 앱 / 회사 / Bundle ID 노출 없음 (`grep -r 'gymlog\|sumtally\|com\.twosun' docs/`) — 단, **실존 테스트 파일명 인용** (예: `testing-strategy.md` 의 회귀 테스트 파일명) 은 예외
 - [ ] 커밋 메시지 Conventional Commits 포맷 + subject 72자 이하

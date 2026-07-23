@@ -57,7 +57,7 @@ iOS TestFlight 수동 배포            (fastlane beta 또는 Xcode Archive)
 ### 1. 업로드 keystore 생성
 
 ```bash
-./scripts/generate-upload-keystore.sh <app-slug>
+./scripts/signing/generate-upload-keystore.sh <app-slug>
 ```
 
 생성: `android/app/upload-keystore.jks` + `android/key.properties` (둘 다 gitignore). 비밀번호는 자동 생성돼 `~/Documents/keystores-pending/<app-slug>/passwords.txt` 에 임시 백업돼요.
@@ -156,7 +156,7 @@ App Store Connect → TestFlight → Internal Testing → 본인 Apple ID 추가
 `generate-upload-keystore.sh` 가 만들어 둔 `~/Documents/keystores-pending/<app-slug>/` 를 읽어 서명 관련 4종만 자동 등록해요:
 
 ```bash
-./scripts/upload-secrets-to-github.sh <app-slug>
+./scripts/signing/upload-secrets-to-github.sh <app-slug>
 # [1/4] ANDROID_KEYSTORE_BASE64   (jks → base64)
 # [2/4] ANDROID_KEYSTORE_PASSWORD
 # [3/4] ANDROID_KEY_PASSWORD

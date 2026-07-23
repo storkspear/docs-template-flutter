@@ -31,7 +31,7 @@
 ### 1. 업로드 키스토어 생성
 
 ```bash
-./scripts/generate-upload-keystore.sh <app-slug>
+./scripts/signing/generate-upload-keystore.sh <app-slug>
 ```
 
 생성물은 `~/Documents/keystores-pending/<app-slug>/` 에 임시 저장돼요 (키스토어 + `passwords.txt`, 커밋 금지)
@@ -39,7 +39,7 @@
 ### 2. 키스토어 · Play Console 자격 증명 GitHub Secrets 등록
 
 ```bash
-./scripts/upload-secrets-to-github.sh <app-slug>
+./scripts/signing/upload-secrets-to-github.sh <app-slug>
 ```
 
 이 스크립트는 `~/Documents/keystores-pending/<app-slug>/` 의 키스토어·비번을 읽어 **`ANDROID_*` 4종만 자동 업로드**해요. 나머지는 스크립트가 출력하는 안내대로 `gh secret set` 으로 직접 등록하세요:

@@ -58,7 +58,7 @@ cd <your-app>
 ### 3. git hooks 활성화
 
 ```bash
-./scripts/setup.sh
+./scripts/init/setup.sh
 # → git config core.hooksPath .githooks
 ```
 
@@ -122,7 +122,7 @@ git add -A
 git commit -m "chore: rename to <slug>"
 ```
 
-> 직접 실행이 필요하면 (예: dry-run 검토): `bash scripts/rename-app.sh --dry-run <slug> <bundle_id>`.
+> 직접 실행이 필요하면 (예: dry-run 검토): `bash scripts/app/rename-app.sh --dry-run <slug> <bundle_id>`.
 
 ---
 
@@ -236,7 +236,7 @@ flutter emulators --launch <AVD_ID>
 <repo> local start -d <device-id>       # 디바이스 지정
 ```
 
-`scripts/start.sh` 가 다음 규칙으로 분기해요 (debug 빌드 기준):
+`scripts/run/start.sh` 가 다음 규칙으로 분기해요 (debug 빌드 기준):
 
 | 조건 | 동작 |
 |---|---|

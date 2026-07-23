@@ -76,7 +76,7 @@ GHA Secrets 에 `SENTRY_DSN` 추가 후 release workflow 에서:
       --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN }}
 ```
 
-`SENTRY_DSN` 은 `gh secret set SENTRY_DSN` 으로 직접 등록해요 ([`scripts/upload-secrets-to-github.sh`](../../scripts/upload-secrets-to-github.sh) 는 `ANDROID_*` 4종만 자동 업로드 — Sentry/Play secret 은 수동 등록 안내만 출력).
+`SENTRY_DSN` 은 `gh secret set SENTRY_DSN` 으로 직접 등록해요 ([`scripts/signing/upload-secrets-to-github.sh`](../../scripts/signing/upload-secrets-to-github.sh) 는 `ANDROID_*` 4종만 자동 업로드 — Sentry/Play secret 은 수동 등록 안내만 출력).
 
 ---
 

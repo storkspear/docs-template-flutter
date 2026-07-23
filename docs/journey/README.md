@@ -147,8 +147,8 @@ dart run tool/configure_app.dart   # 정합성 검증
 수행하는 일 (Android 기준):
 
 ```bash
-./scripts/generate-upload-keystore.sh <app-slug>    # 업로드 키스토어 생성 (slug 인자 필수)
-./scripts/upload-secrets-to-github.sh <app-slug>    # keystore 서명 Secrets 4종 자동 업로드
+./scripts/signing/generate-upload-keystore.sh <app-slug>    # 업로드 키스토어 생성 (slug 인자 필수)
+./scripts/signing/upload-secrets-to-github.sh <app-slug>    # keystore 서명 Secrets 4종 자동 업로드
 # PLAY_STORE_JSON_KEY 는 `gh secret set PLAY_STORE_JSON_KEY` 로 수동 등록
 ```
 

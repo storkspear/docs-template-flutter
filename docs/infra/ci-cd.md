@@ -83,7 +83,7 @@ jobs:
 
 ### CI 게이트 아님 (로컬 권장)
 
-- **`./scripts/coverage.sh`** — 커버리지 측정 + HTML 리포트 (월 1회 권장).
+- **`./scripts/verify/coverage.sh`** — 커버리지 측정 + HTML 리포트 (월 1회 권장).
 
 ---
 
@@ -142,10 +142,10 @@ updates:
 
 ## Git Hooks (로컬)
 
-`.githooks/` 에 pre-commit · commit-msg · pre-push 훅 제공. `./scripts/setup.sh` 로 활성화:
+`.githooks/` 에 pre-commit · commit-msg · pre-push 훅 제공. `./scripts/init/setup.sh` 로 활성화:
 
 ```bash
-./scripts/setup.sh
+./scripts/init/setup.sh
 # → git config core.hooksPath .githooks
 ```
 

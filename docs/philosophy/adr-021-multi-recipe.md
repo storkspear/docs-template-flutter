@@ -201,7 +201,7 @@ vi lib/main.dart
 dart run tool/configure_app.dart
 
 # 6. 앱 정체성 설정
-./scripts/rename-app.sh my_app com.my.app
+./scripts/app/rename-app.sh my_app com.my.app
 
 # 7. 실행
 flutter run
@@ -307,7 +307,7 @@ recipe 를 2개로 줄이면 유형 커버 부족. 6개 이상으로 늘리면 d
 
 **검증 · 도구**
 - [`tool/configure_app.dart`](https://github.com/storkspear/template-flutter/blob/main/tool/configure_app.dart) — YAML ↔ Dart 정합성
-- [`scripts/rename-app.sh`](https://github.com/storkspear/template-flutter/blob/main/scripts/rename-app.sh) — recipe 의 placeholder slug 교체
+- [`scripts/app/rename-app.sh`](https://github.com/storkspear/template-flutter/blob/main/scripts/app/rename-app.sh) — recipe 의 placeholder slug 교체
 
 **관련 ADR**:
 - [`ADR-003 · FeatureKit 동적 레지스트리`](./adr-003-featurekit-registry.md) — Recipe 가 동작하는 기반

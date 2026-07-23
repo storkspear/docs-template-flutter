@@ -315,7 +315,7 @@ Android keystore · Play store JSON key · Apple p12 등은 `.gitignore` + GitHu
 **CI · 배포**
 - [`android/fastlane/Fastfile`](https://github.com/storkspear/template-flutter/blob/main/android/fastlane/Fastfile) — `build_release` (난독화 빌드) + `upload_sentry_mapping` (심볼 업로드) lane
 - [`.github/workflows/release-android.yml`](https://github.com/storkspear/template-flutter/blob/main/.github/workflows/release-android.yml) — 위 fastlane lane 호출
-- [`scripts/upload-secrets-to-github.sh`](https://github.com/storkspear/template-flutter/blob/main/scripts/upload-secrets-to-github.sh) — Secrets 관리
+- [`scripts/signing/upload-secrets-to-github.sh`](https://github.com/storkspear/template-flutter/blob/main/scripts/signing/upload-secrets-to-github.sh) — Secrets 관리
 
 **관련 ADR**:
 - [`ADR-013 · 토큰 저장 원자성`](./adr-013-token-atomic-storage.md) — 방어선 4 의 상세
