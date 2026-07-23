@@ -26,7 +26,7 @@
 | Kit 조립 | — | `app_kits.yaml` + `main.dart` 에 Kit 선언 |
 | BootStep | `BootStep` | 스플래시에서 순차 실행되는 부팅 단계 |
 | SplashController | `SplashController` | BootStep 실행기 |
-| 3계층 모듈 | — | `core/ · kits/ · common/ · features/` |
+| 3계층 + features | — | `core/ · kits/ · common/ · features/` |
 | Port · Adapter | — | (본 프로젝트는 용어 안 씀. Kit 이 이 역할) |
 
 ---
@@ -78,6 +78,8 @@
 |------|------|------|
 | AppPalette | `AppPalette` | 브랜드 색상 추상 |
 | AppPaletteRegistry | `AppPaletteRegistry` | 팔레트 등록 · 교체 |
+| AppTypeface | `AppTypeface` | 브랜드 폰트 · 타이포 스케일 추상 |
+| AppTypefaceRegistry | `AppTypefaceRegistry` | 타이페이스 등록 · 교체 |
 | 시드 색상 | `seed` | Material 3 `ColorScheme.fromSeed` |
 | 디자인 토큰 | — | spacing · typography · shadow 등 |
 | Skeleton | — | 로딩 UX 패턴 1 ([`ADR-017`](../philosophy/adr-017-loading-ux.md)) |

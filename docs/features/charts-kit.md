@@ -9,7 +9,7 @@
 - **fl_chart 기반**: 검증된 Flutter 차트 라이브러리
 - **래핑 위젯**: `AppLineChart` · `AppPieChart` · `DonutGauge`
 - **테마 통합**: `AppPalette` 색상 자동 적용
-- **빈 데이터 안전**: 포인트/슬라이스 없으면 빈 위젯 자동 반환
+- **빈 데이터 처리**: `AppLineChart` 는 포인트 없으면 빈 위젯(`SizedBox.shrink`) 반환. `AppPieChart` 는 슬라이스 없으면 내용 없는 빈 차트 표시
 
 ---
 

@@ -123,12 +123,12 @@ PrimaryButton(
 ### 4. TopProgressBar (백그라운드)
 
 ```dart
-Scaffold(
-  appBar: AppBar(
-    title: Text('홈'),
-    bottom: TopProgressBar(visible: state.isSyncing, value: state.syncProgress),
+TopProgressBar(
+  isLoading: state.isSyncing,
+  child: Scaffold(
+    appBar: AppBar(title: Text('홈')),
+    body: ...,
   ),
-  body: ...,
 )
 ```
 

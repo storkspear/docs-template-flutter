@@ -1,6 +1,6 @@
 # payment_kit
 
-결제 통합 FeatureKit **골격**. Stripe 사용을 가정한 인터페이스 + Debug 폴백 + Stripe 구현체 placeholder. **template 에선 의도적으로 SDK 의존을 추가 안 했어요** — 결제 정책 (Stripe vs Toss vs PayPal · 가격 모델 · 정산 백엔드) 이 derived repo 마다 달라서.
+결제 통합 FeatureKit **골격**. Stripe 사용을 가정한 인터페이스 + Debug 폴백 + Stripe 구현체 placeholder. **template 에선 의도적으로 SDK 의존을 추가 안 했어요** — 결제 정책 (Stripe vs Toss vs PayPal · 가격 모델 · 정산 백엔드) 이 파생 레포 마다 달라서.
 
 > ⚠️ **이 kit 은 template 에 commit 됐지만 `app_kits.yaml` default 에는 enable 안 됨**. 결제 도입할 때만 활성화.
 
@@ -23,7 +23,7 @@ await AppKits.install([
 
 → 결제 호출 시 콘솔에 `[Payment] DebugPaymentService.charge ...` 로그 + fake `debug-{timestamp}` transactionId 반환.
 
-## derived repo 활성화 (실구현)
+## 파생 레포 활성화 (실구현)
 
 1. `pubspec.yaml` 에 결제 SDK 추가 (`flutter_stripe` 또는 자체 SDK)
 2. `lib/kits/payment_kit/stripe_payment_service.dart` 의 `init` / `charge` 채움

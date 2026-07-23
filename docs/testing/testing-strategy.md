@@ -37,24 +37,42 @@
 
 ### Service (가장 단순)
 
+가짜 `HttpClientAdapter`(`MockDioAdapter`)를 **실제 `ApiClient`/Dio 에 주입**한다. 별도 fake 서비스를 만들지 않고 진짜 인터셉터·파싱 경로를 태우는 게 이 레포 컨벤션이에요. 조립은 `test/helpers/auth_test_harness.dart`(`buildAuthTestHarness`)가 한 번에 해줘요.
+
 ```dart
 void main() {
   group('AuthService', () {
-    late FakeApiClient apiClient;
+    late MockDioAdapter adapter;
     late AuthStateNotifier authState;
     late AuthService service;
 
     setUp(() {
-      apiClient = FakeApiClient();
-      authState = AuthStateNotifier();
-      service = AuthService(apiClient: apiClient, authState: authState, /* ... */);
+      // 스토리지·상태·ApiClient(+MockDioAdapter)·AuthService 를 한 번에 조립.
+      final h = buildAuthTestHarness(onTokenRefresh: () async => false);
+      adapter = h.adapter;
+      authState = h.authState;
+      service = h.authService;
     });
 
-    tearDown(() => authState.dispose());
+    tearDown(() {
+      authState.dispose();
+      AppConfig.resetForTest();
+    });
 
     test('signIn succeeds with valid credentials', () async {
-      apiClient.postResponse = {'accessToken': 'a', 'refreshToken': 'r'};
+      adapter.onPost(
+        '/auth/email/signin',
+        MockResponse.ok({
+          'data': {
+            'user': {'id': 42, 'email': 'x@y.com', 'emailVerified': true},
+            'tokens': {'accessToken': 'a', 'refreshToken': 'r'},
+          },
+          'error': null,
+        }),
+      );
+
       await service.signInWithEmail(email: 'x@y.com', password: 'pw');
+
       expect(authState.current.isAuthenticated, true);
     });
   });
@@ -101,7 +119,7 @@ void main() {
 ```dart
 testWidgets('PrimaryButton shows spinner when loading', (tester) async {
   await tester.pumpWidget(MaterialApp(
-    home: Scaffold(body: PrimaryButton(label: 'OK', loading: true, onPressed: () {})),
+    home: Scaffold(body: PrimaryButton(text: 'OK', isLoading: true, onPressed: () {})),
   ));
   expect(find.byType(CircularProgressIndicator), findsOneWidget);
 });
@@ -217,7 +235,7 @@ dart run drift_dev schema dump lib/database/app_database.dart drift_schemas/
 | 레이어 | 목표 커버리지 |
 |------|------------|
 | Service · ViewModel | 80%+ |
-| Kit 계약 | 핵심 Kit (현재 `auth_kit` · `backend_api_kit` · `payment_kit`) 우선. 메타가 단순한 Kit 은 통합 테스트로 흡수 |
+| Kit 계약 | 핵심 Kit (현재 `auth_kit` · `backend_api_kit` · `payment_kit` · `file_kit`) 우선. 메타가 단순한 Kit 은 통합 테스트로 흡수 |
 | 조립 통합 | 1개 유효 (smoke test 수준 — `test/integration/main_assembly_test.dart`) |
 | 마이그레이션 지문 | 전 스키마 버전 (Drift 사용 시) |
 | Widget (golden) | 주요 화면만 (선택) |
@@ -232,20 +250,16 @@ flutter test --coverage
 
 ## 테스트 데이터 · 헬퍼
 
-`test/helpers/` 에 공용:
+`test/helpers/` 에 공용 fake·빌더 (상세 표는 [`test/helpers/README.md`](../../test/helpers/README.md)):
 
-- `FakeSecureStorage` — Map 기반 SecureStorage (`fake_secure_storage.dart`)
+- `FakeSecureStorage` — 메모리 기반 `SecureStorage` (`fake_secure_storage.dart`)
 - `MockDioAdapter` — Dio 응답 조작 (`mock_dio_adapter.dart`)
-- `TestJwt.generate(...)` — 테스트용 JWT (`test_jwt.dart`)
+- `buildTestJwt(...)` — 테스트용 JWT 생성 (서명 미검증, `test_jwt.dart`)
+- `buildAuthTestHarness()` — AppConfig + 스토리지 + ApiClient + AuthService 를 한 번에 조립 (`auth_test_harness.dart`)
+- `installDefaultPaletteForTest()` — 팔레트 의존 위젯 테스트의 `setUpAll` 공용 설치 (`palette_test_helper.dart`)
+- `buildTestPrefs()` — mock SharedPreferences 위에 초기화된 `PrefsStorage` 생성 (`prefs_test_helper.dart`)
 
-`PrefsStorage` 는 별도 fake 없이 표준 패턴으로:
-```dart
-SharedPreferences.setMockInitialValues({});
-final prefs = PrefsStorage();
-await prefs.init();
-```
-
-모든 테스트가 이걸 재사용 → 일관성.
+`PrefsStorage` 가 필요한 테스트는 `buildTestPrefs()` 로 재사용 → 일관성.
 
 ---
 

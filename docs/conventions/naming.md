@@ -121,7 +121,7 @@ lib/
 | 네트워크 · 앱 에러 | `error` | `errorTimeout` · `errorUnknown` · `errorNetworkUnavailable` |
 | 상대 시간 | `relativeTime` | `relativeTimeMinutes` · `relativeTimeDays` |
 | 확인 · 취소 류 | 없음 | `confirm` · `cancel` · `retry` |
-| 스낵바 · 토스트 | `toast` | `toastCopied` · `toastSaved` |
+| 스낵바 · 토스트 | `toast` | `toastBackPressExit` |
 
 ---
 

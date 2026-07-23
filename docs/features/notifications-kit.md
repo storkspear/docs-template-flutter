@@ -41,7 +41,7 @@ await AppKits.install([
 | `ScheduledAlertService` | **로컬 예약 알림 인터페이스** — `init` · `scheduleAt` · `scheduleDaily` · `cancel` · `cancelAll` · `getPending` |
 | `LocalScheduledAlertService` | `flutter_local_notifications` 기반 구현 — 로컬 전용 앱의 권장 구현 (`service:` 인자로 명시 전달, default 아님) |
 | `NotificationService` | **FCM 푸시 인터페이스** — `init` · `getToken` · `onTokenRefresh` · `onForegroundMessage` · `onNotificationTap` (구현은 파생 레포에서) |
-| `NotificationPermission` | 알림 권한 상태 enum + 헬퍼 |
+| `NotificationPermission` | 권한 요청 전 사전 설명 다이얼로그 헬퍼 (`showRationale(context)` — true 반환 시 시스템 권한 요청 진행) |
 
 > 백엔드에 FCM 토큰 등록하는 `DeviceRegistration` 클래스는 [`backend_api_kit`](./backend-api-kit.md) 으로 이동했어요. 로컬 전용 알림 앱이 BackendApiKit 없이 NotificationsKit 만 쓸 수 있도록 도메인 분리.
 
