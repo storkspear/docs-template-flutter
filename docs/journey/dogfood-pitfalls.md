@@ -19,7 +19,7 @@
 
 **해결**:
 ```bash
-flutter --version          # 3.41.8+ 확인
+flutter --version          # 3.44.8+ 확인
 rm pubspec.lock
 flutter clean
 flutter pub get
@@ -471,8 +471,10 @@ dev/profile 빌드는 가드를 통과시키므로 로컬 개발에는 영향 �
 
 잘못:
 ```dart
-class BadViewModel extends StateNotifier<...> {
-  BadViewModel(this._ref) { _ref.watch(...); }  // ← 금지
+class BadViewModel extends Notifier<...> {
+  Future<void> doSomething() async {
+    final service = ref.watch(...);  // ← 금지
+  }
 }
 ```
 

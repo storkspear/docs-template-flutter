@@ -32,7 +32,7 @@ PascalCase. 역할을 이름에서 바로 파악 가능하게.
 | 종류 | 규칙 | 예시 |
 |------|------|------|
 | 화면 (ConsumerWidget / StatelessWidget) | `{Domain}Screen` | `HomeScreen` · `LoginScreen` |
-| ViewModel (StateNotifier) | `{Domain}ViewModel` | `LoginViewModel` |
+| ViewModel (Notifier) | `{Domain}ViewModel` | `LoginViewModel` |
 | 상태 클래스 | `{Domain}State` | `LoginState` · `AuthState` |
 | 서비스 (비즈니스 로직) | `{Domain}Service` | `AuthService` · `NotificationService` |
 | 추상 인터페이스 | `{기능}Service` · `{기능}Store` | `AnalyticsService` · `CacheStore` |
@@ -53,7 +53,7 @@ Dart 관용은 `lowerCamelCase`. Provider 는 접미사로 종류 표시.
 | 종류 | 규칙 | 예시 |
 |------|------|------|
 | Riverpod Provider | `{name}Provider` | `authServiceProvider` · `apiClientProvider` |
-| StateNotifierProvider | `{name}ViewModelProvider` | `loginViewModelProvider` |
+| NotifierProvider | `{name}ViewModelProvider` | `loginViewModelProvider` |
 | StreamProvider · FutureProvider | `{name}StreamProvider` · `{name}FutureProvider` | `authStreamProvider` |
 | private 필드 | `_camelCase` | `_apiClient` · `_tokenStorage` |
 | 지역 상수 | `camelCase` | `buttonHeight` · `maxRetries` |

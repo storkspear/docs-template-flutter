@@ -6,7 +6,7 @@ MVVM 패턴 · 모듈 의존 방향 · 에러 처리. **코드 작성 시 따라
 
 ---
 
-## 1. MVVM (Riverpod + StateNotifier)
+## 1. MVVM (Riverpod + Notifier)
 
 ### 1-1. 3계층 구조
 
@@ -14,7 +14,7 @@ MVVM 패턴 · 모듈 의존 방향 · 에러 처리. **코드 작성 시 따라
 Screen (ConsumerWidget)
   │  ref.watch(viewModelProvider)
   ▼
-ViewModel (StateNotifier<ViewState>)
+ViewModel (Notifier<ViewState>)
   │  service.method()
   ▼
 Service / Repository
@@ -62,9 +62,11 @@ class ExpenseListState {
   }
 }
 
-class ExpenseListViewModel extends StateNotifier<ExpenseListState> {
-  ExpenseListViewModel(this._repo) : super(const ExpenseListState());
-  final ExpenseRepository _repo;
+class ExpenseListViewModel extends Notifier<ExpenseListState> {
+  @override
+  ExpenseListState build() => const ExpenseListState();
+
+  ExpenseRepository get _repo => ref.read(expenseRepositoryProvider);
 
   Future<void> load() async {
     state = state.copyWith(isLoading: true, errorCode: null);
@@ -82,8 +84,8 @@ class ExpenseListViewModel extends StateNotifier<ExpenseListState> {
 }
 
 final expenseListViewModelProvider =
-    StateNotifierProvider.autoDispose<ExpenseListViewModel, ExpenseListState>(
-  (ref) => ExpenseListViewModel(ref.watch(expenseRepositoryProvider)),
+    NotifierProvider<ExpenseListViewModel, ExpenseListState>(
+  ExpenseListViewModel.new,
 );
 ```
 
@@ -91,7 +93,7 @@ final expenseListViewModelProvider =
 - `copyWith` 로 상태 갱신 (immutable)
 - `errorCode` 는 서버 코드 (`ATH_001` 등) 또는 ViewModel 별 fallback (`FETCH_FAILED`)
 - `errorMessage` 는 서버 i18n 메시지 — 없으면 Screen 에서 errorCode 기반으로 i18n 매핑
-- `autoDispose` 가 default — 메모리 누수 방지
+- riverpod 3 는 `autoDispose` 가 default — 메모리 누수 방지
 
 ### 1-3. Screen 표준 양식
 
@@ -156,9 +158,9 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
 // 단순 Provider
 final apiClientProvider = Provider<ApiClient>((ref) => ApiClient(...));
 
-// StateNotifier
+// Notifier
 final loginViewModelProvider =
-    StateNotifierProvider.autoDispose<LoginViewModel, LoginState>(...);
+    NotifierProvider<LoginViewModel, LoginState>(...);
 
 // Stream
 final authStreamProvider = StreamProvider<AuthState>((ref) => ...);
@@ -398,7 +400,7 @@ flutter run                  # 화면 라우팅 동작 확인
 
 ## 6. 자주 빠지는 함정
 
-1. **`autoDispose` 누락** — 화면 벗어나도 Provider 살아있어 메모리 누수
+1. **화면 수명 상태에 `isAutoDispose: true` 를 빼먹음** — riverpod 3 의 provider 는 기본이 non-autoDispose 라, 명시하지 않으면 화면을 벗어나도 상태가 남아요. 앱 전체 수명 상태는 [`viewmodel-mvvm.md`](./viewmodel-mvvm.md) 의 autoDispose 예외 패턴을 쓰세요
 2. **`copyWith` 안 쓰고 `state.x = ...`** — Dart 의 `final` 필드라 컴파일 에러. 또는 mutable 필드면 UI 갱신 안 됨
 3. **에러 catch 후 reportError 누락** — 운영에서 무엇이 실패했는지 모름
 4. **i18n 키만 추가하고 `flutter gen-l10n` 안 돌림** — 빌드 실패

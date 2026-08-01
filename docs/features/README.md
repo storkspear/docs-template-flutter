@@ -28,7 +28,7 @@
 
 **크기 영향** 은 대략적인 추정이에요. 실제는 플랫폼 · 빌드 설정에 따라 달라요.
 
-> ⚠️ **Tree-shaking 은 Dart 코드만 제거해요**. 미활성 Kit 의 Dart 코드는 빌드에서 빠지지만, **네이티브 플러그인(.aar / CocoaPods)은 `pubspec.yaml` 에 선언되어 있는 한 APK/IPA 에 항상 포함**돼요. 사이즈를 진짜 줄이려면 비활성 Kit 의 패키지를 `pubspec.yaml` 에서도 제거하세요. (예시: 31MB APK 측정 중 `sqlite3_flutter_libs`/`sentry-android-ndk` 등이 ABI 별로 ~5MB 차지)
+> ⚠️ **Tree-shaking 은 Dart 코드만 제거해요**. 미활성 Kit 의 Dart 코드는 빌드에서 빠지지만, **네이티브 플러그인(.aar / CocoaPods)은 `pubspec.yaml` 에 선언되어 있는 한 APK/IPA 에 항상 포함**돼요. 사이즈를 진짜 줄이려면 비활성 Kit 의 패키지를 `pubspec.yaml` 에서도 제거하세요. (예시: 31MB APK 측정 중 `sqlite3`/`sentry-android-ndk` 등이 ABI 별로 ~5MB 차지)
 
 ---
 

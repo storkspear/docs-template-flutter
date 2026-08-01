@@ -128,9 +128,9 @@
 
 ## 상태 관리
 
-### Q. Riverpod 2.x 의 `Notifier` · `AsyncNotifier` 는 왜 안 쓰나요?
+### Q. ViewModel 이 `Notifier` 네요 — `StateNotifier` 는 왜 안 쓰나요?
 
-**A.** 현재 `StateNotifier` 가 안정적 · 생태계 풍부. `Notifier` 는 아직 마이그레이션 도구 · 레퍼런스 덜 성숙. 전환 비용이 이득 초과. [`ADR-005 교훈 2`](../philosophy/adr-005-riverpod-mvvm.md).
+**A.** riverpod 3 에서 `StateNotifier` 가 제거돼 3.4.2 로 올리며 `Notifier` 로 이관 완료했어요 (2026-08). 메서드 본문 무변경, 테스트 631개 무수정 통과. 표준은 이제 `Notifier` + `NotifierProvider` 예요. [`ADR-005 교훈 2`](../philosophy/adr-005-riverpod-mvvm.md).
 
 ### Q. BLoC 이나 GetX 로 바꿔도 되나요?
 

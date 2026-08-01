@@ -52,7 +52,7 @@
 
 핵심 흐름 (`factory` CLI 기반):
 
-1. `§1 사전 설치 체크리스트` — Flutter SDK (3.41.8+) · FVM · Xcode · Android Studio 확인
+1. `§1 사전 설치 체크리스트` — Flutter SDK (3.44.8+) · FVM · Xcode · Android Studio 확인
 2. `§2 파생 레포 생성` — `Use this template` 으로 본인 레포 만들기 + clone
 3. `§3 앱 정체성 설정` — `./factory install` (symlink 등록) → `<repo> local init <slug> <bundle_id>` (rename + .env + pub get 한 번에)
 4. `§5 첫 기동` — `<repo> local start` (mock 자동 폴백 — 백엔드 없이 시연)
@@ -118,7 +118,7 @@ dart run tool/configure_app.dart   # 정합성 검증
 읽을 문서:
 
 - [`build-first-app.md`](./build-first-app.md) — 완성까지 가는 12단계 walkthrough
-- [`ViewModel + MVVM`](../conventions/viewmodel-mvvm.md) — `StateNotifier + ConsumerWidget` 패턴
+- [`ViewModel + MVVM`](../conventions/viewmodel-mvvm.md) — `Notifier + ConsumerWidget` 패턴
 - [`Error Handling`](../conventions/error-handling.md) — ApiException 처리
 - [`Loading UX`](../conventions/loading-ux.md) — 로딩 UX 4가지 패턴
 

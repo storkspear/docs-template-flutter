@@ -35,11 +35,11 @@
 
 | 용어 | 표기 | 설명 |
 |------|------|------|
-| ViewModel | `*ViewModel` | `StateNotifier<*State>` 상속 |
+| ViewModel | `*ViewModel` | `Notifier<*State>` 상속 |
 | State 클래스 | `*State` | 불변 데이터 + `copyWith` |
 | Provider | `Provider` (영문) | Riverpod DI 노드 |
 | 전역 DI | `lib/common/providers.dart` | 모든 전역 Provider 정의 |
-| autoDispose | — | 화면 이탈 시 자동 정리 |
+| autoDispose | — | 화면 이탈 시 자동 정리. riverpod 3 는 기본값이 아니라 `isAutoDispose: true` 로 명시해요 |
 | Late Binding | — | `ref.read` 콜백으로 순환 의존 해결 ([`ADR-007`](../philosophy/adr-007-late-binding.md)) |
 
 ---

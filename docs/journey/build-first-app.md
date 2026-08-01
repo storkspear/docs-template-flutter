@@ -256,10 +256,11 @@ class ItemListState {
   }
 }
 
-class ItemListViewModel extends StateNotifier<ItemListState> {
-  final Ref _ref;
+class ItemListViewModel extends Notifier<ItemListState> {
+  @override
+  ItemListState build() => const ItemListState();
 
-  ItemListViewModel(this._ref) : super(const ItemListState());
+  Ref get _ref => ref;
 
   Future<void> load() async {
     state = state.copyWith(isLoading: true, errorCode: null, errorMessage: null);
@@ -294,7 +295,7 @@ class ItemListViewModel extends StateNotifier<ItemListState> {
   }
 }
 
-final itemListViewModelProvider = StateNotifierProvider.autoDispose<ItemListViewModel, ItemListState>(
+final itemListViewModelProvider = NotifierProvider<ItemListViewModel, ItemListState>(
   ItemListViewModel.new,
 );
 ```
