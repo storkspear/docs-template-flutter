@@ -1,10 +1,10 @@
 # Riverpod_MVVM
 
-**Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-07-15 수치 재실측. `flutter_riverpod ^2.6.1` 사용, `lib/common/providers.dart` (156줄) 중앙 DI, ViewModel 3개 (`login` / `password_reset` / `verify_email`) 파일럿.
+**Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-07-15 수치 재실측 / 2026-08-01 riverpod 3 이관 반영. `flutter_riverpod ^3.4.2` 사용, `StateNotifier` → `Notifier` 이관 완료 (ViewModel 4개 + PaginationController 1개, 테스트 631개 통과 — 교훈 2). `lib/common/providers.dart` (156줄) 중앙 DI.
 
 ## 결론부터
 
-상태 관리는 **`StateNotifier` + `ConsumerWidget` + `Provider.autoDispose`** 조합 하나로 통일해요. Screen 은 UI 만, ViewModel 은 로직만, `state` 는 **불변 데이터 클래스 + `copyWith`** 로 다뤄요. 전역 DI 는 `lib/common/providers.dart` 에 모아두고 Kit 이 필요 시 `providerOverrides` 로 교체 (ADR-003). 이 한 벌의 규약이 **15개 Kit + 파생 레포 N 개** 전부에서 똑같이 돌아가게 하는 게 목표예요.
+상태 관리는 **`Notifier` + `ConsumerWidget` + `NotifierProvider`** 조합 하나로 통일해요 (riverpod 3 의 provider 는 기본이 non-autoDispose 라 화면 단위 ViewModel 은 `isAutoDispose: true` 를 명시해요 — 별도 수식어가 없어요). Screen 은 UI 만, ViewModel 은 로직만, `state` 는 **불변 데이터 클래스 + `copyWith`** 로 다뤄요. 전역 DI 는 `lib/common/providers.dart` 에 모아두고 Kit 이 필요 시 `providerOverrides` 로 교체 (ADR-003). 이 한 벌의 규약이 **15개 Kit + 파생 레포 N 개** 전부에서 똑같이 돌아가게 하는 게 목표예요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -56,16 +56,16 @@ Flutter 기본 제공. 추가 패키지 없음.
 
 ### Option 4 — Riverpod + MVVM ★ (채택)
 
-`flutter_riverpod` 의 `StateNotifier` 를 ViewModel 로 쓰고, `ConsumerWidget` 을 Screen 으로, `Provider` 를 DI 컨테이너로 삼음.
+`flutter_riverpod` 의 `StateNotifier` (채택 당시 기준 — riverpod 3 이관 후엔 `Notifier`) 를 ViewModel 로 쓰고, `ConsumerWidget` 을 Screen 으로, `Provider` 를 DI 컨테이너로 삼음.
 
 - **압력 A 만족**: 상태 + DI 가 **단일 패러다임 (Provider)** 으로 통일. 러닝 커브 1회.
 - **압력 B 만족**: `ProviderContainer(overrides: [...])` 로 테스트마다 완전 격리. `overrideWithValue` / `overrideWith` 로 HTTP · 저장소 교체 간단.
-- **압력 C 만족**: 1 ViewModel = 1 파일 (`LoginViewModel extends StateNotifier<LoginState>` + `copyWith`). Event 분리 없음.
-- **추가 이점**: `autoDispose` 로 화면 이탈 시 상태 자동 정리 → 메모리 누수 방지가 기본.
+- **압력 C 만족**: 1 ViewModel = 1 파일 (`LoginViewModel extends Notifier<LoginState>` + `copyWith`). Event 분리 없음.
+- **추가 이점**: `autoDispose` 로 화면 이탈 시 상태 자동 정리 → 메모리 누수 방지. riverpod 3 에서는 기본값이 아니라 명시(`isAutoDispose: true`)해야 해요.
 
 ## 결정
 
-`StateNotifier + ConsumerWidget + Provider.autoDispose` 조합을 표준으로 못 박아요.
+`Notifier + ConsumerWidget + NotifierProvider` 조합을 표준으로 못 박아요. (채택 당시 표준은 `StateNotifier + StateNotifierProvider.autoDispose` 였는데, riverpod 3 에서 `StateNotifier` 가 제거돼 2026-08 에 `Notifier` 로 이관했어요 — 교훈 2.)
 
 ### ViewModel 표준 형태
 
@@ -94,9 +94,11 @@ class LoginState {
   }
 }
 
-class LoginViewModel extends StateNotifier<LoginState> {
-  final Ref _ref;
-  LoginViewModel(this._ref) : super(const LoginState());
+class LoginViewModel extends Notifier<LoginState> {
+  @override
+  LoginState build() => const LoginState();   // ← 초기 상태는 build() 가 돌려줘요
+
+  Ref get _ref => ref;                        // ← Ref 는 베이스 클래스가 제공해요
 
   Future<void> signInWithEmail(String email, String password) async {
     state = state.copyWith(isLoading: true, errorCode: null, errorMessage: null);
@@ -113,9 +115,9 @@ class LoginViewModel extends StateNotifier<LoginState> {
   }
 }
 
-final loginViewModelProvider = StateNotifierProvider.autoDispose<LoginViewModel, LoginState>(
-  LoginViewModel.new,
-);
+/// riverpod 3 는 `.autoDispose` 수식어 대신 `isAutoDispose:` 인자를 써요 (기본값 false).
+final NotifierProvider<LoginViewModel, LoginState> loginViewModelProvider =
+    NotifierProvider<LoginViewModel, LoginState>(LoginViewModel.new);
 ```
 
 ### Screen 표준 형태
@@ -159,8 +161,8 @@ final crashServiceProvider = Provider<CrashService>((ref) => DebugCrashService()
 
 ### 설계 선택 포인트
 
-**포인트 1 — `autoDispose` 를 기본값으로**  
-ViewModel Provider 는 기본적으로 `StateNotifierProvider.autoDispose` 를 써요. 화면이 stack 에서 빠지면 즉시 dispose → 불필요한 상태 · 구독 누적 방지. 예외는 "앱 전체 수명 = 상태 수명" 인 경우 (예: `authStateProvider`) 만 `autoDispose` 생략.
+**포인트 1 — autoDispose 는 riverpod 3 에서 기본값이 아니에요**  
+riverpod 3 의 provider 는 **기본이 non-autoDispose**(`isAutoDispose = false`) 예요. riverpod 2 의 `StateNotifierProvider.autoDispose` 와 같은 수명을 유지하려면 `isAutoDispose: true` 를 넘겨야 해요 — 빼먹으면 ViewModel 이 앱 수명 내내 살아남아 화면을 떠나도 이전 에러 문구·단계와 private 필드(비밀번호·2FA 토큰)가 남아요. (riverpod 2 시절엔 `StateNotifierProvider.autoDispose` 를 명시했어요). 화면이 stack 에서 빠지면 즉시 dispose → 불필요한 상태 · 구독 누적 방지. 예외는 "앱 전체 수명 = 상태 수명" 인 경우 (예: `authStateProvider`) 만 `ref.keepAlive()` 로 유지해요.
 
 **포인트 2 — ViewModel 은 `code` 만, UI 는 i18n 메시지**  
 ViewModel 의 `state.errorCode` 는 서버 `ErrorCode` enum 문자열 또는 로컬 키 (`LOGIN_FAILED` 등). 실제 화면 표시 문구는 Screen 에서 `S.of(context).loginFailed` 같이 번역. **이유**: ViewModel 은 `BuildContext` 를 가지지 않으므로 i18n 에 직접 의존하면 안 됨. 테스트에서도 "code 비교" 가 "문구 비교" 보다 깨지지 않아요.
@@ -175,16 +177,16 @@ ViewModel 의 `state.errorCode` 는 서버 `ErrorCode` enum 문자열 또는 로
 
 ### 긍정적 결과
 
-- **1 ViewModel = 1 파일**: 신규 화면 추가 비용이 극적으로 낮아요. Event / State / Bloc 분리 없이 `StateNotifier<MyState>` 한 클래스.
+- **1 ViewModel = 1 파일**: 신규 화면 추가 비용이 극적으로 낮아요. Event / State / Bloc 분리 없이 `Notifier<MyState>` 한 클래스.
 - **테스트 격리 완벽**: `ProviderContainer(overrides: [...])` 로 매 테스트가 독립 공간. `authServiceProvider.overrideWithValue(MockAuthService())` 한 줄로 mock 주입.
 - **Kit 과 자연 통합**: ADR-003 의 `providerOverrides` 가 Riverpod 의 override 체인과 그대로 맞물려요. Kit 이 늘어날 때 DI 설계를 다시 안 해도 됨.
-- **`autoDispose` 로 메모리 누수 방지가 기본값**: 개발자가 의식적으로 안 해도 자동. Flutter inspector 에서 "왜 이 화면 나갔는데 아직 stream 구독중?" 류 디버깅 시간 감소.
+- **`autoDispose` 로 메모리 누수 방지**: riverpod 3 에서는 기본값이 아니라 `isAutoDispose: true` 명시가 필요해요. Flutter inspector 에서 "왜 이 화면 나갔는데 아직 stream 구독중?" 류 디버깅 시간 감소.
 - **컴파일 안전성**: `ref.watch(loginViewModelProvider)` 반환 타입이 `LoginState` 로 추론 → IDE 자동완성 완벽.
 
 ### 부정적 결과
 
-- **Riverpod 학습 곡선**: `Provider` / `StateProvider` / `StateNotifierProvider` / `FutureProvider` / `StreamProvider` / `NotifierProvider` (2.0 이후) 등 종류가 많아요. "뭘 언제 써야?" 의 결정 피로. 템플릿은 `StateNotifierProvider` 를 기본으로 못박아 이 피로를 줄여요.
-- **`StateNotifier` 는 Riverpod 2.x 에서 legacy 로 향함**: Riverpod 3.0 은 `Notifier` 를 밀고 있어요. 현재는 `StateNotifier` 가 안정적 · 생태계 풍부하지만, 미래에 마이그레이션 비용 발생 가능. 교훈 2 참조.
+- **Riverpod 학습 곡선**: `Provider` / `NotifierProvider` / `AsyncNotifierProvider` / `FutureProvider` / `StreamProvider` 등 종류가 많아요. "뭘 언제 써야?" 의 결정 피로. 템플릿은 `NotifierProvider` 를 기본으로 못박아 이 피로를 줄여요.
+- **메이저 버전 전환 비용은 실제로 발생함**: 채택 당시 "미래에 마이그레이션 비용 발생 가능" 이라 적었는데, riverpod 3.0 에서 `StateNotifier` 가 제거되면서 현실이 됐어요. 2026-08 에 `Notifier` 로 이관 완료 — 다행히 비용은 예상보다 작았어요. 상세는 교훈 2.
 - **글로벌 provider 파일 (`providers.dart`) 이 비대해질 위험**: 현재 156줄. 30개 넘으면 쪼개야 해요. 아직은 유지.
 - **`copyWith` 의 nullable 관용이 낯섬**: 처음 보는 개발자가 "왜 `this.errorMessage` 폴백이 없지?" 하고 의아해함 — README 에 명시 필요.
 
@@ -196,11 +198,17 @@ Flutter 커뮤니티에선 매년 "어떤 상태 관리가 최고?" 토론이 �
 
 **교훈**: 솔로 앱 공장에서는 **표준화가 기술적 우수성보다 가치가 커요**. 한 번 고르면 5년 간 바꾸지 말기.
 
-### 교훈 2 — `StateNotifier` vs `Notifier` 전환은 미루기
+### 교훈 2 — `StateNotifier` vs `Notifier` 전환은 미루기 (2026-08 개정: 결국 이관했어요)
 
-Riverpod 3.0 이 `Notifier` + `AsyncNotifier` 를 새 표준으로 밀고 있어요. 당장 전환하면 파일럿 ViewModel 3개를 전부 다시 써야 해요. 그런데 `StateNotifier` 도 당분간 deprecated 는 아니고, 마이그레이션 가이드가 성숙해질 때까지 기다리는 게 비용 대비 효율이 높아요.
+**당시 판단 (2026-04)**: Riverpod 3.0 이 `Notifier` + `AsyncNotifier` 를 새 표준으로 밀고 있지만, `StateNotifier` 도 당분간 deprecated 는 아니니 마이그레이션 가이드가 성숙해질 때까지 기다리는 게 비용 대비 효율이 높다 — 그래서 미루기로 했어요.
 
-**교훈**: 새 표준이 나왔다고 바로 쫓아가지 말고, **"당장 깨지나?" × "마이그레이션 도구 있나?"** 두 조건 모두 충족할 때 움직이기.
+**실제 결과 (2026-08)**: `flutter_riverpod` 을 3.4.2 로 올리는 시점에 riverpod 3 가 `StateNotifier` 를 아예 제거해서, 전환에 선택의 여지가 없어졌어요. ViewModel 4개 + PaginationController 1개를 `Notifier` 로 이관했는데, 미룬 덕에 치른 비용은 예상보다 작았어요:
+
+- 형태 변경뿐: 초기 상태는 생성자 대신 `build()` 가 돌려주고, `Ref` 는 베이스 클래스가 제공. **메서드 본문 로직은 전혀 안 바뀌었어요** (`state = state.copyWith(...)` 관용이 `Notifier` 에서도 동일).
+- 테스트 631개 전부 통과. `ProviderContainer` / `overrideWithValue` 를 쓰는 테스트 25곳도 수정 없이 그대로 동작.
+- 자잘한 차이 두 가지만 흡수: `Override` 타입이 `flutter_riverpod` 에서 재수출되지 않아 `import 'package:riverpod/misc.dart' show Override;` 추가 (AppKit 의 `providerOverrides` 가 `List<Override>` 를 써요), `StateNotifier` 의 `mounted` 는 `ref.mounted` 로 이동.
+
+**교훈**: "당장 깨지나?" × "마이그레이션 도구 있나?" 기준으로 미루는 전략 자체는 유효했지만, 실제 트리거는 "상위 버전에서 제거됨" 이라는 외부 강제였어요. 미루기가 안전하려면 **이관 비용이 작게 유지된다는 조건** 이 필요해요 — 이번엔 상태 갱신 관용(`state` + `copyWith`)이 두 API 에서 동일했던 덕에 성립했어요. 미룬 판단이 맞았다기보다, 전환 비용이 낮은 구조를 유지한 것이 안전판이었어요.
 
 ### 교훈 3 — `copyWith` 의 nullable 관용은 문서화 필수
 
@@ -210,7 +218,8 @@ Riverpod 3.0 이 `Notifier` + `AsyncNotifier` 를 새 표준으로 밀고 있어
 
 ## 관련 사례 (Prior Art)
 
-- [Riverpod 공식 가이드 — StateNotifier](https://riverpod.dev/docs/providers/state_notifier_provider) — 본 ADR 이 따르는 주 레퍼런스
+- [Riverpod 공식 가이드 — Notifier](https://riverpod.dev/docs/essentials/side_effects) — 본 ADR 이 따르는 주 레퍼런스
+- [Riverpod 3.0 마이그레이션 가이드](https://riverpod.dev/docs/3.0_migration) — `StateNotifier` 제거와 `Notifier` 이관 경로
 - [Flutter MVVM with Riverpod](https://codewithandrea.com/articles/flutter-state-management-riverpod/) — Andrea Bizzotto, MVVM + Riverpod 패턴 정리
 - [Reso Coder — Clean Architecture in Flutter](https://resocoder.com/flutter-clean-architecture-tdd/) — ViewModel 계층 분리의 원리
 - [BLoC 공식 비교 — Why BLoC?](https://bloclibrary.dev/#/faqs) — BLoC 의 설계 철학 (본 ADR 의 반대편)

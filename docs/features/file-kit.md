@@ -81,9 +81,11 @@ Future<FileDownloadResponse> getDownloadUrl(String key);
 ### 업로드 → 게시물 첨부
 
 ```dart
-class ComposeViewModel extends StateNotifier<ComposeState> {
-  ComposeViewModel(this._ref) : super(const ComposeState());
-  final Ref _ref;
+class ComposeViewModel extends Notifier<ComposeState> {
+  @override
+  ComposeState build() => const ComposeState();
+
+  Ref get _ref => ref;
 
   Future<String> attach(Uint8List bytes, String name, String mime) async {
     final file = _ref.read(fileServiceProvider);

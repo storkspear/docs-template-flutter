@@ -9,7 +9,7 @@
 - **Drift**: SQLite 를 Dart ORM 으로 다룸. 타입 안전 쿼리
 - **코드 생성**: `build_runner` 로 DAO · 테이블 클래스 자동 생성
 - **마이그레이션**: `DbMigrationStep` (BootStep) 이 버전 업 시 자동 실행 (Drift schema fingerprint 테스트는 템플릿 미포함 — 파생 레포가 필요 시 추가)
-- **플랫폼**: sqlite3_flutter_libs 로 Android · iOS · macOS · Windows · Linux 지원
+- **플랫폼**: sqlite3 (3.x) 로 Android · iOS · macOS · Windows · Linux 지원
 
 ---
 

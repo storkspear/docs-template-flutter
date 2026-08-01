@@ -47,7 +47,7 @@
 - [`Overview`](./conventions/README.md)
 - [`Architecture`](./conventions/architecture.md) — MVVM · 모듈 의존 방향 · 에러 처리 한눈
 - [`Naming`](./conventions/naming.md) — 파일 · 클래스 · Provider 명명
-- [`ViewModel + MVVM`](./conventions/viewmodel-mvvm.md) — StateNotifier · ConsumerWidget 패턴
+- [`ViewModel + MVVM`](./conventions/viewmodel-mvvm.md) — Notifier · ConsumerWidget 패턴
 - [`Error Handling`](./conventions/error-handling.md) — ApiException · safeErrorCode/Message · 인터셉터 순서
 - [`Loading UX`](./conventions/loading-ux.md) — 4가지 로딩 패턴
 - [`i18n`](./conventions/i18n.md) — ARB · gen_l10n 원칙

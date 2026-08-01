@@ -107,7 +107,7 @@ Screen.onPressed
   ↓
 ref.read(viewModelProvider.notifier).someAction()
   ↓
-ViewModel (StateNotifier) 가 Service 호출
+ViewModel (Notifier) 가 Service 호출
   ↓
 ref.read(serviceProvider).call()
   ↓
@@ -296,11 +296,11 @@ Xcode 가 빌드 시점에 `$(VAR)` placeholder 를 (Build Config 의 xcconfig �
 
 | 영역 | 기술 |
 |------|------|
-| 프레임워크 | Flutter 3.41.8 (`.fvmrc` 핀, FVM 권장) · Dart `^3.8.1` (`pubspec.yaml`) |
-| 상태관리 | flutter_riverpod 2.6+ (StateNotifier) |
-| 라우팅 | go_router 14.8+ |
+| 프레임워크 | Flutter 3.44.8 (`.fvmrc` 핀, FVM 권장) · Dart `^3.8.1` (`pubspec.yaml`) |
+| 상태관리 | flutter_riverpod 3.4+ (Notifier) |
+| 라우팅 | go_router 17.3+ |
 | HTTP | dio 5.7+ |
-| 로컬 DB | drift 2.23+ (SQLite) |
+| 로컬 DB | drift 2.34+ · sqlite3 3.5+ (SQLite) |
 | 로컬 저장 | shared_preferences · flutter_secure_storage |
 | 알림 | flutter_local_notifications · (선택) firebase_messaging |
 | 관측성 | sentry_flutter · posthog_flutter |

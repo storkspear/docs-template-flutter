@@ -83,7 +83,7 @@ RefreshIndicator(
 ### ViewModel 측
 
 ```dart
-class ExpenseListViewModel extends StateNotifier<ExpenseListState> {
+class ExpenseListViewModel extends Notifier<ExpenseListState> {
   // 첫 진입
   Future<void> load() async {
     state = state.copyWith(isLoading: true);

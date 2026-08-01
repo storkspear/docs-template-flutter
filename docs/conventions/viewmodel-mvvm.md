@@ -1,6 +1,6 @@
 # ViewModel + MVVM 패턴
 
-Screen 은 UI 만, ViewModel 은 로직만. 상태 관리는 `StateNotifier<TState>` + `ConsumerWidget` 조합 하나로 통일해요. 이 규약의 근거는 [`ADR-005 · Riverpod + MVVM`](../philosophy/adr-005-riverpod-mvvm.md) 참조.
+Screen 은 UI 만, ViewModel 은 로직만. 상태 관리는 `Notifier<TState>` + `ConsumerWidget` 조합 하나로 통일해요. 이 규약의 근거는 [`ADR-005 · Riverpod + MVVM`](../philosophy/adr-005-riverpod-mvvm.md) 참조.
 
 ---
 
@@ -65,13 +65,14 @@ errorMessage: errorMessage
 
 ## ViewModel 클래스
 
-`StateNotifier<TState>` 를 상속. 생성자에서 `Ref` 받기.
+`Notifier<TState>` 를 상속. 초기 상태는 `build()` 가 돌려주고, `Ref` 는 베이스 클래스가 `ref` 로 제공해요.
 
 ```dart
-class LoginViewModel extends StateNotifier<LoginState> {
-  final Ref _ref;
+class LoginViewModel extends Notifier<LoginState> {
+  @override
+  LoginState build() => const LoginState();
 
-  LoginViewModel(this._ref) : super(const LoginState());
+  Ref get _ref => ref;
 
   Future<void> signInWithEmail(String email, String password) async {
     // 1. 로딩 시작 + 이전 에러 clear
@@ -120,15 +121,20 @@ class LoginViewModel extends StateNotifier<LoginState> {
 
 ## Provider 선언
 
-`StateNotifierProvider.autoDispose` 기본. 같은 파일 하단에 선언.
+`NotifierProvider` 기본. 같은 파일 하단에 선언.
 
 ```dart
-final loginViewModelProvider = StateNotifierProvider.autoDispose<LoginViewModel, LoginState>(
+final NotifierProvider<LoginViewModel, LoginState> loginViewModelProvider =
+    NotifierProvider<LoginViewModel, LoginState>(
   LoginViewModel.new,
+  // 화면 단위 ViewModel 은 필수. 기본값이 non-autoDispose 라 빼면 화면을 떠나도 상태가 남는다.
+  isAutoDispose: true,
 );
 ```
 
-### autoDispose 가 기본인 이유
+### autoDispose 를 명시하는 이유
+
+riverpod 3 의 provider 는 기본이 non-autoDispose 라, 화면 단위 ViewModel 에는 `isAutoDispose: true` 를 명시해야 이렇게 동작해요. (riverpod 2 의 `.autoDispose` 수식어가 이 인자로 바뀌었어요.)
 
 - 화면 이탈 시 자동 정리 → 메모리 누수 방지
 - 상태 재진입 시 **초기 상태로 시작** → 예전 에러 · 로딩 남아있음 방지
@@ -323,7 +329,7 @@ LoginViewModel catch → state = copyWith(errorCode: 'ATH_001', errorMessage: '.
 
 ```dart
 // 금지
-class BadViewModel extends StateNotifier<...> {
+class BadViewModel extends Notifier<...> {
   Future<void> doSomething(BuildContext context) async {  // ← context 받지 말기
     ScaffoldMessenger.of(context).showSnackBar(...);      // ← 금지
   }
@@ -336,7 +342,7 @@ class BadViewModel extends StateNotifier<...> {
 
 ```dart
 // 금지
-class BadViewModel extends StateNotifier<...> {
+class BadViewModel extends Notifier<...> {
   final _client = ApiClient();  // ← 금지
   // ...
 }

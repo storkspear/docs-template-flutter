@@ -170,8 +170,8 @@ class ObservabilityKit extends AppKit {
 
 ```dart
 // 어떤 ViewModel
-class MyViewModel extends StateNotifier<MyState> {
-  final Ref _ref;
+class MyViewModel extends Notifier<MyState> {
+  Ref get _ref => ref;
 
   Future<void> doSomething() async {
     try {

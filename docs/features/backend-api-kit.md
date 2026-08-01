@@ -149,9 +149,11 @@ final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
 ### ViewModel 에서
 
 ```dart
-class ExpenseListViewModel extends StateNotifier<ExpenseListState> {
-  final Ref _ref;
-  ExpenseListViewModel(this._ref) : super(const ExpenseListState());
+class ExpenseListViewModel extends Notifier<ExpenseListState> {
+  @override
+  ExpenseListState build() => const ExpenseListState();
+
+  Ref get _ref => ref;
 
   Future<void> load() async {
     state = state.copyWith(isLoading: true);

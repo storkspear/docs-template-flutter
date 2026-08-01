@@ -8,7 +8,7 @@
 
 ### 필수
 
-- [ ] **Flutter SDK** `3.41.8` (`.fvmrc` 핀) — [fvm](https://fvm.app/) 으로 버전 관리 권장
+- [ ] **Flutter SDK** `3.44.8` (`.fvmrc` 핀) — [fvm](https://fvm.app/) 으로 버전 관리 권장
 - [ ] **Dart SDK** — Flutter 에 번들된 Dart 사용 (`pubspec.yaml` constraint: `^3.8.1`)
 - [ ] **Git** 2.30+
 - [ ] **Xcode** (iOS 빌드용) — macOS 전용. App Store 에서 설치
