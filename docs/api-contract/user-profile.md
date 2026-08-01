@@ -4,7 +4,7 @@
 
 > **경로 — 앱별 endpoint** : auth·device 와 동일하게 `/api/apps/{slug}/users/...` 아래에 있어요. 백엔드 `AppSlugVerificationFilter` 가 path slug ↔ JWT slug 일치를 강제해 cross-app 접근을 막아요.
 >
-> Flutter `ApiClient.get/patch` 의 `/api/apps/{slug}` 자동 prefix 를 그대로 써요. `api_endpoints.dart` 의 `userMe`/`userById` 는 **상대 경로**(`/users/me`, `/users/{id}`)이고, `_apiClient.get(ApiEndpoints.userMe)` 처럼 호출해요 (device 와 동일 컨벤션).
+> Flutter `ApiClient.get/patch` 의 `/api/apps/{slug}` 자동 prefix 를 그대로 써요. `api_endpoints.dart` 의 `userMe` 는 **상대 경로**(`/users/me`)이고, `_apiClient.get(ApiEndpoints.userMe)` 처럼 호출해요 (device 와 동일 컨벤션).
 
 ---
 

@@ -48,7 +48,7 @@ git tag v1.0.0 → GitHub Actions → fastlane build (AAB) → Play Console Inte
 ./scripts/signing/upload-secrets-to-github.sh <app-slug>
 ```
 
-스크립트는 `~/Documents/keystores-pending/<app-slug>/` 의 키스토어를 읽어 **`ANDROID_*` 4종만 자동 업로드**해요. `PLAY_STORE_JSON_KEY` 와 `SENTRY_*` 는 스크립트가 출력하는 `gh secret set` 안내대로 직접 등록하세요. (keystore 발급은 [`docs/infra/android-deployment.md`](../infra/android-deployment.md) §최초 설정 참고)
+스크립트는 `~/Documents/keystores-pending/<app-slug>/` 의 키스토어를 읽어 **`ANDROID_*` 4종만 자동 업로드**해요. `PLAY_STORE_JSON_KEY` · `GOOGLE_SERVICES_JSON_PROD` · `SENTRY_*` 는 스크립트가 출력하는 `gh secret set` 안내대로 직접 등록하세요 (`GOOGLE_SERVICES_JSON_PROD` 를 빠뜨리면 출시 빌드에서 구글 로그인이 동작하지 않아 워크플로가 fail-fast 해요). (keystore 발급은 [`docs/infra/android-deployment.md`](../infra/android-deployment.md) §최초 설정 참고)
 
 ---
 
@@ -59,9 +59,11 @@ git tag v1.0.0 → GitHub Actions → fastlane build (AAB) → Play Console Inte
 먼저 콘솔에서 AAB 한 번 수동 업로드해서 앱이 등록되는지 확인 권장:
 
 ```bash
-flutter build appbundle --release
-# build/app/outputs/bundle/release/app-release.aab 를 Play Console Internal 트랙에 수동 업로드
+flutter build appbundle --release --flavor prod
+# build/app/outputs/bundle/prodRelease/app-prod-release.aab 를 Play Console Internal 트랙에 수동 업로드
 ```
+
+`--flavor prod` 가 필수예요 — productFlavors 에 default 가 없어서 생략하면 빌드가 실패해요.
 
 ### 4-2. GHA 자동 배포
 

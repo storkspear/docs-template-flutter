@@ -29,20 +29,20 @@ env-verb dispatch — 첫 인자가 `local`/`dev`/`prod`/`all` 이면 env, 아�
 | `lib/init-common.sh` | init 3종 공용 (prereq 검증 · .env 생성 · REQUIRED 키 검증) | init-*.sh 가 source |
 | `lib/firebase.sh` | Firebase 프로젝트/앱 생성 · plist/json 다운로드 헬퍼 | init-dev/prod 가 source |
 | `lib/xcode-config.sh` | xcconfig 조작 헬퍼 | link-oauth 등이 source |
-| `readiness-check.sh` | 개발 준비 7 step 검증 | factory 의 `test` verb |
-| `setup.sh` | git hooks 활성화 | clone 직후 1회 |
-| `rename-app.sh` | 앱 이름 · Bundle ID 일괄 치환 | 파생 레포 생성 시 |
-| `init-local.sh` | rename + `.env` + `flutter pub get` 한 번에 | `<repo> local init` |
-| `init-dev.sh` | Firebase dev 프로젝트 + 앱 등록 + plist/json + link-oauth | `<repo> dev init` |
-| `init-prod.sh` | 동일 흐름의 prod 버전 (별도 Firebase 프로젝트) | `<repo> prod init` |
-| `start.sh` | flutter run 래퍼 (mock 자동 폴백 · flavor 라우팅) | `<repo> <env> start` |
-| `link-oauth.sh` | GoogleService-Info plist → AppEnv-secrets xcconfig 주입 | `<repo> <env> link-oauth` |
-| `regenerate-assets.sh` | 런처 아이콘 + 스플래시 재생성 | 아이콘 · 스플래시 변경 후 |
-| `coverage.sh` | 테스트 커버리지 측정 + HTML 리포트 | 월 1회 정기 점검 |
-| `generate-upload-keystore.sh` | Android 업로드 keystore 생성 (비대화형) | 첫 Android 배포 전 |
-| `batch-backup-keystores.sh` | pending keystore 들을 암호화 7z 로 일괄 백업 | 정기 운영 |
-| `upload-secrets-to-github.sh` | Android 서명 Secrets 4종 GHA 업로드 | 첫 배포 전 · 키 갱신 시 |
-| `sync-docs.sh` | docs/ → docs-template-flutter mirror | docs 변경 push 시 (CI) |
+| `verify/readiness-check.sh` | 개발 준비 7 step 검증 | factory 의 `test` verb |
+| `init/setup.sh` | git hooks 활성화 | clone 직후 1회 |
+| `app/rename-app.sh` | 앱 이름 · Bundle ID 일괄 치환 | 파생 레포 생성 시 |
+| `init/init-local.sh` | rename + `.env` + `flutter pub get` 한 번에 | `<repo> local init` |
+| `init/init-dev.sh` | Firebase dev 프로젝트 + 앱 등록 + plist/json + link-oauth | `<repo> dev init` |
+| `init/init-prod.sh` | 동일 흐름의 prod 버전 (별도 Firebase 프로젝트) | `<repo> prod init` |
+| `run/start.sh` | flutter run 래퍼 (mock 자동 폴백 · flavor 라우팅) | `<repo> <env> start` |
+| `signing/link-oauth.sh` | GoogleService-Info plist → AppEnv-secrets xcconfig 주입 | `<repo> <env> link-oauth` |
+| `app/regenerate-assets.sh` | 런처 아이콘 + 스플래시 재생성 | 아이콘 · 스플래시 변경 후 |
+| `verify/coverage.sh` | 테스트 커버리지 측정 + HTML 리포트 | 월 1회 정기 점검 |
+| `signing/generate-upload-keystore.sh` | Android 업로드 keystore 생성 (비대화형) | 첫 Android 배포 전 |
+| `signing/batch-backup-keystores.sh` | pending keystore 들을 암호화 7z 로 일괄 백업 | 정기 운영 |
+| `signing/upload-secrets-to-github.sh` | Android 서명 Secrets 4종 GHA 업로드 | 첫 배포 전 · 키 갱신 시 |
+| `docs/sync-docs.sh` | docs/ → docs-template-flutter mirror | docs 변경 push 시 (CI) |
 
 ---
 
@@ -292,6 +292,8 @@ Android **서명 Secrets 4종** 을 GHA Secrets 에 자동 업로드. (`.env` �
 
 ```bash
 gh secret set PLAY_STORE_JSON_KEY   # Play Console service account JSON 내용
+base64 -i android/app/src/prod/google-services.json | gh secret set GOOGLE_SERVICES_JSON_PROD
+                                    # prod Firebase google-services.json (base64) — 릴리스 빌드 구글 로그인용
 gh secret set SENTRY_AUTH_TOKEN     # sentry-cli 용 Auth Token
 gh secret set SENTRY_ORG
 gh secret set SENTRY_PROJECT
@@ -356,7 +358,7 @@ Status: ISSUES FOUND
 
 ## 새 스크립트 추가 가이드
 
-새 `scripts/*.sh` 작성 시:
+새 `scripts/<기능폴더>/*.sh` 작성 시 (기능별 폴더: `app/`·`init/`·`run/`·`signing/`·`verify/`·`docs/`, 공용 헬퍼는 `lib/`):
 
 ```bash
 #!/bin/bash
@@ -364,6 +366,9 @@ set -euo pipefail   # 에러 시 즉시 종료
 
 # 설명 주석
 # 사용법 출력
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib/common.sh"
 
 if [[ "$#" -lt 1 ]]; then
   echo "Usage: $0 <arg>"
@@ -373,7 +378,7 @@ fi
 # 실제 로직
 ```
 
-실행 권한: `chmod +x scripts/new-script.sh`
+실행 권한: `chmod +x scripts/<기능폴더>/new-script.sh`
 
 ---
 

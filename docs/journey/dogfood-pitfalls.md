@@ -146,7 +146,7 @@ class MainActivity : FlutterFragmentActivity()
 
 ---
 
-### ❌ derived repo 정리하려는데 `firebase projects:delete` 가 "is not a Firebase command"
+### ❌ 파생 레포 정리하려는데 `firebase projects:delete` 가 "is not a Firebase command"
 
 **증상**: 검증 끝나고 만든 Firebase project 정리하려고 `firebase projects:delete <pid>` 호출 → `Error: projects:delete is not a Firebase command`.
 
@@ -173,7 +173,7 @@ https://console.firebase.google.com/project/<project-id>/settings/general
 
 ### ❌ `gh repo delete` 가 403 — `Must have admin rights to Repository ... needs "delete_repo" scope`
 
-**증상**: 도그푸딩 검증 끝나고 derived repo 정리하려고 `gh repo delete <owner>/<repo> --yes` → HTTP 403.
+**증상**: 도그푸딩 검증 끝나고 파생 레포 정리하려고 `gh repo delete <owner>/<repo> --yes` → HTTP 403.
 
 **원인**: 기본 `gh auth login` 시 발급되는 토큰엔 `delete_repo` scope 가 빠져있어요. 안전상 default 가 read/write 만 포함.
 
@@ -421,8 +421,8 @@ cat fastlane_error.log
 **해결**:
 ```bash
 # GHA 에 추가
-- run: flutter build appbundle --obfuscate --split-debug-info=build/app/symbols
-- run: npx @sentry/cli upload-dif --org $ORG --project $PROJECT build/app/symbols
+- run: flutter build appbundle --obfuscate --split-debug-info=build/symbols
+- run: npx @sentry/cli upload-dif --org $ORG --project $PROJECT build/symbols
 ```
 
 ---
@@ -445,6 +445,8 @@ StateError: AppConfig.init() release 빌드 검증 실패:
 5. `environment == Environment.dev` (release 는 staging/prod 만 허용)
 
 → 의도: privacy URL 404 로 App Store 리뷰 거부 / Sentry · PostHog 이벤트가 'dev' 라벨로 박혀 운영 알람 노이즈 혼재 같은 사고를 컴파일 직후에 차단해요.
+
+> ⚠️ **자동 검출 밖의 플레이스홀더가 하나 더 있어요** — ARB 의 `contactSubject`(`app_ko.arb` 의 `"[앱 이름] 문의"`, `app_en.arb` 의 `"[App Name] Inquiry"`). `AppConfig` 가 아니라 i18n 리소스라 위 5가지 검사에 안 걸려요. 출시 전에 ko·en 양쪽을 실제 앱 이름으로 직접 바꿔주세요 — 안 바꾸면 사용자가 보내는 문의 메일 제목에 대괄호가 그대로 나가요.
 
 **해결**: `lib/main.dart` 의 `AppConfig.init` 인자를 자기 앱 값으로 모두 교체:
 ```dart

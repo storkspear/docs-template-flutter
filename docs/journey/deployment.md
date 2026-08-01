@@ -171,6 +171,8 @@ Play Console JSON 키 · Sentry · PostHog 값은 스크립트가 다루지 않�
 
 ```bash
 gh secret set PLAY_STORE_JSON_KEY < service-account.json   # Play Console 서비스 계정 JSON
+base64 -i android/app/src/prod/google-services.json | gh secret set GOOGLE_SERVICES_JSON_PROD
+                                   # prod Firebase google-services.json (base64) — 안 넣으면 릴리스 빌드에서 구글 로그인 불능 (워크플로가 fail-fast)
 gh secret set SENTRY_AUTH_TOKEN    # sentry-cli 용 Auth Token (심볼 업로드)
 gh secret set SENTRY_ORG           # 예: my-org
 gh secret set SENTRY_PROJECT       # 예: my-app

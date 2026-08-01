@@ -285,7 +285,7 @@ OpenAPI / freezed / json_serializable 같은 코드 생성 도구는 **수십 �
 
 ## 관련 사례 (Prior Art)
 
-- [`template-spring · api-response.md`](https://github.com/storkspear/template-spring/blob/main/docs/api-contract/api-response.md) — 짝이 되는 백엔드 스키마 원본
+- [`template-spring · api-response.md`](https://github.com/storkspear/template-spring/blob/main/docs/api-and-functional/api/api-response.md) — 짝이 되는 백엔드 스키마 원본
 - [Spring Boot `Page<T>` 직렬화](https://docs.spring.io/spring-data/jpa/reference/repositories/core-concepts.html#core.web) — `PageResponse` 포맷의 출처
 - [RFC 7807 — Problem Details for HTTP APIs](https://datatracker.ietf.org/doc/html/rfc7807) — 에러 응답 표준화 관련 표준. 본 ADR 은 이보다 단순한 `{code, message}` 택함
 - [JSON:API spec](https://jsonapi.org/) — `{data, errors}` 포맷의 대중화. 본 ADR 은 singular `error` 를 택했는데 백엔드 Spring 관용과 맞춤
@@ -304,7 +304,7 @@ OpenAPI / freezed / json_serializable 같은 코드 생성 도구는 **수십 �
 
 **짝이 되는 백엔드 정의** (template-spring)
 - [`common-web/src/main/java/com/factory/common/web/response/ApiResponse.java`](https://github.com/storkspear/template-spring/blob/main/common/common-web/src/main/java/com/factory/common/web/response/ApiResponse.java) — 동일 스키마 서버 측
-- [`common-web/src/main/java/com/factory/common/web/error/ErrorCode.java`](https://github.com/storkspear/template-spring/blob/main/common/common-web/src/main/java/com/factory/common/web/error/ErrorCode.java) — 같은 enum 문자열
+- [`common-web/src/main/java/com/factory/common/web/exception/CommonError.java`](https://github.com/storkspear/template-spring/blob/main/common/common-web/src/main/java/com/factory/common/web/exception/CommonError.java) — 같은 enum 문자열
 
 **관련 ADR**:
 - [`ADR-010 · QueuedInterceptor 로 401 자동 갱신`](./adr-010-queued-interceptor.md) — `CMN_007` (access token 만료) 에러 코드가 여기서 트리거

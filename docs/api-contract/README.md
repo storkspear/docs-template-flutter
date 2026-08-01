@@ -24,7 +24,7 @@
 | [`user-profile.md`](./user-profile.md) | `/api/apps/{slug}/users/me` GET / PATCH + 활동 ping(POST, app-scoped `/users/me/activity`) |
 | [`devices.md`](./devices.md) | 푸시 대상 기기 등록 / 해제 (FCM 토큰) |
 | [`file-api.md`](./file-api.md) | 파일 업로드(presigned POST policy) / 조회(presigned GET) + 게시물 첨부 |
-| [`notification-settings.md`](./notification-settings.md) | kind 별 push / email 채널 toggle (ADR-031) |
+| [`notification-settings.md`](./notification-settings.md) | kind 별 push / email 채널 toggle (짝 백엔드 ADR-031) |
 
 ---
 
@@ -32,7 +32,7 @@
 
 ### 서버 변경 시
 
-1. 백엔드의 `ApiResponse.java` · `ErrorInfo` 구현 enum (`CommonError.java` / `AuthError.java` 등) 수정 → `tools/contract-snapshot/gen-snapshot.sh` 재실행·커밋 (안 하면 backend CI 가 staleness 로 FAIL)
+1. 백엔드의 `ApiResponse.java` · `ErrorInfo` 구현 enum (`CommonError.java` / `AuthError.java` 등) 수정 → `tools/verify/gen-snapshot.sh` 재실행·커밋 (안 하면 backend CI 가 staleness 로 FAIL)
 2. 프론트의 `api_response.dart` · `error_code.dart` **동시** 수정
 3. 두 레포에 **같은 커밋 메시지** 로 PR
 4. `flutter test` 의 계약 크로스체크(`test/contract/contract_test.dart`, 클라 참조 ⊆ 스냅샷)가 어긋남을 잡아요. 스냅샷 복사본 갱신은 `contract-sync.yml` 이 매일 auto-PR 로도 수행 (자동 머지 없음)

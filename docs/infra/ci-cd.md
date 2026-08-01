@@ -107,6 +107,7 @@ jobs:
 | `ANDROID_KEYSTORE_BASE64` | Android 업로드 키스토어 |
 | `ANDROID_KEYSTORE_PASSWORD` · `ANDROID_KEY_PASSWORD` · `ANDROID_KEY_ALIAS` | 키스토어 비밀번호 |
 | `PLAY_STORE_JSON_KEY` | Play Console 서비스 계정 |
+| `GOOGLE_SERVICES_JSON_PROD` | prod Firebase `google-services.json` (base64) — 미등록 시 release-android 가 fail-fast |
 | `APP_STORE_KEY_ID` · `APP_STORE_ISSUER_ID` · `APP_STORE_KEY_CONTENT` | App Store Connect API |
 | `SENTRY_DSN` · `SENTRY_AUTH_TOKEN` · `SENTRY_ORG` · `SENTRY_PROJECT` | Sentry |
 | `POSTHOG_KEY` | PostHog |

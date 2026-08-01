@@ -1,12 +1,12 @@
 # auth_kit
 
-**JWT 인증 + 소셜 로그인 (Google · Apple) + 로그인 · 비번찾기 · 이메일 인증 화면**. `backend_api_kit` 에 의존.
+**JWT 인증 + 소셜 로그인 4종 (Google · Apple · Kakao · Naver) + 로그인 · 비번찾기 · 이메일 인증 · 2FA 화면**. `backend_api_kit` 에 의존.
 
 ---
 
 ## 개요
 
-- **인증 방식**: 이메일/비번 · Google Sign-In · Sign in with Apple
+- **인증 방식**: 이메일/비번 · Google Sign-In · Sign in with Apple · Kakao · Naver (kakao/naver 는 한국 시장 앱에서 활성)
 - **토큰 저장**: `SecureStorage` + 원자적 ([`ADR-013`](../philosophy/adr-013-token-atomic-storage.md))
 - **401 자동 refresh**: `AuthInterceptor` 가 투명 처리 ([`ADR-010`](../philosophy/adr-010-queued-interceptor.md))
 - **부팅 시 토큰 검증**: `AuthCheckStep` BootStep
@@ -181,7 +181,7 @@ AuthKit(
 
 ## 시연 모드 (Dev Mock)
 
-백엔드 · OAuth SDK 키 없이 로그인 → home 흐름까지 keyless 시연하는 모드. 솔로 dev 가 새 derived repo 첫 `flutter run` 에서 가장 자주 쓸 옵션이에요.
+백엔드 · OAuth SDK 키 없이 로그인 → home 흐름까지 keyless 시연하는 모드. 솔로 dev 가 새 파생 레포 첫 `flutter run` 에서 가장 자주 쓸 옵션이에요.
 
 ```bash
 flutter run --dart-define=AUTH_DEV_MOCK=true
@@ -300,7 +300,12 @@ try {
 - [`lib/kits/auth_kit/auth_service.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/auth_service.dart)
 - [`lib/kits/auth_kit/auth_state.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/auth_state.dart)
 - [`lib/kits/auth_kit/auth_check_step.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/auth_check_step.dart)
-- [`lib/kits/auth_kit/ui/`](https://github.com/storkspear/template-flutter/tree/main/lib/kits/auth_kit/ui) — 3개 화면 + ViewModel
+- [`lib/kits/auth_kit/ui/`](https://github.com/storkspear/template-flutter/tree/main/lib/kits/auth_kit/ui) — 기능별 4개 디렉터리 + 공용 위젯
+  - `login/` — 로그인 화면 · ViewModel · 소셜 로그인 바/버튼
+  - `password_reset/` — 비밀번호 재설정 화면 · ViewModel
+  - `verify_email/` — 이메일 인증 화면 · ViewModel
+  - `two_factor/` — 2FA 화면 5종(로그인·설정·해제·백업코드) · 백업코드 뷰 · ViewModel
+  - `auth_error_text.dart` — 에러코드 → 사용자 문구 매핑(전 화면 공용)
 - [`lib/core/storage/token_storage.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/storage/token_storage.dart) — 원자 저장
 
 ---

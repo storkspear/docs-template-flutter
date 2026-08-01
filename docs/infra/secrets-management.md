@@ -88,7 +88,14 @@ Repository → Settings → Secrets and variables → Actions → New repository
 ```bash
 ./scripts/signing/upload-secrets-to-github.sh <app-slug>
 # → ~/Documents/keystores-pending/<app-slug>/ 의 키스토어 + passwords.txt 를 읽어
-#   ANDROID_KEYSTORE_* 4종을 gh secret set. (Play/Sentry secret 은 수동 등록 안내 출력)
+#   ANDROID_KEYSTORE_* 4종을 gh secret set.
+#   (Play/GOOGLE_SERVICES_JSON_PROD/Sentry secret 은 수동 등록 안내 출력)
+```
+
+`GOOGLE_SERVICES_JSON_PROD` 는 gitignore 된 `android/app/src/prod/google-services.json` 을 CI 에서 복원하려고 두는 secret 이에요. 없으면 `google-services` 플러그인이 붙지 않아 `default_web_client_id` 가 생성되지 않고, **출시 빌드에서만 구글 로그인이 안 돼요** — `release-android` 워크플로가 fail-fast 로 막아 줘요.
+
+```bash
+base64 -i android/app/src/prod/google-services.json | gh secret set GOOGLE_SERVICES_JSON_PROD
 ```
 
 ### 워크플로우에서 참조

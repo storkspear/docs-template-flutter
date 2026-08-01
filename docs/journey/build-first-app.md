@@ -51,7 +51,8 @@ await AppKits.install([
   AuthKit(),
   NotificationsKit(service: LocalScheduledAlertService()),
   DeviceInfoKit(),
-  UpdateKit(service: NoUpdateAppUpdateService()),
+  UpdateKit(service: BackendAppUpdateService(/* GET /app-version — lib/main.dart 기본 조립 그대로 */)),  // 템플릿 기본 (backend_api_kit 필요)
+  // backend 없는 recipe는 NoUpdateAppUpdateService — lib/kits/update_kit/README.md 참고
 ]);
 ```
 

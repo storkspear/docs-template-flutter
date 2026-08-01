@@ -56,10 +56,15 @@
 5. PrefsStorage().init()   (SharedPreferences 초기화)
                  │
                  ▼
+5-b. ApiClient.onUpgradeRequired = ...
+     (426/CMN_010 → forceUpdateInfoNotifier)
+                 │
+                 ▼
 6. AppKits.install([
      BackendApiKit(),
-     AuthKit(),
-     UpdateKit(service: NoUpdateAppUpdateService()),
+     AuthKit(providers: {...}, loginPath: ..., twoFactorEnabled: true, ...),
+     FileKit(),
+     UpdateKit(service: BackendAppUpdateService(...)),
      ObservabilityKit(),
    ])
    │
@@ -103,7 +108,7 @@
    │    └─ PostHog SDK 초기화 (POSTHOG_KEY 주입 시)
    │
    ├─ UpdateKit 의 _ForceUpdateStep
-   │    └─ service.init() → check() → isForce 면 forceUpdateInfoNotifier 갱신
+   │    └─ service.init() → check() → null 아니면 forceUpdateInfoNotifier 갱신(isForce 로 강제/경고 분기는 UI 몫)
    │
    └─ (기타 활성 Kit 의 BootStep)
                  │
@@ -158,6 +163,8 @@
 
 여기서 각 Kit 의 `onInit` 이 실행. 예: `BackendApiKit.onInit` 은 Dio 인스턴스 생성 등.
 
+`ApiClient.onUpgradeRequired` 글루(5-b)는 install 보다 **먼저** 실행돼요 — `backend_api_kit` 은 `update_kit` 을 모르고(kit 간 디커플링), 두 kit 을 엮는 유일한 지점이 `main.dart` 라서 조립 이전에 정적 훅부터 걸어 둬요.
+
 ### 4. ProviderContainer + attachContainer
 
 ADR-003 의 3단계 패턴:
@@ -196,7 +203,7 @@ initialLocation `/splash` → refreshListenable 이 곧 초기 notify → `_comp
 
 ## 코드 참조
 
-- [`lib/main.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/main.dart) — 전체 부팅 코드 (167줄)
+- [`lib/main.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/main.dart) — 전체 부팅 코드
 - [`lib/app.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/app.dart) — MaterialApp 구성
 - [`lib/common/splash/splash_controller.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/common/splash/splash_controller.dart)
 - [`lib/core/kits/app_kits.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/kits/app_kits.dart) — install · attachContainer

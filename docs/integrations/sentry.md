@@ -3,7 +3,7 @@
 > **목표**: Sentry DSN 발급 → `--dart-define` 주입 → 운영 환경에서 크래시 1건 이상 수신 확인까지.
 
 **관련 Kit**: [`observability_kit`](../features/observability-kit.md)
-**관련 ADR**: 없음 (Phase 1 관측성 도입 — `docs/superpowers/plans/2026-04-19-observability-sentry-posthog.md`)
+**관련 ADR**: 없음 (관측성 도입 결정은 [`ADR-019 · 솔로 친화적 운영`](../philosophy/adr-019-solo-friendly.md) 의 "관리형 서비스 선호" 원칙을 따라요)
 
 ---
 

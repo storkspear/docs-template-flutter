@@ -110,17 +110,30 @@ Image.network(dl.downloadUrl); // ~10분 만료 presigned GET
 ### 에러 분기
 
 ```dart
+// 타입/용량 위반은 **티켓 발급 단계**에서만 나와요 (서버가 검증).
 try {
-  await file.uploadBytes(ticket: ticket, bytes: bytes);
+  final ticket = await file.requestUpload(
+    filename: name,
+    contentType: mime,
+    sizeBytes: bytes.length,
+  );
+  // 스토리지 업로드는 우리 엔벨로프 밖 — ApiException.unknown 으로 올라와요.
+  try {
+    await file.uploadBytes(ticket: ticket, bytes: bytes);
+  } on ApiException catch (_) {
+    // '업로드에 실패했어요'
+  }
 } on ApiException catch (e) {
   final msg = switch (e.code) {
     ErrorCode.contentTypeNotAllowed => '지원하지 않는 형식이에요',
     ErrorCode.fileSizeExceeded => '파일이 너무 커요',
-    _ => '업로드에 실패했어요',
+    _ => '업로드를 시작하지 못했어요',
   };
   // ...
 }
 ```
+
+`uploadBytes` 의 스토리지 실패는 우리 `ApiResponse` 엔벨로프 밖이라 `ApiException.unknown` 으로 올라와요 — `ATC_002`/`ATC_003` 으로는 분기되지 않아요.
 
 ---
 

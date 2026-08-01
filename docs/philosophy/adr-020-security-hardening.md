@@ -207,7 +207,7 @@ class SslPinning {
 ```bash
 # 빌드 시 주입
 flutter build appbundle \
-  --obfuscate --split-debug-info=build/app/symbols \
+  --obfuscate --split-debug-info=build/symbols \
   --dart-define=SSL_PINS=sha256/AAA=,sha256/BBB=
 ```
 

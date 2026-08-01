@@ -150,6 +150,7 @@ dart run tool/configure_app.dart   # 정합성 검증
 ./scripts/signing/generate-upload-keystore.sh <app-slug>    # 업로드 키스토어 생성 (slug 인자 필수)
 ./scripts/signing/upload-secrets-to-github.sh <app-slug>    # keystore 서명 Secrets 4종 자동 업로드
 # PLAY_STORE_JSON_KEY 는 `gh secret set PLAY_STORE_JSON_KEY` 로 수동 등록
+# GOOGLE_SERVICES_JSON_PROD 도 수동 등록 (base64 -i android/app/src/prod/google-services.json | gh secret set GOOGLE_SERVICES_JSON_PROD)
 ```
 
 여기까지 마치면 `git tag v1.0.0 && git push --tags` 만으로 Play Internal 배포가 돌아가요.
@@ -192,7 +193,7 @@ git push --tags
 | API 계약 (백엔드 쌍) | [`API Contract`](../api-contract/README.md) | 응답 스키마 · 에러 코드 · JWT |
 | 배포 / CI/CD / 보안 | [`Android Deployment`](../infra/android-deployment.md) | Fastlane · GHA · 난독화 (Infra 폴더 진입점) |
 | 테스트 전략 | [`Testing Strategy`](../testing/testing-strategy.md) | resetForTest · Provider override |
-| 스크립트 사용법 | [`Scripts`](../reference/scripts.md) | `scripts/*.sh` 전체 |
+| 스크립트 사용법 | [`Scripts`](../reference/scripts.md) | `scripts/**/*.sh` 전체 |
 | Recipe 선택 기준 | [`Recipes`](../reference/recipes.md) | local-only / notifier / backend-auth / social-auth |
 | 용어 사전 | [`Glossary`](../reference/glossary.md) | 파생 레포 · Kit · BootStep 등 |
 | 템플릿 → 파생 동기화 | [`Migration from Template`](../reference/migration-from-template.md) | cherry-pick 전파 |

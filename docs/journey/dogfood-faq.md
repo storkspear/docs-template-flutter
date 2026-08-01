@@ -96,7 +96,7 @@
 
 ### Q. 소셜 로그인 중 하나 (예: Google 만) 만 쓸 수 있나요?
 
-**A.** 가능. `auth_kit` 의 Google · Apple 은 독립. 사용 안 하는 건 로그인 화면에서 숨기면 돼요.
+**A.** 가능. `auth_kit` 의 Google · Apple · Kakao · Naver 는 서로 독립. 사용 안 하는 건 로그인 화면에서 숨기면 돼요.
 
 ### Q. 이메일 인증 · 비번 재설정은 어떻게?
 
@@ -190,7 +190,7 @@ class MyPalette extends AppPalette {
 
 ### Q. 모든 Kit 에 대해 계약 테스트를 써야 하나요?
 
-**A.** 아니요. 핵심 Kit (`auth_kit` · `backend_api_kit` · `payment_kit`) 의 `{kit_name}_contract_test.dart` 를 우선하고, 메타가 단순한 Kit 은 통합 테스트로 흡수해요. 정책: [`Testing Strategy`](../testing/testing-strategy.md), 작성법: [`Contract Testing`](../testing/contract-testing.md).
+**A.** 아니요. 핵심 Kit (`auth_kit` · `backend_api_kit` · `payment_kit` · `file_kit`) 의 `{kit_name}_contract_test.dart` 를 우선하고, 메타가 단순한 Kit 은 통합 테스트로 흡수해요. 정책: [`Testing Strategy`](../testing/testing-strategy.md), 작성법: [`Contract Testing`](../testing/contract-testing.md).
 
 ### Q. ViewModel 테스트에 Kit 설치 필요한가요?
 
@@ -217,7 +217,7 @@ class MyPalette extends AppPalette {
 **A.** 크래시 스택이 난독화 상태로 저장돼서 원인 추적 불가. 수동 재업로드:
 
 ```bash
-npx @sentry/cli upload-dif --org $ORG --project $PROJECT build/app/symbols
+npx @sentry/cli upload-dif --org $ORG --project $PROJECT build/symbols
 ```
 
 ---

@@ -26,54 +26,85 @@
 ```dart
 // test/kits/auth_kit/auth_kit_contract_test.dart
 void main() {
-  tearDown(() => AppKits.resetForTest());
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('AuthKit contract', () {
+  setUp(() async {
+    await AppKits.resetForTest();
+    AppConfig.resetForTest();
+    AppConfig.init(appSlug: 'test-app', baseUrl: 'https://api.test');
+  });
+
+  tearDown(AppConfig.resetForTest);
+
+  group('AuthKit 메타', () {
     // 1. name
-    test('name is AuthKit', () {
+    test('name이 AuthKit', () {
       expect(AuthKit().name, 'AuthKit');
     });
 
     // 2. requires
-    test('requires BackendApiKit', () {
+    test('requires에 BackendApiKit 포함', () {
       expect(AuthKit().requires, contains(BackendApiKit));
     });
 
     // 3. redirectPriority
-    test('redirectPriority is 10', () {
+    test('redirectPriority가 10 (UpdateKit 다음, OnboardingKit 이전)', () {
       expect(AuthKit().redirectPriority, 10);
     });
+  });
 
-    // 4. routes
-    test('contributes /login, /forgot-password, /verify-email', () {
-      final paths = AuthKit().routes.whereType<GoRoute>().map((r) => r.path);
-      expect(paths, containsAll(['/login', '/forgot-password', '/verify-email']));
+  // 4. routes — 조건부 기여는 on/off 두 케이스 모두 고정한다.
+  group('AuthKit.routes', () {
+    test('기본(2FA 관리 off): 4개 — 로그인 흐름 + 로그인 2단계', () {
+      final routes = AuthKit().routes.whereType<GoRoute>().toList();
+      expect(routes.map((r) => r.path), [
+        '/login',
+        '/forgot-password',
+        '/verify-email',
+        '/login/2fa',
+      ]);
     });
 
-    // 5. bootSteps (container 필요)
-    test('contributes AuthCheckStep after container attached', () async {
+    test('twoFactorEnabled: true → 관리 라우트 4개 추가 (총 8개)', () {
+      final routes = AuthKit(
+        twoFactorEnabled: true,
+      ).routes.whereType<GoRoute>().toList();
+      expect(routes.map((r) => r.path), [
+        '/login',
+        '/forgot-password',
+        '/verify-email',
+        '/login/2fa',
+        '/settings/2fa',
+        '/settings/2fa/setup',
+        '/settings/2fa/disable',
+        '/settings/2fa/backup-codes',
+      ]);
+    });
+  });
+
+  // 5. bootSteps (container 필요)
+  group('container 있는 AuthKit', () {
+    test('bootSteps 2개 — AuthCheckStep 다음에 ActivityPingStep', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = PrefsStorage();
       await prefs.init();
 
       final kit = AuthKit();
       await AppKits.install([BackendApiKit(), kit]);
-      final container = ProviderContainer(overrides: [
-        ...AppKits.allProviderOverrides,
-        prefsStorageProvider.overrideWithValue(prefs),
-        secureStorageProvider.overrideWithValue(FakeSecureStorage()),
-      ]);
+
+      final container = ProviderContainer(
+        overrides: [
+          ...AppKits.allProviderOverrides,
+          prefsStorageProvider.overrideWithValue(prefs),
+        ],
+      );
+      addTearDown(container.dispose);
       AppKits.attachContainer(container);
 
-      final steps = kit.bootSteps;
-      expect(steps.whereType<AuthCheckStep>(), hasLength(1));
-
-      container.dispose();
-    });
-
-    // 6. providerOverrides (선택)
-    test('contributes providerOverrides when conditions met', () {
-      // ObservabilityKit 같이 조건부 override 가 있는 Kit
+      expect(kit.bootSteps.map((s) => s.name).toList(), [
+        'AuthCheckStep',
+        'ActivityPingStep',
+      ]);
     });
   });
 }
@@ -158,15 +189,15 @@ test('exposes refreshListenable tied to authState', () {
 
 ---
 
-## resetForTest 는 tearDown 필수
+## resetForTest 는 setUp 에서
 
 ```dart
-tearDown(() {
-  AppKits.resetForTest();
+setUp(() async {
+  await AppKits.resetForTest();
 });
 ```
 
-다음 테스트로 이전 상태가 누적되는 걸 막아요.
+이전 상태가 다음 테스트로 누적되는 걸 막아요. `tearDown` 이 아니라 `setUp` 에 두는 이유는, 직전 파일/테스트가 어떤 상태를 남겼든 **자기 테스트 시작 시점**의 깨끗함을 스스로 보장하기 때문이에요 (레포의 모든 계약 테스트가 이 형태예요 — `auth_kit_contract_test.dart` · `main_assembly_test.dart` · `update_kit_contract_test.dart` · `onboarding_kit_contract_test.dart`).
 
 ---
 
@@ -205,6 +236,6 @@ flutter test test/kits
 
 ## 관련 문서
 
-- [`testing-strategy.md`](./testing-strategy.md) — 4 레이어 개요
+- [`testing-strategy.md`](./testing-strategy.md) — 5 레이어 개요
 - [`FeatureKit Contract`](../architecture/featurekit-contract.md) — 검증 대상 속성들
 - [`ADR-003 · FeatureKit`](../philosophy/adr-003-featurekit-registry.md)

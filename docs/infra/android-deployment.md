@@ -50,6 +50,7 @@
 - `ANDROID_KEY_PASSWORD` — *스크립트 자동*
 - `ANDROID_KEY_ALIAS` — *스크립트 자동*
 - `PLAY_STORE_JSON_KEY` — Play Console 서비스 계정 JSON — *수동*
+- `GOOGLE_SERVICES_JSON_PROD` — prod Firebase `google-services.json` (base64) — *수동* — 이 파일은 gitignore 라 CI 가 secret 으로 복원해요. 없으면 `google-services` 플러그인이 적용되지 않아 `default_web_client_id` 가 안 생기고 **출시 빌드에서만 구글 로그인이 안 돼요** → 워크플로가 fail-fast 로 막아요 (`base64 -i android/app/src/prod/google-services.json | gh secret set GOOGLE_SERVICES_JSON_PROD`)
 - `SENTRY_AUTH_TOKEN` — 심볼 업로드 — *수동*
 - `SENTRY_ORG` · `SENTRY_PROJECT` — *수동*
 
@@ -100,6 +101,12 @@ jobs:
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
 
+      # gitignore 된 prod google-services.json 복원 (없으면 구글 로그인 불능 → fail-fast)
+      - name: Write google-services.json (prod)
+        run: echo "$GOOGLE_SERVICES_JSON_PROD" | base64 -d > android/app/src/prod/google-services.json
+        env:
+          GOOGLE_SERVICES_JSON_PROD: ${{ secrets.GOOGLE_SERVICES_JSON_PROD }}
+
       - name: Write Play Store JSON
         run: echo "$PLAY_STORE_JSON_KEY" > android/play-store-credentials.json
 
@@ -137,7 +144,7 @@ default_platform(:android)
 platform :android do
   # 1) AAB 빌드 + Dart 난독화 + 관측성 키 주입
   lane :build_release do
-    sh "cd ../.. && flutter build appbundle --release " \
+    sh "cd ../.. && flutter build appbundle --release --flavor prod " \
        "--obfuscate --split-debug-info=build/symbols " \
        "--dart-define=SENTRY_DSN=#{ENV['SENTRY_DSN'] || ''} " \
        "--dart-define=POSTHOG_KEY=#{ENV['POSTHOG_KEY'] || ''}"
@@ -148,7 +155,7 @@ platform :android do
     build_release
     upload_to_play_store(
       track: 'internal',
-      aab: '../build/app/outputs/bundle/release/app-release.aab',
+      aab: '../build/app/outputs/bundle/prodRelease/app-prod-release.aab',
       json_key: ENV['PLAY_STORE_JSON_KEY_PATH'] || 'play-store-credentials.json',
       skip_upload_metadata: true,
       skip_upload_images: true,
@@ -206,7 +213,8 @@ Play Console 앱 패키지명과 Android `applicationId` 가 같아야 해요. �
 - [ ] Play Console 앱 생성 + Play App Signing 활성화
 - [ ] 서비스 계정 · JSON 키 발급 + Android Publisher 권한
 - [ ] `generate-upload-keystore.sh` 로 keystore 생성
-- [ ] `upload-secrets-to-github.sh` 로 모든 secrets 업로드
+- [ ] `upload-secrets-to-github.sh` 로 `ANDROID_*` 4종 자동 업로드
+- [ ] `PLAY_STORE_JSON_KEY` · `GOOGLE_SERVICES_JSON_PROD` · `SENTRY_AUTH_TOKEN` · `SENTRY_ORG` · `SENTRY_PROJECT` 를 `gh secret set` 으로 수동 등록
 - [ ] 최초 AAB 수동 업로드 (Play Console)
 - [ ] 내부 테스터 이메일 등록
 - [ ] `v1.0.0` 태그 push → 자동 배포 확인

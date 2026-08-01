@@ -27,7 +27,9 @@
 | `CMN_007` | 401 | `ErrorCode.accessTokenExpired` | **JWT access token 만료** → refresh 시도 트리거 |
 | `CMN_008` | 401 | `ErrorCode.accessTokenInvalid` | JWT access token 무효 (서명 불일치/형식 오류) |
 | `CMN_009` | 503 | `ErrorCode.featureDisabled` | 기능 비활성화 (lite mode 등 feature toggle) |
-| `CMN_010` | 426 | `ErrorCode.upgradeRequired` | 앱 버전이 서버 최소 요구 버전 미만 (min-version 게이트). `ApiException.isUpgradeRequired` → 강제 업데이트 화면 유도 |
+| `CMN_010` | 426 | `ErrorCode.upgradeRequired` | 앱 버전이 서버 최소 요구 버전 **이하(≤)** (min-version 게이트). `ApiException.isUpgradeRequired` → 강제 업데이트 화면 유도 |
+| `CMN_400` | 400 | (클라 미매핑) | 요청 본문(JSON) 파싱 불가 — 깨진 JSON·형식 오류. 정상 클라가 만들지 않는 요청이라 분기 없이 기본 에러 메시지로 노출돼요 |
+| `CMN_413` | 413 | (클라 미매핑) | 요청 본문이 크기 상한 초과. 본문 파싱 전에 필터가 조기 거부해요. 파일 업로드는 presigned 경로라 이 상한과 무관 |
 | `CMN_429` | 429 | `ErrorCode.rateLimitExceeded` | Rate limit 초과. `Retry-After` 헤더 + `details.limit/window` |
 
 ### 인증 도메인 — `ATH_*` (AuthError)
@@ -48,9 +50,9 @@
 | `ATH_011` | 401 | `ErrorCode.invalidVerificationCode` | verify-before-signup 인증 코드 불일치/만료 |
 | `ATH_012` | 401 | `ErrorCode.verificationProofInvalid` | verify-before-signup proofToken 무효 |
 | `ATH_013` | 429 | `ErrorCode.verificationRateLimited` | 인증 코드 요청 rate limit 초과 |
-| `ATH_014` | 429 | `ErrorCode.accountLocked` | 로그인 실패 누적으로 계정 일시 잠금 (brute-force 방어). `ATH_006` 은 역사적 결번 |
+| `ATH_014` | 429 | `ErrorCode.accountLocked` | 로그인 실패 누적으로 계정 일시 잠금 (brute-force 방어) |
 
-> **ATH_006 결번**: 역사적으로 비어 있고 재사용하지 않아요 (`ACCOUNT_LOCKED` 는 `ATH_014`).
+> **`ATH_006` 은 결번**: 비어 있고 재사용하지 않아요 (`ACCOUNT_LOCKED` 는 `ATH_014`).
 >
 > **2FA 로그인 흐름**: 2FA enabled 유저의 1단계(email/social) 응답은 에러가 아니라 `{twoFactorToken}` (user/tokens 없음) 을 내려요. 클라이언트는 `ATH_007` 등을 2단계(`/2fa/login`) 및 관리 화면에서 만나요. 자세한 흐름은 [`auth-flow.md`](./auth-flow.md).
 >
@@ -228,9 +230,9 @@ String _localizedError(BuildContext context, String code) {
     case ErrorCode.accessTokenExpired:
     case ErrorCode.refreshTokenExpired:
       return s.errorSessionExpired;
-    case 'NETWORK_ERROR':
+    case ErrorCode.networkError:
       return s.errorNetworkUnavailable;
-    case 'TIMEOUT':
+    case ErrorCode.timeout:
       return s.errorTimeout;
     default:
       return s.errorUnknown;
@@ -239,6 +241,8 @@ String _localizedError(BuildContext context, String code) {
 ```
 
 > 위 ARB 키들은 예시예요. 실제 `lib/core/i18n/app_ko.arb` / `app_en.arb` 에 정의된 키와 일치시키세요. 새 키 추가 시 `flutter gen-l10n` 실행 필수.
+>
+> 코드 비교는 `ErrorCode` 상수만 써요 — 리터럴 직접 비교는 `api_exception.dart` 규약 위반이에요.
 
 ---
 

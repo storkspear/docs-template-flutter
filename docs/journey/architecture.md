@@ -135,9 +135,9 @@ AuthInterceptor: Authorization 헤더 자동 첨부
   ↓
 응답 수신
   ↓
-ErrorInterceptor: DioException → ApiException 변환
+AuthInterceptor: 401 이면 refresh 시도 + 재시도 (설치 순 FIFO — Dio 5.x 는 onError 체인도 설치 순)
   ↓
-AuthInterceptor: 401 이면 refresh 시도 + 재시도
+ErrorInterceptor: DioException → ApiException 변환
   ↓
 LoggingInterceptor: debug 빌드에 콘솔 출력
   ↓
@@ -208,15 +208,15 @@ dart run tool/configure_app.dart
 
 ## 환경 분리 인프라 (dev/prod flavor)
 
-derived repo 출시 운영을 위해 **iOS Build Configuration 6 + Android productFlavors + xcconfig 변수 계층** 으로 dev/prod 환경을 분리해요. Crashlytics/Analytics 데이터 격리 + 동일 디바이스에 dev/prod 공존 설치 가능.
+파생 레포 출시 운영을 위해 **iOS Build Configuration 6 + Android productFlavors + xcconfig 변수 계층** 으로 dev/prod 환경을 분리해요. Crashlytics/Analytics 데이터 격리 + 동일 디바이스에 dev/prod 공존 설치 가능.
 
 ### Bundle ID 결정 흐름
 
 ```text
-사용자 입력 (rename-app.sh):  com.hexator.budgetbook
+사용자 입력 (rename-app.sh):  com.example.myapp
                   ↓
 ios/Flutter/AppEnv-{dev,prod}.xcconfig:
-  BUNDLE_ID_BASE = com.hexator.budgetbook       ← 양쪽 동일
+  BUNDLE_ID_BASE = com.example.myapp       ← 양쪽 동일
   BUNDLE_ID_SUFFIX = .dev                       ← dev 만
   (prod 는 빈 값)
                   ↓
@@ -224,8 +224,8 @@ ios/Runner.xcodeproj 의 PRODUCT_BUNDLE_IDENTIFIER:
   $(BUNDLE_ID_BASE)$(BUNDLE_ID_SUFFIX)
                   ↓
 빌드 시 flavor 별 자동 결정:
-  flutter build --flavor dev   → com.hexator.budgetbook.dev
-  flutter build --flavor prod  → com.hexator.budgetbook
+  flutter build --flavor dev   → com.example.myapp.dev
+  flutter build --flavor prod  → com.example.myapp
 ```
 
 Android 도 동일 원리 — `android/app/build.gradle.kts` 의 `productFlavors { dev { applicationIdSuffix = ".dev" } / prod {} }`.
@@ -254,8 +254,8 @@ xcconfig 계층:
     #include? "AppEnv-secrets-dev.xcconfig"      ← optional include (gitignored)
     
   AppEnv-secrets-dev.xcconfig (gitignored — link-oauth 생성):
-    GID_CLIENT_ID = 127883306802-...             ← 실 OAuth Client ID
-    GID_REVERSED_CLIENT_ID = com.googleusercontent.apps.127883306802-...
+    GID_CLIENT_ID = <PROJECT_NUMBER>-<HASH>.apps.googleusercontent.com   ← link-oauth 가 plist 에서 읽어 채움
+    GID_REVERSED_CLIENT_ID = com.googleusercontent.apps.<PROJECT_NUMBER>-<HASH>
 ```
 
 ### Info.plist 변수 substitution
@@ -310,7 +310,7 @@ Xcode 가 빌드 시점에 `$(VAR)` placeholder 를 (Build Config 의 xcconfig �
 | 백엔드 연동 | [`template-spring`](https://github.com/storkspear/template-spring) 짝 |
 
 최소 지원:
-- **Android**: API 23 (6.0) +
+- **Android**: API 24 (7.0) +
 - **iOS**: 14.0 +
 
 ---

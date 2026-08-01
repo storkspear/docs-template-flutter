@@ -128,23 +128,7 @@
 
 프로젝트 특유 용어는 **표기를 고정** 해요. 흔들리면 검색 · 치환이 안 돼요.
 
-| 용어 | 표기 | 설명 |
-|---|---|---|
-| 템플릿 레포 | `template-flutter` | 본 레포 (GitHub Template Repository) |
-| 파생 레포 | (앱 slug 이름) | 템플릿에서 "Use this template" 으로 분기된 레포 |
-| 짝 백엔드 템플릿 | `template-spring` | 함께 쓰이는 백엔드 레포 |
-| Kit / AppKit | `AppKit`, `auth_kit`, `backend_api_kit` 등 | 기능 단위 플러그인. `AppKit` 추상 클래스 계약 |
-| Kit 조립 | — | `app_kits.yaml` + `lib/main.dart` 에 Kit 선언해서 활성화 |
-| Recipe | `recipes/*.yaml` | 4가지 샘플 앱 유형 (local-only / local-notifier / backend-auth / social-auth) |
-| BootStep | `BootStep` | 스플래시 중 실행되는 단계 (AuthCheckStep 등) |
-| ViewModel | `*ViewModel` | `StateNotifier<*State>` 를 상속한 로직 객체 |
-| Provider | `Provider`, `provider` | Riverpod 의 DI 노드. 본 프로젝트는 영문 `Provider` 유지 |
-| providers.dart | `lib/common/providers.dart` | 전역 DI 정의 중앙 파일 |
-| safeErrorCode / safeErrorMessage | — | UI 안전 에러 추출 함수 (ADR-009) |
-| 솔로 | 한 명의 개발자 | "솔로 감당 가능" 등 |
-| 도그푸딩 | (전용 폴더 없음) | 자체 템플릿을 자기 프로젝트에 적용해 검증하는 행위 — 파생 레포에서의 실사용을 가리킴 |
-| cherry-pick 전파 | — | 템플릿 레포 개선 → 파생 레포로 전파 |
-| `appSlug` | 단일 문자열 claim | JWT 의 앱 식별자 (ADR-012) |
+용어 목록의 단일 출처는 [`reference/glossary.md`](./reference/glossary.md) 예요 — 새 용어는 거기에만 추가해요. 이 절은 표기를 어떻게 쓰는지(아래 규칙)만 정해요.
 
 ### 용어 사용 규칙
 
@@ -337,7 +321,7 @@ Code References 마지막에 `**관련 ADR**:` 블록으로 수렴:
 
 ### 로드맵에서 이 가이드의 활용
 
-- **Phase 3 이후 ADR 작성** 시 이 가이드가 주 레퍼런스
+- **새 ADR 작성** 시 이 가이드가 주 레퍼런스
 - **conventions / features / infra** 작성 시 가이드 위반 발견되면 즉시 업데이트
 - **Level 0 신규 문서** 작성 시 Level 0 톤 규칙 확장 필요 — 작성 결과에서 추출 → 본 가이드 §1 업데이트
 
@@ -345,9 +329,4 @@ Code References 마지막에 `**관련 ADR**:` 블록으로 수렴:
 
 ## 10. 변경 이력
 
-| 날짜 | 변경 | 근거 |
-|---|---|---|
-| 2026-04-24 | 초기 작성 | `philosophy/` 파일럿 3개 ADR (003 · 005 · 009) 에서 귀납 추출 |
-| 2026-05-07 | §1·§2·§3·§4·§6·§8 정정 | S1 감사 — `journey/philosophy/` 경로 오류 7곳 정정, `docs-viwer` → `docs-template-flutter` 표기 통일, `rsync` 자동화 미존재 명시, 도그푸딩 정의 정정, 음슴체 4건 해요체로 정리, 이모지 관용 범위에 `journey/README.md` 포함 |
-
-이후 업데이트 시 상기 표에 추가.
+이 문서의 변경 이력은 `git log docs/STYLE_GUIDE.md` 로 확인해요. 문서 안에 이력 표를 따로 두면 갱신이 빠지는 순간 실제 규칙과 어긋나요.

@@ -48,10 +48,11 @@ git check-ignore -v .env android/key.properties android/app/upload-keystore.jks
 gh secret list
 ```
 
-존재해야 하는 항목 (Phase 2a 기준):
+존재해야 하는 항목:
 - `SENTRY_DSN`, `POSTHOG_KEY`
 - `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_PASSWORD`, `ANDROID_KEY_ALIAS`
 - `PLAY_STORE_JSON_KEY`
+- `GOOGLE_SERVICES_JSON_PROD` (prod Firebase `google-services.json` base64 — 릴리스 빌드의 구글 로그인용)
 - (옵션) `SSL_PINS`
 
 ### 1-4. 빌드 산출물 검사

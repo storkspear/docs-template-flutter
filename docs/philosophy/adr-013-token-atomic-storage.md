@@ -246,7 +246,7 @@ access 삭제가 실패해도 refresh 삭제는 **반드시** 시도. 두 토큰
 ### 부정적 결과
 
 - **두 매체 관리 복잡**: 어떤 데이터를 어디에 넣을지 선택 피로. "유저 설정 중 민감한 건 뭐?" 판단.
-- **Android 호환성**: EncryptedSharedPreferences 는 Android 6.0 (API 23) 이상. 이보다 낮은 기기 미지원 (템플릿 minSdk 정책과 일치).
+- **Android 호환성**: EncryptedSharedPreferences 는 Android 6.0(API 23) 이상 요구인데, 템플릿 minSdk 는 24(7.0)라 이 제약은 실질적으로 걸리지 않아요.
 - **iOS Keychain 동기화 이슈**: 앱 삭제 후 재설치 시 Keychain 이 남아있는 경우 (OS 버전별 동작 차이). "첫 실행 체크" 로 clearAll 필요 시 있음.
 - **원자성 구현이 완벽하지 않음**: 2개 쓰기 사이에 **OS 가 프로세스 kill** 하면 둘 다 쓰임 없이 멈춤. 그래도 반쪽은 안 됨. 극단적 시나리오 (첫 쓰기 성공 후 kill) 에선 반쪽 → 다음 부팅 `repairIfPartial` 로 복구.
 

@@ -1,6 +1,6 @@
 # Testing Strategy
 
-4 레이어 테스트 전략 — **Unit · Kit 계약 · 조립 통합 · 마이그레이션 지문**. 각 레이어의 검증 대상이 다르고, 도구도 다름. Kit 계약 테스트의 상세 패턴은 [`contract-testing.md`](./contract-testing.md) 참조.
+5 레이어 테스트 전략 — **Unit · Kit 계약 · 조립 통합 · 마이그레이션 지문 · 백엔드 계약 스냅샷**. 각 레이어의 검증 대상이 다르고, 도구도 다름. Kit 계약 테스트의 상세 패턴은 [`contract-testing.md`](./contract-testing.md) 참조.
 
 ---
 
@@ -28,6 +28,12 @@
 ┌─────────────────────────────────────────┐
 │  4. 마이그레이션 지문                       │
 │     Drift 스키마 변경 자동 감지             │
+└─────────────────────────────────────────┘
+
+┌─────────────────────────────────────────┐
+│  5. 백엔드 계약 스냅샷                      │
+│     contract_test.dart                    │
+│     → 클라 참조 ⊆ contract-snapshot.json  │
 └─────────────────────────────────────────┘
 ```
 
@@ -81,29 +87,53 @@ void main() {
 
 ### ViewModel (ProviderContainer 필요)
 
+이 레포엔 mockito·mocktail 이 없어요 (`pubspec.yaml` dev_dependencies 확인). `implements` + `noSuchMethod` 로 손수 fake 를 쓰는 게 컨벤션이에요 — `login_view_model_test.dart` · `two_factor_view_model_test.dart` 가 실물 예시예요.
+
 ```dart
+class _FakeAuthService implements AuthService {
+  Object? throwOnSignIn;
+
+  @override
+  Future<String?> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    if (throwOnSignIn != null) throw throwOnSignIn!;
+    return null;
+  }
+
+  // 나머지 메서드는 이 테스트가 안 쓰므로 noSuchMethod 로 위임.
+  @override
+  dynamic noSuchMethod(Invocation i) => super.noSuchMethod(i);
+}
+
 void main() {
   group('LoginViewModel', () {
     late ProviderContainer container;
-    late MockAuthService mockAuth;
+    late _FakeAuthService fakeAuth;
 
     setUp(() {
-      mockAuth = MockAuthService();
+      fakeAuth = _FakeAuthService();
       container = ProviderContainer(overrides: [
-        authServiceProvider.overrideWithValue(mockAuth),
+        authServiceProvider.overrideWithValue(fakeAuth),
       ]);
     });
 
     tearDown(() => container.dispose());
 
     test('error state set on failure', () async {
-      when(mockAuth.signInWithEmail(...))
-        .thenThrow(const ApiException(code: 'ATH_001', message: '...'));
+      fakeAuth.throwOnSignIn = const ApiException(
+        code: ErrorCode.invalidCredentials,
+        message: '...',
+      );
 
       await container.read(loginViewModelProvider.notifier)
         .signInWithEmail('x@y.com', 'wrong');
 
-      expect(container.read(loginViewModelProvider).errorCode, 'ATH_001');
+      expect(
+        container.read(loginViewModelProvider).errorCode,
+        ErrorCode.invalidCredentials,
+      );
     });
   });
 }
@@ -162,45 +192,44 @@ Kit 의 `requires`, `redirectPriority`, `routes` 같은 **외부 의존적 속�
 
 ## 3. 조립 통합 테스트
 
-실제 `main.dart` 흐름 재현:
+실제 `main.dart` 흐름 재현 — 정본은 [`test/integration/main_assembly_test.dart`](https://github.com/storkspear/template-flutter/blob/main/test/integration/main_assembly_test.dart) 예요.
+검증 대상은 **"install → container(allProviderOverrides) → attach → provider read"** 경로이고,
+Kit 조합은 테스트가 무엇을 확인하려는지에 따라 고릅니다(아래는 provider 주입 확인용 최소 조합).
 
 ```dart
 void main() {
-  tearDown(() {
-    AppKits.resetForTest();
-    AppPaletteRegistry.resetForTest();
+  setUp(() async {
+    await AppKits.resetForTest();
+    forceUpdateInfoNotifier.value = null;
   });
 
-  test('main assembly completes', () async {
-    AppConfig.init(/* ... */);
-    AppPaletteRegistry.install(DefaultPalette());
+  test('install → container → attach → provider read 성공', () async {
+    final fakeDb = FakeDatabase();
+    final alertSvc = InMemoryScheduledAlertService();
+    final prefs = await buildTestPrefs();   // SharedPreferences mock init 을 감싼 헬퍼
 
+    // 1. Kit install — 주입 인스턴스를 넘겨 네트워크 의존 없이 조립만 검증해요.
     await AppKits.install([
-      BackendApiKit(),
-      AuthKit(),
-      UpdateKit(service: NoUpdateAppUpdateService()),
-      ObservabilityKit(),
+      LocalDbKit(database: () => fakeDb),
+      NotificationsKit(service: alertSvc),
     ]);
 
-    // PrefsStorage 는 SharedPreferences mock 으로 init.
-    SharedPreferences.setMockInitialValues({});
-    final prefs = PrefsStorage();
-    await prefs.init();
+    // 2. Container 생성 (모든 kit override + 앱 수준 override 합성)
+    final container = ProviderContainer(
+      overrides: [...AppKits.allProviderOverrides, prefsStorageProvider.overrideWithValue(prefs)],
+    );
+    addTearDown(container.dispose);
 
-    final container = ProviderContainer(overrides: [
-      ...AppKits.allProviderOverrides,
-      prefsStorageProvider.overrideWithValue(prefs),
-      secureStorageProvider.overrideWithValue(FakeSecureStorage()),
-    ]);
+    // 3. container 부착 → 4. kit 이 기여한 Provider 가 실제로 resolve 되는지
     AppKits.attachContainer(container);
-
-    final boot = await SplashController(steps: AppKits.allBootSteps).run();
-    expect(boot.status, isNot(SplashStatus.error));
-
-    container.dispose();
+    expect(identical(container.read(databaseProvider), fakeDb), isTrue);
+    expect(identical(container.read(scheduledAlertServiceProvider), alertSvc), isTrue);
   });
 }
 ```
+
+같은 파일의 다른 케이스가 **Splash 부트 경로**(`AppKits.allBootSteps` 전수 실행)와
+**UpdateKit 실패 시 게이트 동작**을 따로 검증해요.
 
 ### 검증 포인트
 
@@ -230,6 +259,20 @@ dart run drift_dev schema dump lib/database/app_database.dart drift_schemas/
 
 ---
 
+## 5. 백엔드 계약 스냅샷
+
+`test/contract/contract_test.dart` 는 template-spring 이 생성한 계약 스냅샷(`tools/contract-check/contract-snapshot.json`)을 로드해, flutter 클라가 실제로 의존하는 경로·에러코드·enum·DTO 필드가 스냅샷의 **subset** 인지 검증해요. 별도 CI job 없이 `flutter test` 에 그대로 탑승해요.
+
+```bash
+flutter test test/contract/
+```
+
+- 스냅샷 갱신: `tools/contract-check/refresh-spec.sh` (형제 backend 레포에서 복사)
+- 자동 PR: `.github/workflows/contract-sync.yml`
+- 계약 문서: [`docs/api-contract/README.md`](../api-contract/README.md)
+
+---
+
 ## 커버리지 목표
 
 | 레이어 | 목표 커버리지 |
@@ -238,6 +281,7 @@ dart run drift_dev schema dump lib/database/app_database.dart drift_schemas/
 | Kit 계약 | 핵심 Kit (현재 `auth_kit` · `backend_api_kit` · `payment_kit` · `file_kit`) 우선. 메타가 단순한 Kit 은 통합 테스트로 흡수 |
 | 조립 통합 | 1개 유효 (smoke test 수준 — `test/integration/main_assembly_test.dart`) |
 | 마이그레이션 지문 | 전 스키마 버전 (Drift 사용 시) |
+| 백엔드 계약 스냅샷 | 클라가 호출하는 전 경로·전 ErrorCode |
 | Widget (golden) | 주요 화면만 (선택) |
 
 ```bash

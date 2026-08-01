@@ -151,7 +151,7 @@ cp recipes/social-auth-app.yaml app_kits.yaml
 예 (local-only-tracker):
 
 ```dart
-// lib/main.dart — prefsStorage 는 main.dart 상단에서 이미 생성돼 있어요
+// lib/main.dart 의 _bootstrap() 안 — prefsStorage 는 AppKits.install 직전에 이미 생성·init 돼 있어요
 await AppKits.install([
   LocalDbKit(database: () => AppDatabase()),
   OnboardingKit(steps: [...], prefs: prefsStorage),
@@ -236,12 +236,12 @@ flutter emulators --launch <AVD_ID>
 <repo> local start -d <device-id>       # 디바이스 지정
 ```
 
-`scripts/run/start.sh` 가 다음 규칙으로 분기해요 (debug 빌드 기준):
+`scripts/run/start.sh` 가 다음 규칙으로 분기해요 (debug 빌드 기준). local 모드는 iOS 스킴이 dev/prod 로만 존재해 `--flavor` 가 필수예요 — `start.sh` 가 default flavor 를 자동 주입해요.
 
-| 조건 | 동작 |
-|---|---|
-| `GoogleService-Info-{dev,prod}.plist` + `android/app/src/{dev,prod}/google-services.json` 모두 없음 | `--dart-define=AUTH_DEV_MOCK=true` 자동 주입 → 백엔드/OAuth 없이 keyless 시연 |
-| 위 중 하나라도 있음 | 실 SDK 경로 (flutter run 그대로) |
+| 조건 | 주입되는 flavor | 동작 |
+|---|---|---|
+| `GoogleService-Info-{dev,prod}.plist` + `android/app/src/{dev,prod}/google-services.json` 모두 없음 | `--flavor=prod` | `--dart-define=AUTH_DEV_MOCK=true` 자동 주입 → 백엔드/OAuth 없이 keyless 시연 |
+| 위 중 하나라도 있음 | `--flavor=prod` | 실 SDK 경로 (flutter run 그대로) |
 
 처음 실행이면 빌드에 1~2분. 이후엔 hot reload.
 

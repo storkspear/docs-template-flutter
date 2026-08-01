@@ -90,6 +90,7 @@ kits:
 
 ### 특이 사항
 
+- **update_kit 조립 교체 필수**: 이 recipe 는 `backend_api_kit` 이 없어서 템플릿 기본 `BackendAppUpdateService` 를 그대로 두면 컴파일이 깨져요. `lib/main.dart` 에서 `UpdateKit(service: NoUpdateAppUpdateService())` 로 바꾸고 `ApiClient.onUpgradeRequired` 글루 블록 + import 2개(`backend_api_kit.dart`, `upgrade_required.dart`)를 지워요 ([`update-kit.md`](../features/update-kit.md) 참고).
 - **ads_kit 활성**: 첫 실행 시 ATT (iOS) · UMP (GDPR) 다이얼로그 자동 노출
 - **출시 전**: `Info.plist` 의 `NSUserTrackingUsageDescription` 다듬기 + AdMob 실제 ID 입력
 
@@ -221,10 +222,13 @@ await AppKits.install([
   AuthKit(),
   NotificationsKit(service: LocalScheduledAlertService()),
   DeviceInfoKit(),
-  UpdateKit(service: NoUpdateAppUpdateService()),
+  UpdateKit(service: BackendAppUpdateService(/* GET /app-version — lib/main.dart 기본 조립 그대로 */)),  // 템플릿 기본 (backend_api_kit 필요)
+  // backend 없는 recipe는 NoUpdateAppUpdateService — lib/kits/update_kit/README.md 참고
   ObservabilityKit(),        // ← 추가
 ]);
 ```
+
+`backend_api_kit` 을 켜는 recipe 는 템플릿 기본 조립(`BackendAppUpdateService` + `ApiClient.onUpgradeRequired` 글루)을 건드리지 않아요.
 
 ### 4. 검증
 

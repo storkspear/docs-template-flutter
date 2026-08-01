@@ -68,7 +68,7 @@ abstract class AppKit {
 
 - **타입**: `List<RouteBase>`
 - **호출 시점**: `AppKits.allRoutes` 수집 → `GoRouter(routes: [...])` 조립
-- **예**: `AuthKit` 이 `/login`, `/forgot-password`, `/verify-email` 기여
+- **예**: `AuthKit` 이 `/login`, `/forgot-password`, `/verify-email`, `/login/2fa` 를 상시 기여하고 `twoFactorEnabled: true` 면 `/settings/2fa`(+`/setup`·`/disable`·`/backup-codes`) 를 추가로 기여
 
 ### `navigatorObservers` — NavigatorObserver 기여
 
@@ -178,12 +178,11 @@ class AppKits {
 
 ```dart
 // lib/kits/my_kit/my_kit.dart
+import 'package:app_template/common/splash/boot_step.dart';
+import 'package:app_template/core/kits/app_kit.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
-import '../../core/kits/app_kit.dart';
-import '../../common/splash/boot_step.dart';
 
 class MyKit extends AppKit {
   @override String get name => 'MyKit';

@@ -11,7 +11,7 @@
 | Kit | 목적 | 의존 | 바이너리 크기 영향 |
 |-----|------|------|----------------|
 | [`backend_api_kit`](./backend-api-kit.md) | Dio HTTP 클라이언트 + 3 인터셉터 | 없음 | +1MB |
-| [`auth_kit`](./auth-kit.md) | JWT + 소셜 로그인 (Google · Apple) | `backend_api_kit` | +3MB |
+| [`auth_kit`](./auth-kit.md) | JWT + 소셜 로그인 4종 (Google·Apple·Kakao·Naver) | `backend_api_kit` | +3MB |
 | [`file_kit`](./file-kit.md) | 파일 업로드(presigned POST policy) + 조회 | `backend_api_kit` | +0MB (dio 공유) |
 | [`payment_kit`](./payment-kit.md) | 결제 (Stripe 통합 골격, 의도적 SDK 미주입) | `backend_api_kit` | +0MB (template), derived 시 +SDK |
 | [`observability_kit`](./observability-kit.md) | Sentry 크래시 + PostHog 분석 | 없음 | +4MB |

@@ -63,7 +63,7 @@
 - [`Kit 목록 + 의존 관계도`](./features/README.md)
 - [`auth_kit`](./features/auth-kit.md) — JWT · 소셜 로그인
 - [`backend_api_kit`](./features/backend-api-kit.md) — Dio · 3개 인터셉터
-- [`payment_kit`](./features/payment-kit.md) — 결제 (Stripe 통합 골격, derived repo SDK 추가)
+- [`payment_kit`](./features/payment-kit.md) — 결제 (Stripe 통합 골격, 파생 레포에서 SDK 추가)
 - [`observability_kit`](./features/observability-kit.md) — Sentry · PostHog 번들
 - [`notifications_kit`](./features/notifications-kit.md) — 로컬 · 푸시
 - [`local_db_kit`](./features/local-db-kit.md) — Drift · 마이그레이션

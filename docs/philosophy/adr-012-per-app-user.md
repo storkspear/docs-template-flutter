@@ -200,7 +200,7 @@ Google Sign-In · Apple Sign-In 도 앱별 **Client ID** 필요. 같은 Google �
 - [`lib/kits/auth_kit/auth_service.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/auth_service.dart) — JWT 수신 → TokenStorage 저장
 
 **짝이 되는 백엔드**
-- [`core/core-auth-impl/.../AppSlugVerificationFilter.java`](https://github.com/storkspear/template-spring/blob/main/core/core-auth-impl/src/main/java/com/factory/core/auth/impl/AppSlugVerificationFilter.java) — URL ↔ JWT 검증
+- [`common/common-security/.../AppSlugVerificationFilter.java`](https://github.com/storkspear/template-spring/blob/main/common/common-security/src/main/java/com/factory/common/security/AppSlugVerificationFilter.java) — URL ↔ JWT 검증
 - [`common/common-security/.../JwtService.java`](https://github.com/storkspear/template-spring/blob/main/common/common-security/src/main/java/com/factory/common/security/jwt/JwtService.java) — `appSlug` 클레임 발급/검증
 
 **관련 ADR**:

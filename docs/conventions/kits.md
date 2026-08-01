@@ -127,11 +127,13 @@ try {
 
 manifest `requires` 에 적지 않은 kit 을 import 하면 **다른 recipe 로 출발한 파생 레포에서 컴파일 실패**.
 
-실제 사례 (2026-05-06 fix 됨):
-- `auth_kit/ui/login/login_screen.dart` 가 `observability_kit/dogfooding_panel.dart` 를 `kDebugMode` 가드 안에서 직접 import
-- `auth_kit/kit_manifest.yaml` 의 `requires` 에는 `backend_api_kit` 만 — observability 없음
-- recipe `backend-auth-app.yaml` (observability 미포함) 로 출발한 파생 레포가 즉시 컴파일 실패
-- → 디버그 도구는 home_screen 한 곳만 노출 (login 에선 제거)
+규칙이 깨지면 이렇게 터져요 — `auth_kit/ui/login/login_screen.dart` 가 `observability_kit/dogfooding_panel.dart` 를 `kDebugMode` 가드 안에서 직접 import 한다고 해볼게요.
+
+- `auth_kit/kit_manifest.yaml` 의 `requires` 에는 `backend_api_kit` 만 있고 observability 는 없어요
+- recipe `backend-auth-app.yaml` (observability 미포함) 로 출발한 파생 레포는 즉시 컴파일 실패해요
+- `kDebugMode` 가드는 **런타임** 분기라 import 자체는 남아요 — 컴파일 실패를 막아주지 못해요
+
+그래서 디버그 도구는 `observability_kit` 을 `requires` 에 선언한 화면 한 곳에서만 노출해요.
 
 이 규칙이 깨지면 사이즈 영향, 의존 관계 캐스케이드, 테스트 격리, recipe 호환성 모두 문제 발생. 자세한 근거는 [`ADR-002 · Layered Modules`](../philosophy/adr-002-layered-modules.md), [`ADR-003 · FeatureKit Registry`](../philosophy/adr-003-featurekit-registry.md).
 

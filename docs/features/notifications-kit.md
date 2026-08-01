@@ -30,7 +30,7 @@ await AppKits.install([
 ]);
 ```
 
-> `service` 인자는 필수예요. 로컬 전용은 `LocalScheduledAlertService`, FCM 통합은 파생 레포에서 `NotificationService` 인터페이스를 구현한 클래스를 전달.
+> `service` 인자는 필수이고 타입은 `ScheduledAlertService` 예요. 로컬 전용은 `LocalScheduledAlertService` 를 전달해요. FCM 통합은 이 `service` 인자로 넘기는 게 아니라 `notificationServiceProvider` override 로 주입해요(아래 참조) — `service` 에 FCM 구현을 넘기려 하면 타입이 안 맞아 컴파일 에러가 나요.
 
 ---
 
@@ -43,7 +43,7 @@ await AppKits.install([
 | `NotificationService` | **FCM 푸시 인터페이스** — `init` · `getToken` · `onTokenRefresh` · `onForegroundMessage` · `onNotificationTap` (구현은 파생 레포에서) |
 | `NotificationPermission` | 권한 요청 전 사전 설명 다이얼로그 헬퍼 (`showRationale(context)` — true 반환 시 시스템 권한 요청 진행) |
 
-> 백엔드에 FCM 토큰 등록하는 `DeviceRegistration` 클래스는 [`backend_api_kit`](./backend-api-kit.md) 으로 이동했어요. 로컬 전용 알림 앱이 BackendApiKit 없이 NotificationsKit 만 쓸 수 있도록 도메인 분리.
+> 백엔드에 FCM 토큰을 등록하는 `DeviceRegistration` 은 [`backend_api_kit`](./backend-api-kit.md) 에 있어요 — 로컬 전용 알림 앱이 BackendApiKit 없이 NotificationsKit 만 쓸 수 있게 도메인을 분리한 결과예요.
 
 ---
 
@@ -121,7 +121,7 @@ FirebaseMessaging.onMessage.listen((RemoteMessage message) {
 - [`lib/kits/notifications_kit/local_scheduled_alert_service.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/notifications_kit/local_scheduled_alert_service.dart) — 기본 구현
 - [`lib/kits/notifications_kit/notification_service.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/notifications_kit/notification_service.dart) — FCM 인터페이스
 - [`lib/kits/notifications_kit/notification_permission.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/notifications_kit/notification_permission.dart) — 권한 헬퍼
-- [`lib/kits/backend_api_kit/device_registration.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/device_registration.dart) — push token 백엔드 등록 (이 kit 에서 backend_api_kit 으로 이동)
+- [`lib/kits/backend_api_kit/device_registration.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/device_registration.dart) — push token 백엔드 등록
 
 ---
 

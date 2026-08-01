@@ -154,7 +154,7 @@ Conflict 가 나면 도메인 코드 보존이 우선. 이미 파생 레포가 �
 - [`scripts/init/setup.sh`](https://github.com/storkspear/template-flutter/blob/main/scripts/init/setup.sh) — git hooks 활성화
 
 **짝이 되는 백엔드 템플릿**
-- [`Spring Backend — Cross-repo Cherry-pick`](https://github.com/storkspear/template-spring/blob/main/docs/journey/cross-repo-cherry-pick.md) — 같은 전파 원칙 상세. 이 ADR 의 실전 가이드로 재사용 가능
+- [`Spring Backend — Cross-repo Cherry-pick`](https://github.com/storkspear/template-spring/blob/main/docs/start/cross-repo-cherry-pick.md) — 같은 전파 원칙 상세. 이 ADR 의 실전 가이드로 재사용 가능
 
 **관련 ADR**:
 - [`ADR-002 · 3계층 모듈 구조`](./adr-002-layered-modules.md) — 템플릿에 뭐를 둘지 / 파생 레포에 뭐를 둘지 경계
