@@ -218,7 +218,7 @@ git filter-branch --force --index-filter \
 ```bash
 # .env.dev
 SENTRY_DSN=https://dev-dsn@sentry.io/...
-BASE_URL=http://localhost:8080
+BASE_URL=http://localhost:8081
 
 # .env.staging
 SENTRY_DSN=https://staging-dsn@sentry.io/...

@@ -112,7 +112,7 @@ AppConfig.init(
 ```dart
 baseUrl: const String.fromEnvironment(
   'BASE_URL',
-  defaultValue: 'http://localhost:8080',
+  defaultValue: 'http://localhost:8081',
 ),
 environment: Environment.values.byName(
   const String.fromEnvironment('APP_ENV', defaultValue: 'dev'),
