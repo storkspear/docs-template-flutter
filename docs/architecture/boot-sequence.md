@@ -24,7 +24,7 @@
                  ▼
 4. AppConfig.init(
      appSlug: 'template',
-     baseUrl: 'http://localhost:8080',
+     baseUrl: 'http://localhost:8081',
      environment: Environment.dev,
      ...
    )

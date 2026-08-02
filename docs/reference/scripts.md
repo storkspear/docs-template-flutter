@@ -36,7 +36,7 @@ env-verb dispatch — 첫 인자가 `local`/`dev`/`prod`/`all` 이면 env, 아�
 | `init/init-dev.sh` | Firebase dev 프로젝트 + 앱 등록 + plist/json + link-oauth | `<repo> dev init` |
 | `init/init-prod.sh` | 동일 흐름의 prod 버전 (별도 Firebase 프로젝트) | `<repo> prod init` |
 | `run/start.sh` | flutter run 래퍼 (mock 자동 폴백 · flavor 라우팅) | `<repo> <env> start` |
-| `signing/link-oauth.sh` | GoogleService-Info plist → AppEnv-secrets xcconfig 주입 | `<repo> <env> link-oauth` |
+| `signing/link-oauth.sh` | GoogleService-Info plist → AppEnv-secrets xcconfig 주입 | `<repo> <env> link-oauth`. env 를 생략하면(`local link-oauth`) **prod 기본값**이라 `AppEnv-secrets-prod.xcconfig` 를 갱신해요 — dev 를 쓰려면 `<repo> dev link-oauth` |
 | `app/regenerate-assets.sh` | 런처 아이콘 + 스플래시 재생성 | 아이콘 · 스플래시 변경 후 |
 | `verify/coverage.sh` | 테스트 커버리지 측정 + HTML 리포트 | 월 1회 정기 점검 |
 | `signing/generate-upload-keystore.sh` | Android 업로드 keystore 생성 (비대화형) | 첫 Android 배포 전 |
@@ -88,11 +88,11 @@ env-verb 패턴 통합 dispatcher (340줄 bash).
 | 5 | Format check (`dart format --output=none --set-exit-if-changed lib/ test/`) |
 | 6 | Tests (`flutter test --reporter=compact`) — `--skip-tests` 로 생략 가능 |
 | 7 | Backend ping (`$BASE_URL/actuator/health`) — `--no-backend` 로 생략 가능 |
-| 8 | Build smoke (`flutter build apk --debug`) — `--with-build` 로 활성 |
+| 8 | Build smoke (`flutter build apk --debug --flavor dev`) — `--with-build` 로 활성. flavor 를 명시해야 해요 — 이 템플릿은 productFlavors(dev/prod)를 쓰므로 flavor 없이는 Gradle 이 `app-dev-debug.apk` 를 만드는데 flutter 는 `app-debug.apk` 를 찾다 실패해요 |
 
 마지막 출력이 "🎉 개발할 준비가 완료되었습니다" 면 코딩 시작 가능.
 
-**환경변수**: `BASE_URL` (default: `http://localhost:8080`)
+**환경변수**: `BASE_URL` (default: `http://localhost:8081` — template-spring 기본 포트)
 
 ---
 

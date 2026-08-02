@@ -94,7 +94,7 @@ class AppConfig {
 // lib/main.dart 발췌
 AppConfig.init(
   appSlug: 'template',           // 파생 레포에서 자기 slug 로 교체
-  baseUrl: 'http://localhost:8080',
+  baseUrl: 'http://localhost:8081',
   // ...
 );
 ```
@@ -109,7 +109,7 @@ await api.get<User>('/users/me', fromData: User.fromJson);
 
 // 실제 HTTP 요청 URL
 // {baseUrl}/api/apps/{appSlug}/users/me
-// = http://localhost:8080/api/apps/template/users/me
+// = http://localhost:8081/api/apps/template/users/me
 ```
 
 개발자는 앱 slug 를 매번 쓸 필요 없음. AppConfig 에서 자동으로 주입.
