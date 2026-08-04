@@ -29,6 +29,8 @@ on:
 
 jobs:
   analyze-and-test:
+    # push 이벤트일 때만 CI_ON_PUSH 게이트 적용 — PR·수동 실행은 항상 통과
+    if: github.event_name != 'push' || vars.CI_ON_PUSH != 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,6 +47,7 @@ jobs:
       - run: flutter test --reporter=expanded
 
   build-android:
+    if: github.event_name != 'push' || vars.CI_ON_PUSH != 'false'
     needs: [analyze-and-test]
     runs-on: ubuntu-latest
     steps:
@@ -58,6 +61,7 @@ jobs:
       - run: flutter build apk --debug --flavor dev
 
   build-ios:
+    if: github.event_name != 'push' || vars.CI_ON_PUSH != 'false'
     needs: [analyze-and-test]
     runs-on: macos-latest
     steps:
@@ -65,6 +69,21 @@ jobs:
       - uses: subosito/flutter-action@v2
       - run: flutter pub get
       - run: flutter build ios --debug --no-codesign --flavor dev
+```
+
+### `CI_ON_PUSH` 게이트 — push CI 는 기본적으로 꺼두는 스위치
+
+세 job 전부에 `if: github.event_name != 'push' || vars.CI_ON_PUSH != 'false'` 가 걸려 있어요. Repo Variable `CI_ON_PUSH` 를 `false` 로 설정하면 push 트리거일 때 job 이 skip 되고, skip 된 job 은 러너를 잡지 않아 Actions 분을 전혀 소비하지 않아요. PR 과 `workflow_dispatch` 는 게이트와 무관하게 항상 실행돼요.
+
+이렇게 꺼두는 이유는 러너 분 소모예요. private 레포는 러너별 분 배수가 달라 (Linux 1x / macOS 10x) ci.yml 1회 실행이 약 62분어치이고, 그중 macOS 러너의 Build iOS 가 약 78% 를 차지해요. Free 티어 월 2000분 기준 32회면 소진돼요. 그래서 push 시 CI 는 꺼두고, 같은 검증을 로컬 pre-push 훅 (아래 [Git Hooks](#git-hooks-로컬)) 이 대신해요.
+
+```bash
+# 끄기
+gh variable set CI_ON_PUSH --body false --repo <owner>/<repo>
+# 다시 켜기 (변수 삭제 = 게이트 해제)
+gh variable delete CI_ON_PUSH --repo <owner>/<repo>
+# 꺼진 상태에서 수동 1회 실행
+gh workflow run ci.yml --repo <owner>/<repo>
 ```
 
 ### 단계 순서
@@ -153,7 +172,7 @@ updates:
 훅 내용:
 - **commit-msg**: `Co-Authored-By: Claude` 트레일러 차단 (AI 공동저자 표기 금지). ⚠️ Conventional Commits 포맷 자동 검증은 **하지 않아요** — 컨벤션 준수는 작성자 책임.
 - **pre-commit**: `dart format` 체크 (빠름, 1초 내) — 포맷 누락 시 commit 차단
-- **pre-push**: `dart format` 재확인 + `flutter analyze` (느린 검사는 push 직전에)
+- **pre-push**: ci.yml 의 analyze-and-test job 과 동일한 5개 검사를 순서대로 실행해요 (약 35초) — ① `dart format` 재확인 ② `dart run tool/configure_app.dart --audit` ③ `bash tools/docs-check/docs-contract-test.sh` ④ `flutter analyze` ⑤ `flutter test`. `.fvmrc` 가 있고 fvm 이 설치돼 있으면 `fvm flutter` / `fvm dart` 를 경유해 `.fvmrc` 핀 버전으로 검사해요 — push CI 를 `CI_ON_PUSH` 게이트로 꺼둔 상태에서 이 훅이 CI 검증을 대신해요.
 
 ---
 

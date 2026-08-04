@@ -296,7 +296,7 @@ Xcode 가 빌드 시점에 `$(VAR)` placeholder 를 (Build Config 의 xcconfig �
 
 | 영역 | 기술 |
 |------|------|
-| 프레임워크 | Flutter 3.44.8 (`.fvmrc` 핀, FVM 권장) · Dart `^3.8.1` (`pubspec.yaml`) |
+| 프레임워크 | Flutter 3.44.8 (`.fvmrc` 핀, FVM 권장) · Dart `^3.12.0` + flutter `>=3.44.0` (`pubspec.yaml`) |
 | 상태관리 | flutter_riverpod 3.4+ (Notifier) |
 | 라우팅 | go_router 17.3+ |
 | HTTP | dio 5.7+ |

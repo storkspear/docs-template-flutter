@@ -134,7 +134,7 @@ final NotifierProvider<LoginViewModel, LoginState> loginViewModelProvider =
 
 ### autoDispose 를 명시하는 이유
 
-riverpod 3 의 provider 는 기본이 non-autoDispose 라, 화면 단위 ViewModel 에는 `isAutoDispose: true` 를 명시해야 이렇게 동작해요. (riverpod 2 의 `.autoDispose` 수식어가 이 인자로 바뀌었어요.)
+riverpod 3 의 provider 는 기본이 non-autoDispose 라, 화면 단위 ViewModel 에는 `isAutoDispose: true` 를 명시해야 이렇게 동작해요.
 
 - 화면 이탈 시 자동 정리 → 메모리 누수 방지
 - 상태 재진입 시 **초기 상태로 시작** → 예전 에러 · 로딩 남아있음 방지
