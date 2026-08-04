@@ -1,6 +1,6 @@
 # Module Dependencies
 
-`lib/` 하위 모듈 간 **의존 방향 · 규칙 · 검증 메커니즘**. 근거는 [`ADR-002 · 3계층 모듈 구조`](../philosophy/adr-002-layered-modules.md) 참조.
+이 문서는 `lib/` 하위 모듈 간 **의존 방향 · 규칙 · 검증 메커니즘** 을 정리해요. 근거는 [`ADR-002 · 3계층 모듈 구조`](../philosophy/adr-002-layered-modules.md) 를 참조하세요.
 
 ---
 
@@ -81,7 +81,7 @@ payment_kit
 
 ### `features/` — 파생 레포 도메인 영역
 
-템플릿은 **스텁만** — `home/` + `settings/`. 파생 레포가 채워요.
+템플릿은 **스텁만** 담아요 — `home/` + `settings/`. 파생 레포가 채워요.
 
 ---
 
@@ -108,7 +108,7 @@ payment_kit
 
 ### 런타임
 
-`AppKits.install([...])` 시 `requires` 자동 검증. 누락 시 `StateError`:
+`AppKits.install([...])` 시 `requires` 를 자동 검증해요. 누락 시 `StateError` 가 나요:
 
 ```text
 ✗ auth_kit requires backend_api_kit, which is not enabled
@@ -120,7 +120,7 @@ payment_kit
 dart run tool/configure_app.dart --audit
 ```
 
-불일치 시 exit 1 ([`ADR-004`](../philosophy/adr-004-manual-sync-ci-audit.md)).
+불일치가 있으면 exit 1 로 실패해요 ([`ADR-004`](../philosophy/adr-004-manual-sync-ci-audit.md)).
 
 ### 정적 분석
 

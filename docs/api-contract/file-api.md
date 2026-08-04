@@ -1,8 +1,8 @@
 # File API
 
-앱 유저가 파일(이미지)을 **presigned POST policy** 로 스토리지에 직접 업로드하고, 본인 소유 또는 공개 게시물 첨부를 **presigned GET** 으로 조회하는 계약. 짝 백엔드의 [`FileController`](https://github.com/storkspear/template-spring/blob/main/core/core-attachment-impl/src/main/java/com/factory/core/attachment/impl/controller/FileController.java) 와 1:1 결합.
+이 문서는 앱 유저가 파일(이미지)을 **presigned POST policy** 로 스토리지에 직접 업로드하고, 본인 소유 또는 공개 게시물 첨부를 **presigned GET** 으로 조회하는 계약을 다뤄요. 짝 백엔드의 [`FileController`](https://github.com/storkspear/template-spring/blob/main/core/core-attachment-impl/src/main/java/com/factory/core/attachment/impl/controller/FileController.java) 와 1:1 로 결합돼요.
 
-Flutter 측 호출은 [`lib/kits/file_kit/file_service.dart`](../../lib/kits/file_kit/file_service.dart) 의 `FileService` 가 담당해요. kit 사용법은 [`features/file-kit.md`](../features/file-kit.md).
+Flutter 측 호출은 [`lib/kits/file_kit/file_service.dart`](../../lib/kits/file_kit/file_service.dart) 의 `FileService` 가 담당해요. kit 사용법은 [`features/file-kit.md`](../features/file-kit.md) 에 있어요.
 
 > **왜 presigned POST policy 인가?** presigned PUT 은 스토리지가 실제 크기·타입을 강제하지 못해요(URL 만 있으면 임의 바이트 업로드 가능). POST policy 는 서버가 **content-length-range·Content-Type 을 서명(policy)에 바인딩**해서, 티켓에 선언한 크기·타입을 넘는 업로드를 스토리지가 거부해요 (임의 크기 업로드로 스토리지 소진·타입 위장 stored-XSS 우회 차단).
 
@@ -47,7 +47,7 @@ Content-Type: application/json
 | `contentType` | string | ✅ | MIME 타입 (≤100). 서버 화이트리스트 **정확 매치** (기본 `image/jpeg,image/png,image/webp,image/gif,image/heic`). 위반 시 `ATC_002` |
 | `sizeBytes` | number | ✅ | 파일 크기 (>0). 정책 상한(기본 10MiB) 초과 시 `ATC_003` |
 
-> 짝 백엔드 `FileUploadRequest` record 3필드 그대로예요 — 계약 변경 시 이 record 가 진실의 출처.
+> 짝 백엔드 `FileUploadRequest` record 3필드 그대로예요 — 계약 변경 시 이 record 가 진실의 출처예요.
 
 ### Response
 
@@ -111,11 +111,11 @@ GET /api/apps/{appSlug}/files/{key}
 Authorization: Bearer <access_token>
 ```
 
-`{key}` 는 업로드로 받은 `attachmentKey`.
+`{key}` 는 업로드로 받은 `attachmentKey` 예요.
 
 ### 인가
 
-`status==ACTIVE` **그리고** (`업로더 본인` **또는** `공개(ACTIVE) 게시물에 연관 확정된 첨부`) 일 때만 발급해요. 불충족·검역·삭제는 **전부 `ATC_001`(404, 존재 은닉)**.
+`status==ACTIVE` **그리고** (`업로더 본인` **또는** `공개(ACTIVE) 게시물에 연관 확정된 첨부`) 일 때만 발급해요. 불충족·검역·삭제는 **전부 `ATC_001`(404, 존재 은닉)** 로 응답해요.
 
 ### Response
 
@@ -161,7 +161,7 @@ Authorization: Bearer <access_token>
 | `ATC_003` | 413 | `sizeBytes` 정책 상한 초과 (티켓 발급) |
 | `ATC_004` | 422 | `attachmentKeys` 연관 검증 위반 (게시물 작성) |
 
-전체 매핑은 [`error-codes.md`](./error-codes.md#첨부파일-도메인--atc_-attachmenterror).
+전체 매핑은 [`error-codes.md`](./error-codes.md#첨부파일-도메인--atc_-attachmenterror) 에 있어요.
 
 ---
 
@@ -188,8 +188,8 @@ final dl = await file.getDownloadUrl(ticket.attachmentKey);
 
 ## 계약 변경 시
 
-- 화이트리스트 content-type · size 상한은 **서버 정책**(`app.uploads.*`)이라 클라 변경 불필요 — 서버가 `ATC_002`/`ATC_003` 로 강제.
-- `attachmentKeys` 상한(10)·필드 추가는 백엔드 리드 + 스냅샷(`PostWriteRequest`) 재생성 후 `refresh-spec.sh` 동기화.
+- 화이트리스트 content-type · size 상한은 **서버 정책**(`app.uploads.*`)이라 클라 변경이 필요 없어요 — 서버가 `ATC_002`/`ATC_003` 로 강제해요.
+- `attachmentKeys` 상한(10)·필드 추가는 백엔드가 리드하고, 스냅샷(`PostWriteRequest`) 재생성 후 `refresh-spec.sh` 로 동기화해요.
 
 ---
 

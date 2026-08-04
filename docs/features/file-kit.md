@@ -1,15 +1,12 @@
 # file_kit
 
-**앱 파일 업로드(presigned POST policy) + presigned GET 조회** 도메인 서비스. 라우트/화면 없는 순수 서비스 kit — `fileServiceProvider` 하나를 노출해요. 백엔드 연동 파일 첨부 기능이 필요할 때 활성화.
+앱 파일 업로드 (presigned POST policy) 와 presigned GET 조회를 맡는 도메인 서비스 kit 이에요. 라우트/화면 없는 순수 서비스라 `fileServiceProvider` 하나만 노출해요. 백엔드 연동 파일 첨부 기능이 필요할 때 활성화해요.
 
 ---
 
 ## 개요
 
-- **3단계 흐름**: 티켓 발급(`POST /files/uploads`) → presigned POST 업로드(`uploadUrl` raw multipart) → 조회(`GET /files/{key}`)
-- **presigned POST policy**: 서버가 content-length-range·Content-Type 을 서명(policy)에 바인딩 — 티켓 선언값을 넘는 업로드를 스토리지가 거부 (presigned PUT 과 달리 실제 크기·타입 강제)
-- **별도 Dio 로 스토리지 직송**: presigned 업로드는 `ApiClient` 계약(`/api/apps/{slug}` prefix + `ApiResponse{data,error}` 엔벨로프 + Auth 인터셉터) **밖의 외부 호스트** 라, 인터셉터 없는 별도 Dio 로 전송 (Authorization 헤더 미부착 — 서명 불일치·자격 누출 방지)
-- 단일 식별자 `storageKey`(UUID): 업로드 응답 `attachmentKey` = GET `{key}` = 게시물 `attachmentKeys[]`
+흐름은 3단계예요 — 티켓 발급(`POST /files/uploads`) → presigned POST 업로드(`uploadUrl` raw multipart) → 조회(`GET /files/{key}`). presigned POST policy 를 쓰는 이유는 강제력이에요. 서버가 content-length-range·Content-Type 을 서명(policy)에 바인딩해서, 티켓 선언값을 넘는 업로드는 스토리지가 거부해요 (presigned PUT 과 달리 실제 크기·타입이 강제돼요). 업로드는 별도 Dio 로 스토리지에 직송해요 — presigned 업로드는 `ApiClient` 계약(`/api/apps/{slug}` prefix + `ApiResponse{data,error}` 엔벨로프 + Auth 인터셉터) **밖의 외부 호스트** 라, 인터셉터 없는 별도 Dio 로 전송하고 Authorization 헤더도 붙이지 않아요 (서명 불일치·자격 누출 방지). 식별자는 `storageKey`(UUID) 하나로 통일돼요 — 업로드 응답 `attachmentKey` = GET `{key}` = 게시물 `attachmentKeys[]`.
 
 > **왜 backend_api_kit 확장이 아니라 신규 kit?** backend_api_kit 은 순수 transport(Dio+인터셉터 3종, 도메인 무지)이고, 도메인 플로우는 전용 kit(auth·payment)로 분리하는 구조예요. presigned 업로드는 절대 URL 로 스토리지에 직접 쏘는 raw HTTP — `ApiClient` 계약 밖이라 별도 kit 분리가 자연스러워요.
 
@@ -33,7 +30,7 @@ await AppKits.install([
 ]);
 ```
 
-의존이 빠지면 `configure_app.dart --audit` 가 CI 에서 차단:
+의존이 빠지면 `configure_app.dart --audit` 가 CI 에서 차단해요:
 
 ```text
 ✗ file_kit requires backend_api_kit, which is not enabled

@@ -1,8 +1,8 @@
 # iOS Deployment
 
-**Fastlane + App Store Connect + TestFlight** 배포. macOS 러너 필수 (GitHub Actions 에서 `macos-latest`).
+이 문서는 **Fastlane + App Store Connect + TestFlight** 배포를 다뤄요. macOS 러너가 필수예요 (GitHub Actions 에서 `macos-latest`).
 
-> ⚠️ 본 템플릿의 iOS 자동 배포 워크플로우는 **작성 예정**. 현재는 수동 배포 또는 Fastlane 로컬 실행.
+> ⚠️ 본 템플릿의 iOS 자동 배포 워크플로우는 **작성 예정** 이에요. 현재는 수동 배포하거나 Fastlane 을 로컬에서 실행해요.
 
 ---
 
@@ -16,14 +16,14 @@
 
 ### 2. 인증서 + 프로비저닝 프로파일
 
-**Fastlane match 권장** — 팀원 간 자격 증명 동기화:
+**Fastlane match 를 권장해요** — 팀원 간 자격 증명이 동기화돼요:
 
 ```bash
 cd ios
 bundle exec fastlane match appstore --readonly=false
 ```
 
-또는 수동:
+또는 수동으로 해요:
 - Keychain Access → Certificate Assistant → Request Certificate
 - Apple Developer Portal 에서 Distribution Certificate 생성
 - App Store Provisioning Profile 다운로드 → Xcode 에 import
@@ -39,7 +39,7 @@ bundle exec fastlane match appstore --readonly=false
 App Store Connect → Users and Access → Keys → `+`  
 권한: Developer · Access to Download Reports
 
-생성된 `.p8` 파일 + Key ID + Issuer ID 를 GitHub Secrets 에.
+생성된 `.p8` 파일 + Key ID + Issuer ID 를 GitHub Secrets 에 등록해요.
 
 ---
 
@@ -130,11 +130,11 @@ jobs:
 
 빌드 업로드 후 App Store Connect 에서:
 
-1. TestFlight → Internal Testing → Testers 추가 (본인 Apple ID)
-2. 앱 빌드 승인 (수 분 ~ 시간)
-3. TestFlight 앱으로 설치
+1. TestFlight → Internal Testing → Testers 를 추가해요 (본인 Apple ID)
+2. 앱 빌드가 승인돼요 (수 분 ~ 시간)
+3. TestFlight 앱으로 설치해요
 
-**외부 테스트** 는 Apple 리뷰 필요 (1~2일).
+**외부 테스트** 는 Apple 리뷰가 필요해요 (1~2일).
 
 ---
 

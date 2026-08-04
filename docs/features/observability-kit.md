@@ -1,15 +1,12 @@
 # observability_kit
 
-**Sentry 크래시 리포팅 + PostHog 사용자 분석 번들**. DSN · API Key 주입이 없으면 Debug 폴백으로 동작 (앱은 정상 부팅).
+Sentry 크래시 리포팅과 PostHog 사용자 분석을 묶은 kit 이에요. DSN · API Key 주입이 없으면 Debug 폴백으로 동작하니 키가 없어도 앱은 정상 부팅해요.
 
 ---
 
 ## 개요
 
-- **Sentry**: 크래시 · 에러 리포트 · 트레이싱 · 심볼 복원
-- **PostHog**: 이벤트 분석 · 화면 추적 (세션 리플레이는 템플릿 미구성 — 필요 시 파생 레포에서 옵션 활성화)
-- **Debug 폴백** ([`ADR-006`](../philosophy/adr-006-debug-fallback.md)): DSN 없으면 콘솔 출력만
-- **자동 화면 추적**: `AnalyticsNavigatorObserver` 가 go_router 경로 감지
+Sentry 는 크래시 · 에러 리포트 · 트레이싱 · 심볼 복원을, PostHog 는 이벤트 분석 · 화면 추적을 담당해요 (세션 리플레이는 템플릿에 없어요 — 필요하면 파생 레포에서 옵션을 활성화해요). DSN 이 없으면 Debug 폴백으로 콘솔 출력만 해요 ([`ADR-006`](../philosophy/adr-006-debug-fallback.md)). 화면 추적은 `AnalyticsNavigatorObserver` 가 go_router 경로를 감지해 자동으로 처리해요.
 
 ---
 
@@ -38,9 +35,9 @@ flutter run \
   --dart-define=POSTHOG_HOST=https://us.i.posthog.com
 ```
 
-> `POSTHOG_HOST` 는 생략 가능 — 미주입 시 기본값이 `https://us.i.posthog.com` 이에요 (`observability_env.dart` 의 `defaultValue`). EU 프로젝트만 `https://eu.i.posthog.com` 으로 주입.
+> `POSTHOG_HOST` 는 생략 가능해요 — 미주입 시 기본값이 `https://us.i.posthog.com` 이에요 (`observability_env.dart` 의 `defaultValue`). EU 프로젝트만 `https://eu.i.posthog.com` 으로 주입해요.
 
-**없으면** Debug 구현체로 동작 — 콘솔 로그만. 앱은 정상 부팅.
+**없으면** Debug 구현체로 동작해요 — 콘솔 로그만 남기고, 앱은 정상 부팅해요.
 
 ---
 
@@ -169,7 +166,7 @@ end
 
 ### 자동 화면 추적
 
-`AnalyticsNavigatorObserver` 가 go_router 의 NavigatorObserver 로 설치됨 → 모든 경로 변경 시 `trackScreen` 자동 호출.
+`AnalyticsNavigatorObserver` 가 go_router 의 NavigatorObserver 로 설치돼서, 모든 경로 변경 시 `trackScreen` 이 자동 호출돼요.
 
 ```dart
 // AppRouter 내부 (자동)

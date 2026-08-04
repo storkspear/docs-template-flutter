@@ -1,6 +1,6 @@
 # Migration from Template
 
-템플릿 원본의 개선을 파생 레포로 가져오는 **cherry-pick 워크플로우**. 근거는 [`ADR-001 · GitHub Template + cherry-pick`](../philosophy/adr-001-template-cherry-pick.md).
+이 문서는 템플릿 원본의 개선을 파생 레포로 가져오는 **cherry-pick 워크플로우** 를 다뤄요. 근거는 [`ADR-001 · GitHub Template + cherry-pick`](../philosophy/adr-001-template-cherry-pick.md) 에 있어요.
 
 ---
 
@@ -78,7 +78,7 @@ git cherry-pick --continue
 
 ### Cherry-pick 포기
 
-도메인 코드 충돌이 크면 **포기가 정당**. 억지로 가져오지 마세요.
+도메인 코드 충돌이 크면 **포기가 정당해요**. 억지로 가져오지 마세요.
 
 ```bash
 git cherry-pick --abort
@@ -115,8 +115,8 @@ git cherry-pick --abort
 
 ### 판단 어려운 것
 
-- 🤔 ViewModel 패턴 변경 — 파생 레포의 ViewModel 들 대거 수정 필요 가능
-- 🤔 AppKit 계약 변경 — 모든 Kit 영향
+- 🤔 ViewModel 패턴 변경 — 파생 레포의 ViewModel 들을 대거 수정해야 할 수 있어요
+- 🤔 AppKit 계약 변경 — 모든 Kit 에 영향이 가요
 
 이런 건 **담당 커밋을 신중히 리뷰** 한 뒤 결정해요. 때론 수동 리팩터가 더 나아요.
 
@@ -126,15 +126,15 @@ git cherry-pick --abort
 
 1년 이상 템플릿과 gap 이 크면 cherry-pick 이 현실적이지 않아요. 이땐:
 
-1. 해당 개선의 **개념만 참고** (파일 그대로 X)
-2. 파생 레포에 맞게 **수동 리팩터**
-3. 커밋 메시지에 "inspired by template commit abc1234" 정도 명시
+1. 해당 개선의 **개념만 참고해요** (파일 그대로 X)
+2. 파생 레포에 맞게 **수동으로 리팩터해요**
+3. 커밋 메시지에 "inspired by template commit abc1234" 정도를 명시해요
 
 ---
 
 ## 템플릿 측 커밋 규칙
 
-파생 레포가 cherry-pick 하기 쉽도록 템플릿에서:
+파생 레포가 cherry-pick 하기 쉽도록 템플릿에서는 이렇게 커밋해요:
 
 - **Conventional Commits**: `feat(kit): ...`, `fix(auth): ...`
 - **작은 커밋**: 하나의 주제 · 하나의 변경
@@ -145,12 +145,12 @@ git cherry-pick --abort
 
 ## 파생 레포가 템플릿으로 기여
 
-발견한 공통 개선이 있으면 **템플릿 레포에 PR**:
+발견한 공통 개선이 있으면 **템플릿 레포에 PR** 을 올려요:
 
-1. 파생 레포에서 먼저 해결 (즉각 필요)
-2. 해당 개선을 템플릿 스타일로 일반화 (도메인 제거)
-3. 템플릿 레포에 PR 제출
-4. merge 후 다른 파생 레포도 cherry-pick 으로 가져감
+1. 파생 레포에서 먼저 해결해요 (즉각 필요)
+2. 해당 개선을 템플릿 스타일로 일반화해요 (도메인 제거)
+3. 템플릿 레포에 PR 을 제출해요
+4. merge 후 다른 파생 레포도 cherry-pick 으로 가져가요
 
 ---
 

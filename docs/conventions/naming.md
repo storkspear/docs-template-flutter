@@ -6,7 +6,7 @@
 
 ## 파일 명명
 
-모든 Dart 파일은 `snake_case.dart`.
+모든 Dart 파일은 `snake_case.dart` 로 지어요.
 
 | 종류 | 규칙 | 예시 |
 |------|------|------|
@@ -27,7 +27,7 @@
 
 ## 클래스 명명
 
-PascalCase. 역할을 이름에서 바로 파악 가능하게.
+클래스는 PascalCase 예요. 역할이 이름에서 바로 파악되게 지어요.
 
 | 종류 | 규칙 | 예시 |
 |------|------|------|
@@ -48,7 +48,7 @@ PascalCase. 역할을 이름에서 바로 파악 가능하게.
 
 ## 변수 · Provider 명명
 
-Dart 관용은 `lowerCamelCase`. Provider 는 접미사로 종류 표시.
+Dart 관용은 `lowerCamelCase` 예요. Provider 는 접미사로 종류를 표시해요.
 
 | 종류 | 규칙 | 예시 |
 |------|------|------|
@@ -66,7 +66,7 @@ Dart 관용은 `lowerCamelCase`. Provider 는 접미사로 종류 표시.
 
 ## 디렉토리 구조
 
-3계층 + features ([`ADR-002`](../philosophy/adr-002-layered-modules.md) 참조):
+구조는 3계층 + features 예요 ([`ADR-002`](../philosophy/adr-002-layered-modules.md) 참조):
 
 ```text
 lib/
@@ -104,15 +104,15 @@ lib/
 
 **의존 방향** (ADR-002):
 - `features → common → kits → core`
-- `core/` 는 Flutter SDK + 외부 패키지만 import
-- `kits/` 간 의존: **type import** 는 `kit_manifest.requires` 선언 시 허용 (`ApiException` 같은 타입은 provider 접근 불가), **인스턴스 접근** 은 provider 경유. 미선언 cross-import 절대 금지. 상세 룰: [`conventions/kits.md` §3](./kits.md), [`ADR-003`](../philosophy/adr-003-featurekit-registry.md)
-- `features/` 간 직접 import **최소화** — 라우터로 느슨한 연결
+- `core/` 는 Flutter SDK + 외부 패키지만 import 해요
+- `kits/` 간 의존: **type import** 는 `kit_manifest.requires` 선언 시 허용돼요 (`ApiException` 같은 타입은 provider 로 접근할 수 없어서예요). **인스턴스 접근** 은 provider 를 경유하고, 미선언 cross-import 는 절대 금지예요. 상세 룰은 [`conventions/kits.md` §3](./kits.md) 과 [`ADR-003`](../philosophy/adr-003-featurekit-registry.md) 에 있어요
+- `features/` 간 직접 import 는 **최소화** 해요 — 라우터로 느슨하게 연결해요
 
 ---
 
 ## i18n 키 명명
 
-접두사로 용도 구분. 자세한 건 [`i18n.md`](./i18n.md).
+접두사로 용도를 구분해요. 자세한 건 [`i18n.md`](./i18n.md) 에 있어요.
 
 | 종류 | 접두사 | 예시 |
 |------|--------|------|
@@ -127,7 +127,7 @@ lib/
 
 ## JSON 필드명
 
-백엔드 응답과 **완전 동일** 하게 camelCase 사용. 자세한 건 [`ADR-009 · 백엔드 계약`](../philosophy/adr-009-backend-contract.md).
+백엔드 응답과 **완전 동일** 하게 camelCase 를 사용해요. 자세한 건 [`ADR-009 · 백엔드 계약`](../philosophy/adr-009-backend-contract.md) 에 있어요.
 
 ```dart
 factory Expense.fromJson(Map<String, dynamic> json) => Expense(
@@ -138,8 +138,8 @@ factory Expense.fromJson(Map<String, dynamic> json) => Expense(
 );
 ```
 
-- **snake_case 금지** — 백엔드가 `expense_date` 로 주지 않음
-- **날짜는 ISO 8601 UTC** — `DateTime.parse()` 로 파싱. 로컬 시간대 변환은 UI 에서.
+- **snake_case 는 금지예요** — 백엔드가 `expense_date` 로 주지 않아요
+- **날짜는 ISO 8601 UTC** 예요 — `DateTime.parse()` 로 파싱하고, 로컬 시간대 변환은 UI 에서 해요.
 
 ---
 

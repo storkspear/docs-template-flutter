@@ -1,8 +1,8 @@
 # Figma → Flutter 디자인 핸드오프
 
-디자이너의 Figma 디자인 토큰을 Flutter 의 `AppPalette` / `AppTypeface` / `AppSpacing` 으로 매핑하는 워크플로우.
+디자이너의 Figma 디자인 토큰을 Flutter 의 `AppPalette` / `AppTypeface` / `AppSpacing` 으로 매핑하는 워크플로우예요.
 
-> 본 문서는 **자동 변환 도구를 강제하지 않아요**. 1-2 명 솔로 개발 환경에서 가장 가벼운 수동 매핑이 보통 가장 빠릅니다. 자동화는 팀이 5명+ / 디자인 토큰 50개+ 일 때 도입 권장.
+> 본 문서는 **자동 변환 도구를 강제하지 않아요**. 1-2 명 솔로 개발 환경에서 가장 가벼운 수동 매핑이 보통 가장 빠릅니다. 자동화는 팀이 5명+ / 디자인 토큰 50개+ 일 때 도입을 권장해요.
 
 **관련 문서**: [`theme-tokens.md`](./theme-tokens.md), [`ADR-015 · Palette Registry`](../philosophy/adr-015-palette-registry.md), [`ADR-023 · Typeface Registry`](../philosophy/adr-023-typeface-registry.md)
 
@@ -10,11 +10,11 @@
 
 ## 1. Figma 측 정리 — 디자이너 측 작업
 
-디자이너가 Figma 에서 미리 정리해주면 매핑이 훨씬 쉬워요. 권장 구조:
+디자이너가 Figma 에서 미리 정리해주면 매핑이 훨씬 쉬워요. 권장 구조는 다음과 같아요.
 
 ### 1-1. Color Styles 정의
 
-Figma 의 **Local styles → Color** 에 시맨틱 이름으로 정의:
+Figma 의 **Local styles → Color** 에 시맨틱 이름으로 정의해요:
 
 ```text
 Brand/Primary       #6366F1
@@ -33,8 +33,8 @@ Border/Default      #E5E7EB
 Border/Strong       #D1D5DB
 ```
 
-> ❌ "Blue 500", "Gray 200" 같은 **원자 이름 금지** — Material 3 의 시맨틱 컬러롤과 매핑 어려움.
-> ✅ **시맨틱 이름** (예: "Primary", "Surface/Background") 으로.
+> ❌ "Blue 500", "Gray 200" 같은 **원자 이름은 금지예요** — Material 3 의 시맨틱 컬러롤과 매핑이 어려워요.
+> ✅ **시맨틱 이름** (예: "Primary", "Surface/Background") 으로 지어요.
 
 ### 1-2. Text Styles 정의
 
@@ -58,7 +58,7 @@ Label/Medium        Pretendard 12px Medium
 
 ### 1-3. Spacing / Radius
 
-Figma 의 **Local variables → Number** 에:
+Figma 의 **Local variables → Number** 에 정의해요:
 
 ```text
 spacing/xs     4
@@ -81,7 +81,7 @@ radius/full    9999
 
 ### 2-1. 색상 → AppPalette
 
-`lib/core/theme/` 에 새 팔레트 클래스:
+`lib/core/theme/` 에 새 팔레트 클래스를 만들어요:
 
 ```dart
 // lib/core/theme/my_app_palette.dart
@@ -115,7 +115,7 @@ class MyAppPalette extends AppPalette {
 }
 ```
 
-`lib/main.dart` 의 `_bootstrap()`:
+`lib/main.dart` 의 `_bootstrap()` 에서 install 해요:
 
 ```dart
 AppPaletteRegistry.install(MyAppPalette());
@@ -123,7 +123,7 @@ AppPaletteRegistry.install(MyAppPalette());
 
 ### 2-2. 폰트 → AppTypeface
 
-폰트 파일 추가:
+폰트 파일부터 추가해요:
 1. Pretendard `.ttf` 파일을 `assets/fonts/` 에 배치 (4 weight 권장: 400/500/600/700)
 2. `pubspec.yaml`:
    ```yaml
@@ -177,11 +177,11 @@ AppPaletteRegistry.install(MyAppPalette());
    AppTypefaceRegistry.install(MyAppTypeface());
    ```
 
-> 자세한 폰트 적용 단계 + 한국어 무료 폰트 비교 (Pretendard / Spoqa Han Sans Neo / Noto Sans KR) 는 [`ADR-023 · Typeface Registry`](../philosophy/adr-023-typeface-registry.md).
+> 자세한 폰트 적용 단계 + 한국어 무료 폰트 비교 (Pretendard / Spoqa Han Sans Neo / Noto Sans KR) 는 [`ADR-023 · Typeface Registry`](../philosophy/adr-023-typeface-registry.md) 에 있어요.
 
 ### 2-3. State 색상 (Material 3 외)
 
-Material 3 의 `ColorScheme` 에 직접 들어맞지 않는 시맨틱 색 (Success / Warning / Info) 은 ThemeExtension 으로:
+Material 3 의 `ColorScheme` 에 직접 들어맞지 않는 시맨틱 색 (Success / Warning / Info) 은 ThemeExtension 으로 처리해요:
 
 ```dart
 // lib/core/theme/state_colors.dart
@@ -230,7 +230,7 @@ ThemeData(
 );
 ```
 
-사용:
+이렇게 사용해요:
 ```dart
 final colors = Theme.of(context).extension<StateColors>()!;
 return Container(color: colors.success);
@@ -259,7 +259,7 @@ class AppSpacing {
 
 Figma 쪽 스케일이 다르면 (예: radius 4/8/12) 상수 값을 바로 바꾸기보다 디자이너와 스케일을 맞추는 쪽을 먼저 검토해요 — 앱 전체가 이 상수를 쓰고 있어서 값 변경은 전 화면에 파급돼요.
 
-사용:
+이렇게 사용해요:
 ```dart
 Padding(padding: const EdgeInsets.all(AppSpacing.md), ...);
 ClipRRect(borderRadius: BorderRadius.circular(AppSpacing.radiusMd), ...);
@@ -287,11 +287,11 @@ ClipRRect(borderRadius: BorderRadius.circular(AppSpacing.radiusMd), ...);
 
 ## 4. 자동화 옵션 (5명+ 팀, 50+ 토큰)
 
-수동 매핑이 부담되면:
+수동 매핑이 부담되면 아래 옵션을 검토해요.
 
 ### 4-1. Figma Tokens (Plugin)
 
-Figma 의 **Tokens Studio for Figma** 플러그인 → JSON export → Flutter 측에서 codegen.
+Figma 의 **Tokens Studio for Figma** 플러그인으로 JSON 을 export 한 뒤 Flutter 측에서 codegen 해요.
 
 ```bash
 # Figma → tokens.json export
@@ -300,22 +300,22 @@ dart run tool/sync_design_tokens.dart tokens.json
 # → lib/core/theme/generated/colors.dart 자동 생성
 ```
 
-> 본 템플릿은 codegen 도구를 기본 제공하지 않아요. 필요하면 파생 레포에서 자체 작성. `style_dictionary` 또는 `figma_tokens_to_dart` 같은 패키지 참조.
+> 본 템플릿은 codegen 도구를 기본 제공하지 않아요. 필요하면 파생 레포에서 자체 작성해요. `style_dictionary` 또는 `figma_tokens_to_dart` 같은 패키지를 참조하세요.
 
 ### 4-2. Figma Variables API
 
-Figma 의 Variables API (paid plan) → 직접 fetch → codegen. Plugin 보다 안정적이지만 paid 플랜 필요.
+Figma 의 Variables API (paid plan) 를 직접 fetch 해서 codegen 해요. Plugin 보다 안정적이지만 paid 플랜이 필요해요.
 
 ---
 
 ## 5. 자주 빠지는 함정
 
-1. **Figma 의 "Blue 500" 같은 원자 이름을 그대로 코드에 도입** → Material 3 시맨틱 컬러롤과 매핑 불가
-2. **폰트만 바꾸고 `pubspec.yaml` 의 fonts 누락** → 빌드 시 silently 시스템 폰트로 fallback
-3. **Material 3 fromSeed 무시하고 모든 색을 직접 override** → 다크모드 / 컨트라스트 / 접근성 고려 못 함
-4. **letterSpacing / lineHeight 누락** — Pretendard 같은 한글 폰트는 lineHeight 1.5 권장 (영문 1.2 와 다름)
-5. **assets/fonts/ 의 weight 와 pubspec 의 weight 불일치** → 잘못된 굵기로 렌더링
-6. **Light/Dark 테마 둘 다 안 정의** — Material 3 `fromSeed` 는 brightness 받아서 자동 생성 가능
+1. **Figma 의 "Blue 500" 같은 원자 이름을 그대로 코드에 도입** → Material 3 시맨틱 컬러롤과 매핑이 안 돼요
+2. **폰트만 바꾸고 `pubspec.yaml` 의 fonts 누락** → 빌드 시 silently 시스템 폰트로 fallback 해요
+3. **Material 3 fromSeed 무시하고 모든 색을 직접 override** → 다크모드 / 컨트라스트 / 접근성을 고려하지 못해요
+4. **letterSpacing / lineHeight 누락** — Pretendard 같은 한글 폰트는 lineHeight 1.5 를 권장해요 (영문 1.2 와 달라요)
+5. **assets/fonts/ 의 weight 와 pubspec 의 weight 불일치** → 잘못된 굵기로 렌더링돼요
+6. **Light/Dark 테마 둘 다 안 정의** — Material 3 `fromSeed` 는 brightness 를 받아 자동 생성할 수 있어요
 
 ---
 

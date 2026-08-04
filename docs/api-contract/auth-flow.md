@@ -1,6 +1,6 @@
 # Auth Flow
 
-JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`ADR-012`](../philosophy/adr-012-per-app-user.md)).
+이 문서는 JWT 기반 인증의 전체 시퀀스를 다뤄요. 앱별 독립 유저 + `appSlug` 검증 구조 위에서 동작해요 ([`ADR-012`](../philosophy/adr-012-per-app-user.md)).
 
 > **용어 구분 — 라우터 경로 vs API endpoint**
 > - **라우터 경로** (`/login`, `/home`, `/forgot-password`): Flutter GoRouter 의 클라 내부 화면 경로
@@ -117,7 +117,7 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
 
 ### 동시 401 처리
 
-`QueuedInterceptor` 덕분에 **동시에 401 이 터져도 refresh 는 1번만 실행**. 다른 요청은 큐에서 대기 → refresh 완료 후 순차 재시도. 상세는 [`ADR-010`](../philosophy/adr-010-queued-interceptor.md).
+`QueuedInterceptor` 덕분에 **동시에 401 이 터져도 refresh 는 1번만 실행돼요**. 다른 요청은 큐에서 대기했다가 refresh 완료 후 순차 재시도해요. 상세는 [`ADR-010`](../philosophy/adr-010-queued-interceptor.md) 을 참고하세요.
 
 ### 응답 구조 비대칭 (signin vs refresh)
 
@@ -126,9 +126,9 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
 | `signin` / `signup` / 소셜 (`google` / `apple` / `kakao` / `naver`) / `2fa/login` | `{ user: {...}, tokens: { accessToken, refreshToken } }` | `AuthResponse` |
 | **`refresh`** | `{ accessToken, refreshToken }` (root 레벨, **`user` 없음**) | `AuthTokens` |
 
-**왜 다른가**: refresh 는 **토큰 회전만** 수행해요. user 정보 echo 는 불필요 (클라이언트가 이미 보유). signin/signup 은 **첫 인증** 이라 user 도 함께 내려와야 해요.
+**왜 다른가**: refresh 는 **토큰 회전만** 수행해요. 클라이언트가 이미 user 정보를 갖고 있으니 echo 가 필요 없어요. signin/signup 은 **첫 인증** 이라 user 도 함께 내려와야 해요.
 
-**Flutter 측 처리**: `AuthService._handleAuthResponse()` 가 두 형태 모두 **관대하게 파싱**해요 (`tokens.accessToken` 우선, 없으면 root `accessToken` fallback). 그래서 호출 측은 동일 메서드로 두 응답을 처리 가능.
+**Flutter 측 처리**: `AuthService._handleAuthResponse()` 가 두 형태 모두 **관대하게 파싱**해요 (`tokens.accessToken` 우선, 없으면 root `accessToken` fallback). 그래서 호출 측은 동일 메서드로 두 응답을 처리할 수 있어요.
 
 ---
 
@@ -176,7 +176,7 @@ JWT 기반 인증 전체 시퀀스. 앱별 독립 유저 + `appSlug` 검증 ([`A
    │ TokenStorage.saveTokens → /home                │
 ```
 
-**짝 백엔드 DTO**: `TotpLoginRequest{ twoFactorToken, code }`. `code` 는 6자리 TOTP 또는 8자리 backup code 모두 허용 (백엔드가 자동 분기).
+**짝 백엔드 DTO**: `TotpLoginRequest{ twoFactorToken, code }`. `code` 는 6자리 TOTP 또는 8자리 backup code 모두 허용돼요 (백엔드가 자동 분기).
 
 **클라이언트 처리(핵심)**: 1단계 응답을 공통 처리하는 `AuthService._handleAuthResponse` 가
 `tokens`/root `accessToken` 이 모두 없고 `twoFactorToken` 만 있으면 **저장/emit 없이 그 토큰을
@@ -205,7 +205,7 @@ backup code 8개는 발급 시 1회만 노출돼요 — 화면이 즉시 표시 
 
 ## 로그아웃 (signOut)
 
-> ⚠️ **백엔드에 로그아웃 endpoint 가 없어요** (의도적 결정). 로그아웃은 **클라단 동작**이에요. 서버 측 토큰 무효화는 refresh 시도 시 자연스럽게 일어나거나, 회원 탈퇴(`/auth/withdraw`) 시 일괄 처리.
+> ⚠️ **백엔드에 로그아웃 endpoint 가 없어요** (의도적 결정). 로그아웃은 **클라단 동작**이에요. 서버 측 토큰 무효화는 refresh 시도 시 자연스럽게 일어나거나, 회원 탈퇴(`/auth/withdraw`) 시 일괄 처리돼요.
 
 ```text
 사용자가 "로그아웃" 버튼 누름
@@ -220,7 +220,7 @@ GoRouter refreshListenable 트리거
 AuthKit.buildRedirect → /login 라우터 경로로 이동
 ```
 
-**왜 백엔드 로그아웃이 없나**: 짧은 access TTL (15분) + refresh 회전 + replay 감지 (`ATH_003 INVALID_TOKEN`) 조합으로 충분. 추가 endpoint 는 공격 표면만 늘림. 회원 탈퇴는 `withdraw` 가 모든 refresh 토큰 일괄 무효화.
+**왜 백엔드 로그아웃이 없나**: 짧은 access TTL (15분) + refresh 회전 + replay 감지 (`ATH_003 INVALID_TOKEN`) 조합으로 충분해요. 추가 endpoint 는 공격 표면만 늘려요. 회원 탈퇴 시에는 `withdraw` 가 모든 refresh 토큰을 일괄 무효화해요.
 
 ---
 
@@ -269,11 +269,11 @@ TokenStorage.clearTokens() + authState.emit(unauthenticated)
 }
 ```
 
-> Spring `JwtService` 가 발급. Flutter 측 `CurrentUser.fromJwtPayload` 가 `sub` 을 `int.parse` 해 `userId` 로 추출. JWT 표준 (RFC 7519) 의 `sub` 클레임 사용 권장.
+> Spring `JwtService` 가 발급해요. Flutter 측에서는 `CurrentUser.fromJwtPayload` 가 `sub` 을 `int.parse` 해 `userId` 로 추출해요. JWT 표준 (RFC 7519) 의 `sub` 클레임을 쓰는 게 권장돼요.
 
 ### Refresh Token Payload
 
-별도 구조. 보통 opaque random token (DB 저장) 또는 짧은 JWT. 클라이언트는 내부 구조 의존하지 않음 — refresh endpoint 호출 시 그대로 전달만.
+access token 과는 별도 구조예요. 보통 opaque random token (DB 저장) 또는 짧은 JWT 를 써요. 클라이언트는 내부 구조에 의존하지 않고, refresh endpoint 호출 시 그대로 전달만 해요.
 
 ### 서명
 
@@ -295,13 +295,13 @@ TokenStorage.clearTokens() + authState.emit(unauthenticated)
 4. JWT 없으면 → 기존 Spring Security 필터로 처리 (로그인 · 가입 등은 skipAuth)
 ```
 
-**왜 필요**: 앱 A 의 JWT 를 복사해서 앱 B 의 URL 에 주입 시도 → 런타임 차단. 상세는 [`ADR-012`](../philosophy/adr-012-per-app-user.md).
+**왜 필요**: 앱 A 의 JWT 를 복사해서 앱 B 의 URL 에 주입하는 시도를 런타임에 차단하기 위해서예요. 상세는 [`ADR-012`](../philosophy/adr-012-per-app-user.md) 를 참고하세요.
 
 ---
 
 ## OAuth 2.0 인증 흐름 (Google · Apple · Kakao · Naver)
 
-각 provider 의 SDK 가 클라이언트에서 토큰을 받아오면 백엔드의 **provider 별 endpoint** 로 전송. 백엔드는 provider 공식 endpoint 로 토큰을 재검증한 후 우리 JWT 를 발급. 짝 백엔드 ADR: [`template-spring ADR-017 · OAuth 2.0 통합`](https://github.com/storkspear/template-spring/blob/main/docs/philosophy/adr-017-oauth-integration.md).
+각 provider 의 SDK 가 클라이언트에서 토큰을 받아오면 백엔드의 **provider 별 endpoint** 로 전송해요. 백엔드는 provider 공식 endpoint 로 토큰을 재검증한 후 우리 JWT 를 발급해요. 짝 백엔드 ADR 은 [`template-spring ADR-017 · OAuth 2.0 통합`](https://github.com/storkspear/template-spring/blob/main/docs/philosophy/adr-017-oauth-integration.md) 이에요.
 
 ### 흐름 (provider 무관 공통)
 
@@ -326,11 +326,11 @@ TokenStorage.clearTokens() + authState.emit(unauthenticated)
 
 ### Apple "Hide My Email" 처리
 
-Apple 사용자가 "Hide My Email" 을 선택하면 첫 로그인 후 identity token 에 email claim 이 빠져요. 클라이언트는 **첫 로그인 시 받은 email** 을 `AppleSignInRequest.email` 에 fallback 으로 전달. 백엔드는 token email > request email 우선순위로 사용.
+Apple 사용자가 "Hide My Email" 을 선택하면 첫 로그인 후 identity token 에 email claim 이 빠져요. 클라이언트는 **첫 로그인 시 받은 email** 을 `AppleSignInRequest.email` 에 fallback 으로 전달해요. 백엔드는 token email > request email 우선순위로 사용해요.
 
 ### Kakao / Naver 이메일 동의
 
-사용자가 가입 시 이메일 동의를 거부할 수 있어요. 응답에 email 이 없으면 백엔드가 `AuthError.SOCIAL_AUTH_FAILED` (`reason=email_required`) 반환. 클라이언트는 i18n 메시지로 "이메일 제공 동의 필요" 안내.
+사용자가 가입 시 이메일 동의를 거부할 수 있어요. 응답에 email 이 없으면 백엔드가 `AuthError.SOCIAL_AUTH_FAILED` (`reason=email_required`) 를 반환해요. 클라이언트는 i18n 메시지로 "이메일 제공 동의 필요" 를 안내해요.
 
 ---
 
@@ -360,9 +360,9 @@ Apple 사용자가 "Hide My Email" 을 선택하면 첫 로그인 후 identity t
 | _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/auth/phone/request` | 휴대폰 OTP 발송 (public, `{data:{devCode}}` — devCode 는 non-prod 만) |
 | _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/auth/phone/verify` | OTP 검증 + 토큰 발급 (public, 유저 find-or-create) |
 
-> 백엔드 `PATCH /api/apps/{slug}/auth/password` (인증 비번 변경) 는 contract에 있지만 `AuthService` 메서드는 미구현 (파생 레포에서 필요 시 직접 호출).
+> 백엔드 `PATCH /api/apps/{slug}/auth/password` (인증 비번 변경) 는 contract에 있지만 `AuthService` 메서드는 미구현이에요 (파생 레포에서 필요 시 직접 호출).
 
-> 경로 단일 진실의 출처: 백엔드 `common-web/ApiEndpoints.java` 의 `Auth.*` 상수. Flutter 쪽 경로 상수도 1:1 일치 권장.
+> 경로의 단일 진실의 출처는 백엔드 `common-web/ApiEndpoints.java` 의 `Auth.*` 상수예요. Flutter 쪽 경로 상수도 1:1 일치가 권장돼요.
 
 ---
 

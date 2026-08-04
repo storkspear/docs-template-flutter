@@ -1,15 +1,12 @@
 # ads_kit
 
-**AdMob 배너 광고 + UMP 동의 폼 + ATT 요청 (iOS 14+)**. 활성화 시 자동으로 동의 UX 처리.
+AdMob 배너 광고를 붙이고, UMP 동의 폼과 ATT 요청 (iOS 14+) 까지 함께 처리해 주는 kit 이에요. 광고 자체보다 까다로운 게 동의 절차인데, 활성화만 하면 그 UX 가 부트 단계에서 자동으로 흘러가요.
 
 ---
 
 ## 개요
 
-- **AdMob 배너**: `BannerAdWidget` 한 줄로 배치
-- **UMP (User Messaging Platform)**: GDPR 지역 자동 동의 폼
-- **ATT (App Tracking Transparency)**: iOS 14+ 자동 시스템 다이얼로그
-- **테스트 ID**: 개발 중엔 `AdConfig.testIds` 를 명시 전달 (`config` 는 필수 인자). 출시 전 실제 AdMob ID 로 교체 필수
+배너 배치는 `BannerAdWidget` 한 줄로 끝나요. GDPR 적용 지역에서는 UMP (User Messaging Platform) 동의 폼을, iOS 14+ 에서는 ATT (App Tracking Transparency) 시스템 다이얼로그를 kit 이 BootStep 으로 알아서 띄워 줘요. 개발 중엔 `AdConfig.testIds` 를 명시적으로 전달하고 (`config` 는 필수 인자예요), 출시 전엔 반드시 실제 AdMob ID 로 교체해야 해요.
 
 ---
 
@@ -34,7 +31,7 @@ await AppKits.install([
 ]);
 ```
 
-`config` 는 **필수 인자** 예요 — 기본값이 없어요. 개발 · 테스트 중엔 `AdConfig.testIds` (Google 테스트 ID) 를 명시 전달하고, 출시 빌드엔 반드시 실제 ID 로 교체.
+`config` 는 **필수 인자** 예요 — 기본값이 없어요. 개발 · 테스트 중엔 `AdConfig.testIds` (Google 테스트 ID) 를 명시적으로 전달하고, 출시 빌드엔 반드시 실제 ID 로 교체해요.
 
 ---
 

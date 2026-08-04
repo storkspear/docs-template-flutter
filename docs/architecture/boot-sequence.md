@@ -1,6 +1,6 @@
 # Boot Sequence
 
-앱 시작 시 실행되는 **전체 순서도**. `main()` → 첫 화면 표시까지. 근거는 [`ADR-008 · 부팅 단계 추상화`](../philosophy/adr-008-boot-step.md).
+이 문서는 앱 시작 시 실행되는 **전체 순서도** 를 다뤄요 — `main()` 부터 첫 화면 표시까지예요. 근거는 [`ADR-008 · 부팅 단계 추상화`](../philosophy/adr-008-boot-step.md) 에 있어요.
 
 ---
 
@@ -151,17 +151,17 @@
 ### 1. Flutter 바인딩 · 팔레트 · 설정 (main 본문)
 
 `main()` 본문에서 Sentry 래핑보다 **먼저** 실행돼요:
-- 바인딩 먼저 (기타 `Platform.` 호출 전제)
-- 팔레트/타이페이스 install (MaterialApp 이 구독할 Listenable)
-- AppConfig.init — Sentry options 람다가 `AppConfig.instance` 를 읽으므로 Sentry 래핑보다 먼저
+- 바인딩을 먼저 해요 (기타 `Platform.` 호출의 전제)
+- 팔레트/타이페이스를 install 해요 (MaterialApp 이 구독할 Listenable)
+- AppConfig.init 을 해요 — Sentry options 람다가 `AppConfig.instance` 를 읽으므로 Sentry 래핑보다 먼저예요
 
 ### 2. Sentry 래핑
 
-`ObservabilityEnv.isSentryEnabled` 확인. DSN 주입되어 있으면 `SentryFlutter.init(..., appRunner: _bootstrap)` 이 내부적으로 `runZonedGuarded` 세팅 → **비동기 에러까지 자동 포착**. 미주입 시 `_bootstrap()` 직접 호출. 이후 단계(PrefsStorage·Kit 설치·container·splash)는 모두 `_bootstrap()` 안에서 실행돼요. (PrefsStorage 는 Provider override 로 주입되므로 container 생성 전.)
+`ObservabilityEnv.isSentryEnabled` 를 확인해요. DSN 이 주입되어 있으면 `SentryFlutter.init(..., appRunner: _bootstrap)` 이 내부적으로 `runZonedGuarded` 를 세팅해서 **비동기 에러까지 자동 포착돼요**. 미주입 시 `_bootstrap()` 을 직접 호출해요. 이후 단계(PrefsStorage·Kit 설치·container·splash)는 모두 `_bootstrap()` 안에서 실행돼요. (PrefsStorage 는 Provider override 로 주입되므로 container 생성 전이에요.)
 
 ### 3. Kit 설치
 
-여기서 각 Kit 의 `onInit` 이 실행. 예: `BackendApiKit.onInit` 은 Dio 인스턴스 생성 등.
+여기서 각 Kit 의 `onInit` 이 실행돼요. 예를 들어 `BackendApiKit.onInit` 은 Dio 인스턴스를 생성해요.
 
 `ApiClient.onUpgradeRequired` 글루(5-b)는 install 보다 **먼저** 실행돼요 — `backend_api_kit` 은 `update_kit` 을 모르고(kit 간 디커플링), 두 kit 을 엮는 유일한 지점이 `main.dart` 라서 조립 이전에 정적 훅부터 걸어 둬요.
 
@@ -172,19 +172,19 @@ ADR-003 의 3단계 패턴:
 - `ProviderContainer` 생성 (모든 override 수집)
 - `attachContainer` (bootSteps 에게 container 노출)
 
-순서 깨지면 런타임 StateError.
+순서가 깨지면 런타임 StateError 가 나요.
 
 ### 5. BootStep 실행
 
-`SplashController.run()` 이 순차 `await`. 한 step 실패해도 앱은 계속 — graceful degradation.
+`SplashController.run()` 이 각 step 을 순차로 `await` 해요. 한 step 이 실패해도 앱은 계속 진행돼요 — graceful degradation 이에요.
 
 ### 6. runApp
 
-`UncontrolledProviderScope` 로 외부에서 만든 container 를 Flutter 트리에 주입.
+`UncontrolledProviderScope` 로 외부에서 만든 container 를 Flutter 트리에 주입해요.
 
 ### 7. 첫 리다이렉트
 
-initialLocation `/splash` → refreshListenable 이 곧 초기 notify → `_composedRedirect` 실행 → AuthKit rule 이 상태에 따라 `/` (homePath 기본값) 또는 `/login` 반환 → 이동.
+initialLocation `/splash` → refreshListenable 이 곧 초기 notify → `_composedRedirect` 실행 → AuthKit rule 이 상태에 따라 `/` (homePath 기본값) 또는 `/login` 을 반환해 이동해요.
 
 ---
 

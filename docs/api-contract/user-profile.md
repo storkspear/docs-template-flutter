@@ -1,6 +1,6 @@
 # User Profile
 
-현재 로그인 유저의 **자신의 프로필** 조회/수정. 짝 백엔드의 `UserController` ([`/api/apps/{slug}/users/me`](https://github.com/storkspear/template-spring/blob/main/core/core-user-impl/src/main/java/com/factory/core/user/impl/controller/UserController.java)) 와 1:1 결합.
+이 문서는 현재 로그인 유저의 **자신의 프로필** 조회/수정 계약을 다뤄요. 짝 백엔드의 `UserController` ([`/api/apps/{slug}/users/me`](https://github.com/storkspear/template-spring/blob/main/core/core-user-impl/src/main/java/com/factory/core/user/impl/controller/UserController.java)) 와 1:1 로 결합돼요.
 
 > **경로 — 앱별 endpoint** : auth·device 와 동일하게 `/api/apps/{slug}/users/...` 아래에 있어요. 백엔드 `AppSlugVerificationFilter` 가 path slug ↔ JWT slug 일치를 강제해 cross-app 접근을 막아요.
 >
@@ -70,13 +70,13 @@ Content-Type: application/json
 
 ### PATCH 의미론
 
-- **`null` 필드는 유지**: 본문에 포함되지 않은 필드는 변경 안 됨.
-- **명시적 `null` 도 유지** (clear 의도가 아님): 짝 백엔드는 PATCH 의미를 "absent = no-op" 로 해석.
-- 변경 불가 필드 (id, email, emailVerified, role, isPremium, createdAt, updatedAt) 는 본문에 포함해도 무시. (`isPremium` 은 결제/구독 상태, `updatedAt` 은 서버가 자동 갱신.)
+- **`null` 필드는 유지**: 본문에 포함되지 않은 필드는 변경되지 않아요.
+- **명시적 `null` 도 유지** (clear 의도가 아니에요): 짝 백엔드는 PATCH 의미를 "absent = no-op" 로 해석해요.
+- 변경 불가 필드 (id, email, emailVerified, role, isPremium, createdAt, updatedAt) 는 본문에 포함해도 무시돼요. (`isPremium` 은 결제/구독 상태고, `updatedAt` 은 서버가 자동 갱신해요.)
 
 ### Response
 
-수정 후 최신 `UserProfile` 반환 (GET 과 동일 shape).
+수정 후 최신 `UserProfile` 을 반환해요 (GET 과 동일 shape).
 
 ```json
 {
@@ -108,7 +108,7 @@ POST /api/apps/{slug}/users/me/activity
 Authorization: Bearer <access_token>
 ```
 
-바디 없음.
+바디는 없어요.
 
 ### Response
 
@@ -137,14 +137,14 @@ final response = await apiClient.get(
 final profile = response.data; // UserProfile
 ```
 
-> 실 코드는 `lib/features/profile/` 같은 도메인 layer 에서 wrap 해요. 이 문서는 계약만 정리.
+> 실 코드는 `lib/features/profile/` 같은 도메인 layer 에서 wrap 해요. 이 문서는 계약만 정리해요.
 
 ---
 
 ## 계약 변경 시
 
-- 짝 백엔드의 `UserProfile.java` 와 Flutter 의 `UserProfile.fromJson` 동시 수정.
-- 필드 **추가** 는 하위 호환 (Flutter 가 모르는 필드 무시). **삭제** / **이름 변경** 은 양쪽 동시 배포 + 마이그레이션 필요.
+- 짝 백엔드의 `UserProfile.java` 와 Flutter 의 `UserProfile.fromJson` 을 동시에 수정해요.
+- 필드 **추가** 는 하위 호환이에요 (Flutter 가 모르는 필드는 무시). **삭제** / **이름 변경** 은 양쪽 동시 배포 + 마이그레이션이 필요해요.
 
 ---
 

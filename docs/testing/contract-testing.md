@@ -1,6 +1,6 @@
 # Contract Testing
 
-**Kit 의 불변 속성** 을 검증하는 테스트. `{kit_name}_contract_test.dart` 규약.
+이 문서는 **Kit 의 불변 속성** 을 검증하는 테스트를 다뤄요 — `{kit_name}_contract_test.dart` 규약이에요.
 
 ---
 
@@ -120,7 +120,7 @@ void main() {
 
 ### `requires`
 
-**리스트 순서 무관**. `contains` 사용.
+**리스트 순서는 무관해요**. `contains` 를 사용해요.
 
 ```dart
 expect(AuthKit().requires, contains(BackendApiKit));
@@ -130,11 +130,11 @@ expect(kit.requires, containsAll([BackendApiKit, LocalDbKit]));
 
 ### `redirectPriority`
 
-정수 비교. 값이 **의도적으로** 정해진 것 (UpdateKit=1, AuthKit=10, OnboardingKit=50) 이라 테스트가 수치 고정.
+정수 비교예요. 값이 **의도적으로** 정해진 것 (UpdateKit=1, AuthKit=10, OnboardingKit=50) 이라 테스트가 수치를 고정해요.
 
 ### `routes`
 
-라우트 path 추출 후 `containsAll`.
+라우트 path 를 추출한 뒤 `containsAll` 로 확인해요.
 
 ```dart
 final paths = kit.routes.whereType<GoRoute>().map((r) => r.path);
@@ -143,7 +143,7 @@ expect(paths, containsAll(['/login', '/verify-email']));
 
 ### `bootSteps`
 
-**container 부착 후** 확인. 그전엔 빈 리스트 반환하는 Kit 이 많음 (ADR-008 참조).
+**container 부착 후** 에 확인해요. 그전엔 빈 리스트를 반환하는 Kit 이 많아요 (ADR-008 참조).
 
 ```dart
 // 부착 전
@@ -226,11 +226,11 @@ flutter test test/kits
 
 ## 계약 변경 시 워크플로우
 
-1. `AuthKit.redirectPriority` 를 10 → 15 로 바꾸고 싶음
-2. 계약 테스트가 fail → "정말 맞나?" 리뷰
-3. 맞으면 테스트 값도 15 로 갱신
-4. **다른 Kit 과의 상호작용** 확인 (우선순위 충돌)
-5. PR 리뷰에서 이 변경 명시적 언급
+1. `AuthKit.redirectPriority` 를 10 → 15 로 바꾸고 싶어요
+2. 계약 테스트가 fail → "정말 맞나?" 리뷰해요
+3. 맞으면 테스트 값도 15 로 갱신해요
+4. **다른 Kit 과의 상호작용** 을 확인해요 (우선순위 충돌)
+5. PR 리뷰에서 이 변경을 명시적으로 언급해요
 
 ---
 

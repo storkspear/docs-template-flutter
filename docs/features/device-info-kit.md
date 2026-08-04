@@ -1,14 +1,12 @@
 # device_info_kit
 
-**앱 버전 + 기기 정보 통합 조회**. `device_info_plus` + `package_info_plus` 래핑.
+앱 버전과 기기 정보를 한 번에 조회하는 kit 이에요. `device_info_plus` 와 `package_info_plus` 를 래핑해서 두 패키지를 따로 다룰 필요가 없어요.
 
 ---
 
 ## 개요
 
-- **앱 정보**: 버전 · 빌드 넘버 · 패키지 이름
-- **기기 정보**: OS · 모델 (고유 식별자는 의도적으로 미수집)
-- **Diagnostic 용도**: 크래시 리포트 첨부 · 푸시 토큰 등록 시
+앱 쪽에선 버전 · 빌드 넘버 · 패키지 이름을, 기기 쪽에선 OS · 모델을 제공해요. 고유 식별자는 의도적으로 수집하지 않아요. 주 용도는 diagnostic 이에요 — 크래시 리포트에 첨부하거나 푸시 토큰을 등록할 때 써요.
 
 ---
 
@@ -53,7 +51,7 @@ print('OS 버전: ${info.osVersion}');       // "17.4" / "14 API 34"
 print('디바이스 모델: ${info.deviceModel}'); // "iPhone 15 Pro" / "Pixel 8"
 ```
 
-> `AppAndDeviceInfo` 는 고유 식별자(IDFA/Android ID) 를 의도적으로 노출하지 않아요. 광고 식별자는 `ads_kit` 의 ATT 동의 흐름과 함께 처리.
+> `AppAndDeviceInfo` 는 고유 식별자(IDFA/Android ID) 를 의도적으로 노출하지 않아요. 광고 식별자는 `ads_kit` 의 ATT 동의 흐름과 함께 처리해요.
 
 ### 크래시 리포트 첨부
 

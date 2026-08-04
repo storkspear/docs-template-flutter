@@ -1,6 +1,6 @@
 # Recipes
 
-`recipes/` 에 제공되는 **4개 샘플 앱 구성**. 파생 레포가 복사 → `app_kits.yaml` 로 덮어쓰기. 상세 근거는 [`ADR-021 · Multi-Recipe`](../philosophy/adr-021-multi-recipe.md).
+이 문서는 `recipes/` 에 제공되는 **4개 샘플 앱 구성** 을 다뤄요. 파생 레포가 복사해서 `app_kits.yaml` 로 덮어써요. 상세 근거는 [`ADR-021 · Multi-Recipe`](../philosophy/adr-021-multi-recipe.md) 에 있어요.
 
 ---
 
@@ -18,7 +18,7 @@
 
 ## 1. local-only-tracker
 
-완전 로컬 앱 (습관 · 가계부 · 학습 기록 등).
+완전 로컬 앱이에요 (습관 · 가계부 · 학습 기록 등).
 
 ```yaml
 # recipes/local-only-tracker.yaml
@@ -46,10 +46,10 @@ kits:
 
 ### 비활성 (의도적)
 
-- `backend_api_kit` · `auth_kit` — 서버 없음
-- `notifications_kit` · `permissions_kit` — 알림 없음
-- `update_kit` — 로컬 전용. 강제 업데이트 체인 불필요
-- `ads_kit` — 광고 없는 앱 기본
+- `backend_api_kit` · `auth_kit` — 서버가 없어요
+- `notifications_kit` · `permissions_kit` — 알림이 없어요
+- `update_kit` — 로컬 전용이라 강제 업데이트 체인이 필요 없어요
+- `ads_kit` — 광고 없는 앱이 기본이에요
 
 ### 대표 사례
 
@@ -59,7 +59,7 @@ kits:
 
 ## 2. local-notifier-app
 
-로컬 알림 · 타이머 중심 앱. 광고 포함.
+로컬 알림 · 타이머 중심 앱이에요. 광고를 포함해요.
 
 ```yaml
 # recipes/local-notifier-app.yaml
@@ -91,8 +91,8 @@ kits:
 ### 특이 사항
 
 - **update_kit 조립 교체 필수**: 이 recipe 는 `backend_api_kit` 이 없어서 템플릿 기본 `BackendAppUpdateService` 를 그대로 두면 컴파일이 깨져요. `lib/main.dart` 에서 `UpdateKit(service: NoUpdateAppUpdateService())` 로 바꾸고 `ApiClient.onUpgradeRequired` 글루 블록 + import 2개(`backend_api_kit.dart`, `upgrade_required.dart`)를 지워요 ([`update-kit.md`](../features/update-kit.md) 참고).
-- **ads_kit 활성**: 첫 실행 시 ATT (iOS) · UMP (GDPR) 다이얼로그 자동 노출
-- **출시 전**: `Info.plist` 의 `NSUserTrackingUsageDescription` 다듬기 + AdMob 실제 ID 입력
+- **ads_kit 활성**: 첫 실행 시 ATT (iOS) · UMP (GDPR) 다이얼로그가 자동 노출돼요
+- **출시 전**: `Info.plist` 의 `NSUserTrackingUsageDescription` 을 다듬고 AdMob 실제 ID 를 입력해요
 
 ### 대표 사례
 
@@ -102,7 +102,7 @@ kits:
 
 ## 3. backend-auth-app
 
-백엔드 연동 + JWT 인증 앱.
+백엔드 연동 + JWT 인증 앱이에요.
 
 ```yaml
 # recipes/backend-auth-app.yaml
@@ -143,7 +143,7 @@ kits:
 
 ## 4. social-auth-app
 
-한국 시장 타겟 — 카카오 · 네이버 포함 4-provider 소셜 로그인 앱.
+한국 시장 타겟 — 카카오 · 네이버 포함 4-provider 소셜 로그인 앱이에요.
 
 ```yaml
 # recipes/social-auth-app.yaml
@@ -236,7 +236,7 @@ await AppKits.install([
 dart run tool/configure_app.dart
 ```
 
-Status: OK 확인.
+Status: OK 를 확인해요.
 
 ### 5. 앱 정체성 변경 + 로컬 셋업
 
@@ -259,7 +259,7 @@ Status: OK 확인.
 
 ### "로컬 + 서버 백업 옵션" 같은 혼합
 
-4개 Recipe 중 어느 것과도 정확히 안 맞음. 전략:
+4개 Recipe 중 어느 것과도 정확히 안 맞아요. 전략은 이래요:
 
 1. **가장 가까운 것 선택** — 예: `local-only-tracker`
 2. **Kit 추가** — `backend_api_kit` · `auth_kit` (옵션 기능)
@@ -267,7 +267,7 @@ Status: OK 확인.
 
 ### 새 Recipe 추가?
 
-4개로 제한 권장 (drift 관리 부담). 필요 시 **파생 레포 에서만** 유지 — 템플릿에 반영하지 않음.
+4개로 제한하는 걸 권장해요 (drift 관리 부담). 필요 시 **파생 레포 에서만** 유지해요 — 템플릿에는 반영하지 않아요.
 
 ---
 

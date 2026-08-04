@@ -1,6 +1,6 @@
 # Android Deployment
 
-**Fastlane + GitHub Actions + Play Console Internal** 배포. `git tag v1.0.0 && git push --tags` 만으로 자동 배포.
+이 문서는 **Fastlane + GitHub Actions + Play Console Internal** 배포를 다뤄요. `git tag v1.0.0 && git push --tags` 만으로 자동 배포돼요.
 
 ---
 
@@ -56,10 +56,10 @@
 
 ### 3. Play Console 설정
 
-- [Play Console](https://play.google.com/console) 에서 앱 생성
-- 서비스 계정 생성 → JSON 키 다운로드 → Google Cloud Console 에서 "Android Publisher" 권한 부여
-- 내부 테스트 track 활성화
-- 최초 1번은 **수동 업로드** 가 필요해요 (AAB 직접 업로드) — 이후엔 API 로 가능
+- [Play Console](https://play.google.com/console) 에서 앱을 생성해요
+- 서비스 계정 생성 → JSON 키 다운로드 → Google Cloud Console 에서 "Android Publisher" 권한을 부여해요
+- 내부 테스트 track 을 활성화해요
+- 최초 1번은 **수동 업로드** 가 필요해요 (AAB 직접 업로드) — 이후엔 API 로 가능해요
 
 ---
 
@@ -77,7 +77,7 @@ git tag v1.2.3
 git push origin main --tags
 ```
 
-**GHA 워크플로우 자동 실행** → `release-android.yml`.
+태그가 올라가면 **GHA 워크플로우가 자동 실행돼요** → `release-android.yml`.
 
 ---
 
@@ -186,7 +186,7 @@ Play Console 워크플로우:
 3. **Open test** (Beta): 무제한 · 공개 URL
 4. **Production**: 정식 배포 · 심사 1~7일
 
-본 GHA 는 **Internal 만** 자동 배포. 상위 track 승격은 Play Console 에서 수동.
+본 GHA 는 **Internal 만** 자동 배포해요. 상위 track 승격은 Play Console 에서 수동으로 해요.
 
 ---
 
@@ -194,15 +194,15 @@ Play Console 워크플로우:
 
 ### "Upload key not matching"
 
-Play Console 의 App Signing 에서 "Upload certificate" 가 `upload-keystore.jks` 와 다르면 발생. 처음 앱 등록 시 **Play App Signing 활성화** + upload 인증서 지문 맞추기.
+Play Console 의 App Signing 에서 "Upload certificate" 가 `upload-keystore.jks` 와 다르면 발생해요. 처음 앱 등록 시 **Play App Signing 을 활성화** 하고 upload 인증서 지문을 맞춰요.
 
 ### "Version code already used"
 
-`pubspec.yaml` 의 `version` 의 `+` 뒤 숫자가 Play 에 이미 올라간 값과 같거나 작으면 실패. 항상 증가.
+`pubspec.yaml` 의 `version` 의 `+` 뒤 숫자가 Play 에 이미 올라간 값과 같거나 작으면 실패해요. 항상 증가시켜요.
 
 ### "Package name conflict"
 
-Play Console 앱 패키지명과 Android `applicationId` 가 같아야 해요. 새 앱 생성 시 `rename-app.sh` 결과 확인.
+Play Console 앱 패키지명과 Android `applicationId` 가 같아야 해요. 새 앱 생성 시 `rename-app.sh` 결과를 확인하세요.
 
 ---
 

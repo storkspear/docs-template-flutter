@@ -1,8 +1,8 @@
 # API Contract
 
-`template-flutter` 과 짝 백엔드 [`template-spring`](https://github.com/storkspear/template-spring) 의 **1:1 계약** 정리. 응답 스키마 · 에러 코드 · 인증 흐름이 양쪽에서 **완전 동일** 해요.
+이 폴더는 `template-flutter` 과 짝 백엔드 [`template-spring`](https://github.com/storkspear/template-spring) 사이의 **1:1 계약** 을 정리해요. 응답 스키마 · 에러 코드 · 인증 흐름이 양쪽에서 **완전 동일** 해요.
 
-> **왜 1:1?** 같은 개발자가 프론트와 백엔드를 함께 운영하는 앱 공장 전제. Mapper 층 제거. 근거는 [`ADR-009`](../philosophy/adr-009-backend-contract.md).
+> **왜 1:1?** 같은 개발자가 프론트와 백엔드를 함께 운영하는 앱 공장 전제라, Mapper 층을 아예 제거했어요. 근거는 [`ADR-009`](../philosophy/adr-009-backend-contract.md) 에 있어요.
 
 ---
 
@@ -35,12 +35,12 @@
 1. 백엔드의 `ApiResponse.java` · `ErrorInfo` 구현 enum (`CommonError.java` / `AuthError.java` 등) 수정 → `tools/verify/gen-snapshot.sh` 재실행·커밋 (안 하면 backend CI 가 staleness 로 FAIL)
 2. 프론트의 `api_response.dart` · `error_code.dart` **동시** 수정
 3. 두 레포에 **같은 커밋 메시지** 로 PR
-4. `flutter test` 의 계약 크로스체크(`test/contract/contract_test.dart`, 클라 참조 ⊆ 스냅샷)가 어긋남을 잡아요. 스냅샷 복사본 갱신은 `contract-sync.yml` 이 매일 auto-PR 로도 수행 (자동 머지 없음)
+4. `flutter test` 의 계약 크로스체크(`test/contract/contract_test.dart`, 클라 참조 ⊆ 스냅샷)가 어긋남을 잡아요. 스냅샷 복사본 갱신은 `contract-sync.yml` 이 매일 auto-PR 로도 수행해요 (자동 머지 없음)
 
 ### 프론트 변경 시
 
-- 프론트 단독으로 계약을 바꾸지 **마세요**. 백엔드에 요청 먼저.
-- DTO 필드 추가 · 삭제는 반드시 백엔드 리드.
+- 프론트 단독으로 계약을 바꾸지 **마세요**. 백엔드에 먼저 요청해요.
+- DTO 필드 추가 · 삭제는 반드시 백엔드가 리드해요.
 
 ---
 

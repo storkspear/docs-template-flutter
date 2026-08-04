@@ -1,8 +1,8 @@
 # Error Codes
 
-서버(template-spring) ↔ 클라이언트(template-flutter) 간 **ErrorCode 1:1 매핑**. 양쪽이 동일한 prefix 형식(`CMN_*`, `ATH_*`)을 공유해요.
+이 문서는 서버(template-spring) ↔ 클라이언트(template-flutter) 간 **ErrorCode 1:1 매핑** 을 정리해요. 양쪽이 동일한 prefix 형식(`CMN_*`, `ATH_*`)을 공유해요.
 
-> **Source of Truth**: Spring 측이 선언하고 Flutter 가 매핑. 변경 시 양쪽 동시 갱신 필수 — `lib/kits/backend_api_kit/error_code.dart` docstring 의 동기화 의무 참조.
+> **Source of Truth**: Spring 측이 선언하고 Flutter 가 매핑해요. 변경 시 양쪽 동시 갱신이 필수예요 — `lib/kits/backend_api_kit/error_code.dart` docstring 의 동기화 의무를 참조하세요.
 >
 > Spring 정의 위치:
 > - `template-spring/common/common-web/.../exception/CommonError.java` (CMN_*)
@@ -14,7 +14,7 @@
 
 ### 공통 — `CMN_*` (CommonError)
 
-도메인에 속하지 않는 범용 에러. JWT access token 관련도 여기에 포함 (common-security 가 core-auth-api 에 의존할 수 없는 모듈 구조 때문).
+도메인에 속하지 않는 범용 에러예요. JWT access token 관련도 여기에 포함돼요 (common-security 가 core-auth-api 에 의존할 수 없는 모듈 구조 때문).
 
 | Code | HTTP | Dart 상수 | 설명 |
 |------|------|---------|------|
@@ -34,7 +34,7 @@
 
 ### 인증 도메인 — `ATH_*` (AuthError)
 
-이메일/소셜 로그인, refresh/reset/verification 토큰 관련.
+이메일/소셜 로그인, refresh/reset/verification 토큰 관련 에러를 모아요.
 
 | Code | HTTP | Dart 상수 | 설명 |
 |------|------|---------|------|
@@ -54,7 +54,7 @@
 
 > **`ATH_006` 은 결번**: 비어 있고 재사용하지 않아요 (`ACCOUNT_LOCKED` 는 `ATH_014`).
 >
-> **2FA 로그인 흐름**: 2FA enabled 유저의 1단계(email/social) 응답은 에러가 아니라 `{twoFactorToken}` (user/tokens 없음) 을 내려요. 클라이언트는 `ATH_007` 등을 2단계(`/2fa/login`) 및 관리 화면에서 만나요. 자세한 흐름은 [`auth-flow.md`](./auth-flow.md).
+> **2FA 로그인 흐름**: 2FA enabled 유저의 1단계(email/social) 응답은 에러가 아니라 `{twoFactorToken}` (user/tokens 없음) 을 내려요. 클라이언트는 `ATH_007` 등을 2단계(`/2fa/login`) 및 관리 화면에서 만나요. 자세한 흐름은 [`auth-flow.md`](./auth-flow.md) 를 참고하세요.
 >
 > **이메일 발송 실패는 ATH 가 아니라 별도 `EmailError`**: `EMAIL_001`(502, 발송 실패) · `EMAIL_002`(503, 설정 누락). 클라 `ErrorCode.emailDeliveryFailed` 는 `EMAIL_001` 에 매핑돼요.
 
@@ -65,7 +65,7 @@
 
 ### 유저 도메인 — `USR_*` (UserError)
 
-유저 엔티티 조회·등록 관련.
+유저 엔티티 조회·등록 관련 에러예요.
 
 | Code | HTTP | Dart 상수 | 설명 |
 |------|------|---------|------|
@@ -74,7 +74,7 @@
 
 ### 스토리지 도메인 — `STG_*` (StorageError)
 
-S3/Cloud Storage 어댑터 호출 관련. 파생 레포가 첨부파일/이미지 업로드를 다룰 때 분기.
+S3/Cloud Storage 어댑터 호출 관련 에러예요. 파생 레포가 첨부파일/이미지 업로드를 다룰 때 분기에 써요.
 
 | Code | HTTP | Dart 상수 | 설명 |
 |------|------|---------|------|
@@ -89,11 +89,11 @@ S3/Cloud Storage 어댑터 호출 관련. 파생 레포가 첨부파일/이미�
 | `STG_009` | 503 | `ErrorCode.adapterUnavailable` | 어댑터 일시 장애 |
 | `STG_010` | 500 | `ErrorCode.deleteFailed` | 삭제 실패 |
 
-> 서버엔 추가로 `STG_011` (500, copy failed) 이 있어요 — 클라엔 아직 미매핑.
+> 서버엔 추가로 `STG_011` (500, copy failed) 이 있어요 — 클라엔 아직 미매핑이에요.
 
 ### 첨부/파일 도메인 — `ATC_*` (AttachmentError)
 
-앱 파일 업로드·조회 API (`file_kit`). 티켓 발급 검증·presigned GET 인가 위반 매핑. 자세한 흐름은 [`file-api.md`](./file-api.md).
+앱 파일 업로드·조회 API (`file_kit`) 의 에러예요. 티켓 발급 검증과 presigned GET 인가 위반을 매핑해요. 자세한 흐름은 [`file-api.md`](./file-api.md) 를 참고하세요.
 
 | Code | HTTP | Dart 상수 | 설명 |
 |------|------|---------|------|
@@ -102,7 +102,7 @@ S3/Cloud Storage 어댑터 호출 관련. 파생 레포가 첨부파일/이미�
 | `ATC_003` | 413 | `ErrorCode.fileSizeExceeded` | 업로드 `sizeBytes` 가 정책 상한(`app.uploads.max-size-bytes`) 초과 |
 | `ATC_004` | 422 | `ErrorCode.attachmentAssociationInvalid` | 게시물 `attachmentKeys` 연관 검증 위반 (타인 업로드·미존재·비ACTIVE 등) |
 
-> **`ATC_001` 은 존재 은닉 코드**: 미존재·검역(QUARANTINED)·삭제·타인 소유·비공개 게시물 첨부를 **모두 404 로 통일**해요 (비추측 storageKey 정책과 일관 — 어느 사유인지 클라에 노출 안 함).
+> **`ATC_001` 은 존재 은닉 코드**: 미존재·검역(QUARANTINED)·삭제·타인 소유·비공개 게시물 첨부를 **모두 404 로 통일**해요 (비추측 storageKey 정책과 일관 — 어느 사유인지 클라에 노출하지 않아요).
 
 ### 결제 도메인 — `BIL_*` (BillingError)
 
@@ -110,7 +110,7 @@ S3/Cloud Storage 어댑터 호출 관련. 파생 레포가 첨부파일/이미�
 
 ### 클라이언트 로컬
 
-백엔드가 내려준 코드가 아닌, Flutter 측이 자체 생성하는 코드. `ApiException` factory 가 발행해요.
+백엔드가 내려준 코드가 아니라 Flutter 측이 자체 생성하는 코드예요. `ApiException` factory 가 발행해요.
 
 | Code | 발생 | 설명 |
 |------|------|------|
@@ -120,12 +120,12 @@ S3/Cloud Storage 어댑터 호출 관련. 파생 레포가 첨부파일/이미�
 
 ### ViewModel fallback codes
 
-ViewModel 의 `safeErrorCode(e, fallbackCode: '...')` 호출 시 사용하는 도메인-친화 코드. 백엔드 응답이 아닌 UI 단의 그룹핑.
+ViewModel 의 `safeErrorCode(e, fallbackCode: '...')` 호출 시 사용하는 도메인-친화 코드예요. 백엔드 응답이 아니라 UI 단의 그룹핑이에요.
 
 - `LOGIN_FAILED` (login_view_model.dart)
 - `SIGNUP_FAILED`
 - `PASSWORD_RESET_FAILED` (password_reset_view_model.dart)
-- 도메인별 fallback 은 파생 레포에서 추가 (예: `EXPENSE_SAVE_FAILED`)
+- 도메인별 fallback 은 파생 레포에서 추가해요 (예: `EXPENSE_SAVE_FAILED`)
 
 ---
 
@@ -219,7 +219,7 @@ try {
 
 **2) 화면에서 i18n 메시지 매핑**
 
-`lib/kits/backend_api_kit/api_exception.dart` 의 `safeErrorCode(e)` 로 안전하게 코드 추출 후 ARB 키와 매핑.
+`lib/kits/backend_api_kit/api_exception.dart` 의 `safeErrorCode(e)` 로 안전하게 코드를 추출한 뒤 ARB 키와 매핑해요.
 
 ```dart
 String _localizedError(BuildContext context, String code) {
@@ -240,7 +240,7 @@ String _localizedError(BuildContext context, String code) {
 }
 ```
 
-> 위 ARB 키들은 예시예요. 실제 `lib/core/i18n/app_ko.arb` / `app_en.arb` 에 정의된 키와 일치시키세요. 새 키 추가 시 `flutter gen-l10n` 실행 필수.
+> 위 ARB 키들은 예시예요. 실제 `lib/core/i18n/app_ko.arb` / `app_en.arb` 에 정의된 키와 일치시키세요. 새 키 추가 시 `flutter gen-l10n` 실행이 필수예요.
 >
 > 코드 비교는 `ErrorCode` 상수만 써요 — 리터럴 직접 비교는 `api_exception.dart` 규약 위반이에요.
 
@@ -248,22 +248,22 @@ String _localizedError(BuildContext context, String code) {
 
 ## 새 ErrorCode 추가 워크플로우
 
-1. **Spring**: 도메인에 따라 `CommonError.java` (범용) 또는 `XxxError.java` (도메인별 — auth/user/device 등) 에 enum 추가. code 형식 `<3자약어>_<번호>` (예: `EXP_001` for expense 도메인).
-2. **Flutter**: `lib/kits/backend_api_kit/error_code.dart` 에 상수 추가. **이 파일 docstring 에 명시된 동기화 의무 준수**.
-3. **i18n**: `lib/core/i18n/app_ko.arb` + `app_en.arb` 양쪽에 새 키 추가 → `flutter gen-l10n`.
-4. **Screen**: `_localizedError` (또는 동등 함수) switch 에 case 추가.
-5. **테스트**: `test/kits/backend_api_kit/api_exception_test.dart` 에 새 코드 boolean helper 추가하면 그 테스트도 갱신.
-6. **양쪽 동시 PR**: Spring 과 Flutter 의 변경은 같은 sprint 안에 배포 — 한쪽만 먼저 나가면 분기 처리 fail.
+1. **Spring**: 도메인에 따라 `CommonError.java` (범용) 또는 `XxxError.java` (도메인별 — auth/user/device 등) 에 enum 을 추가해요. code 형식은 `<3자약어>_<번호>` 예요 (예: `EXP_001` for expense 도메인).
+2. **Flutter**: `lib/kits/backend_api_kit/error_code.dart` 에 상수를 추가해요. **이 파일 docstring 에 명시된 동기화 의무를 지켜요**.
+3. **i18n**: `lib/core/i18n/app_ko.arb` + `app_en.arb` 양쪽에 새 키 추가 → `flutter gen-l10n` 을 실행해요.
+4. **Screen**: `_localizedError` (또는 동등 함수) switch 에 case 를 추가해요.
+5. **테스트**: `test/kits/backend_api_kit/api_exception_test.dart` 에 새 코드 boolean helper 를 추가하면 그 테스트도 갱신해요.
+6. **양쪽 동시 PR**: Spring 과 Flutter 의 변경은 같은 sprint 안에 배포해요 — 한쪽만 먼저 나가면 분기 처리가 실패해요.
 
 ---
 
 ## 주의사항
 
-- **prefix 일관성**: code 는 항상 `<도메인약어>_<번호>` 형식. 예외 없음.
-- **HTTP 상태 코드와 별개**: 같은 401 안에서도 `CMN_004` vs `CMN_007` vs `ATH_002` 가 의미가 달라요. 분기는 code 로만.
-- **details 활용**: validation 에러는 `details.field` 로 첫 위반 필드명 전달 (Spring `GlobalExceptionHandler` 가 `Map.of("field", ...)` 자동 첨부). 다중 필드 일괄 전달은 미지원.
+- **prefix 일관성**: code 는 항상 `<도메인약어>_<번호>` 형식이에요. 예외는 없어요.
+- **HTTP 상태 코드와 별개**: 같은 401 안에서도 `CMN_004` vs `CMN_007` vs `ATH_002` 가 의미가 달라요. 분기는 code 로만 해요.
+- **details 활용**: validation 에러는 `details.field` 로 첫 위반 필드명을 전달해요 (Spring `GlobalExceptionHandler` 가 `Map.of("field", ...)` 자동 첨부). 다중 필드 일괄 전달은 미지원이에요.
 - **열거 공격 방지**: `ATH_001` 은 의도적으로 "이메일/비밀번호" 둘 중 무엇이 틀렸는지 구분하지 않아요.
-- **소셜 로그인 details**: `ATH_004` 는 `details.provider: "kakao"` 처럼 provider 정보 포함 권장.
+- **소셜 로그인 details**: `ATH_004` 는 `details.provider: "kakao"` 처럼 provider 정보 포함이 권장돼요.
 
 ---
 

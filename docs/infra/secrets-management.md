@@ -1,6 +1,6 @@
 # Secrets Management
 
-**비밀 값 관리의 3층 구조** — `.env` (로컬 개발) · GitHub Secrets (CI · 배포) · `--dart-define` (빌드 주입). 커밋 금지 목록 엄격.
+이 문서는 **비밀 값 관리의 3층 구조** — `.env` (로컬 개발) · GitHub Secrets (CI · 배포) · `--dart-define` (빌드 주입) — 를 다뤄요. 커밋 금지 목록은 엄격하게 지켜요.
 
 ---
 
@@ -32,7 +32,7 @@
 
 ### 파일 위치
 
-레포 루트의 `.env` (git 무시). `.env.example` 을 복사해서 시작:
+레포 루트의 `.env` 에 둬요 (git 무시). `.env.example` 을 복사해서 시작해요:
 
 ```bash
 cp .env.example .env
@@ -54,7 +54,7 @@ NAVER_CLIENT_ID=...                      # auth_kit + naver 활성 시
 NAVER_CLIENT_SECRET=...                  # 동일
 ```
 
-> Google OAuth (Google Sign-In) 의 Client ID 는 `google-services.json` / `GoogleService-Info.plist` 안에 포함되므로 별도 환경변수 불필요.
+> Google OAuth (Google Sign-In) 의 Client ID 는 `google-services.json` / `GoogleService-Info.plist` 안에 포함되므로 별도 환경변수가 필요 없어요.
 
 ### 실행 시 주입
 
@@ -109,7 +109,7 @@ base64 -i android/app/src/prod/google-services.json | gh secret set GOOGLE_SERVI
 
 ### Environment secrets
 
-staging · production 분리 필요 시 Environment 단위 secret:
+staging · production 분리가 필요하면 Environment 단위 secret 을 써요:
 
 ```yaml
 jobs:
@@ -156,7 +156,7 @@ static const dsn = String.fromEnvironment('SENTRY_DSN');
 static const host = String.fromEnvironment('POSTHOG_HOST', defaultValue: 'https://us.i.posthog.com');
 ```
 
-주입 안 됐을 때 null 대신 empty string → null 체크 대신 `isEmpty` 확인.
+주입이 안 됐을 때 null 대신 empty string 이 돼요 → null 체크 대신 `isEmpty` 로 확인해요.
 
 ---
 
@@ -207,7 +207,7 @@ git filter-branch --force --index-filter \
   --prune-empty --tag-name-filter cat -- --all
 ```
 
-그리고 **해당 키 즉시 무효화 + 재발급**. Force push 만으론 캐시 · mirror 에 남을 수 있어요.
+그리고 **해당 키를 즉시 무효화하고 재발급해요**. Force push 만으론 캐시 · mirror 에 남을 수 있어요.
 
 ---
 
