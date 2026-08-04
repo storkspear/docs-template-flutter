@@ -1,6 +1,6 @@
 # Onboarding — 파생 레포 최초 셋업
 
-파생 레포 생성 → 로컬에서 **앱이 시뮬레이터에 뜨기** 까지의 여정. 약 1시간 예상.
+파생 레포를 만들고 로컬에서 **앱이 시뮬레이터에 뜨기** 까지를 순서대로 안내하는 문서예요. 그대로 따라 하면 약 1시간이 걸려요.
 
 ---
 
@@ -9,7 +9,7 @@
 ### 필수
 
 - [ ] **Flutter SDK** `3.44.8` (`.fvmrc` 핀) — [fvm](https://fvm.app/) 으로 버전 관리 권장
-- [ ] **Dart SDK** — Flutter 에 번들된 Dart 사용 (`pubspec.yaml` constraint: `^3.8.1`)
+- [ ] **Dart SDK** — Flutter 에 번들된 Dart 사용 (`pubspec.yaml` constraint: `^3.12.0`)
 - [ ] **Git** 2.30+
 - [ ] **Xcode** (iOS 빌드용) — macOS 전용. App Store 에서 설치
 - [ ] **Android Studio** 또는 Android SDK Command-Line Tools
@@ -28,7 +28,7 @@
 flutter doctor
 ```
 
-모든 항목이 ✓ 거나, "Connected device" 만 비어있어야 정상. Android licenses · Xcode 설치 이슈는 `flutter doctor --android-licenses` 등으로 해결.
+모든 항목이 ✓ 거나, "Connected device" 만 비어 있으면 정상이에요. Android licenses · Xcode 설치 이슈는 `flutter doctor --android-licenses` 등으로 해결해요.
 
 ---
 
@@ -260,10 +260,10 @@ template-spring 백엔드를 안 띄웠어도 인증 흐름 끝까지 keyless �
 
 ### 확인 포인트
 
-- [ ] 시뮬레이터에 앱이 뜸
-- [ ] 앱 이름이 `<slug>` 로 표시
-- [ ] 스플래시 → 홈 화면
-- [ ] `flutter run` 콘솔에 에러 없음
+- [ ] 시뮬레이터에 앱이 떠요
+- [ ] 앱 이름이 `<slug>` 로 표시돼요
+- [ ] 스플래시 → 홈 화면으로 이어져요
+- [ ] `flutter run` 콘솔에 에러가 없어요
 
 ---
 
@@ -298,7 +298,7 @@ firebase login                                  # 인터랙티브 인증 1회
 ### 사용자가 직접 마무리할 콘솔 1회 작업 (스크립트 출력에 URL 안내됨)
 
 1. **Firebase Console → Authentication → Sign-in method → Google 활성화** (firebase CLI 미지원)
-2. **Android SHA-1 추가** — debug.keystore SHA-1 자동 추출돼서 출력됨. 콘솔에 paste → 저장
+2. **Android SHA-1 추가** — debug.keystore SHA-1 이 자동 추출돼서 출력돼요. 콘솔에 paste → 저장
 3. plist 다시 다운로드 → `<repo> dev link-oauth` 재실행 (Auth 활성 후 CLIENT_ID 갱신)
 4. `.env.dev` 의 `SENTRY_DSN` / `POSTHOG_KEY` / `BASE_URL` 직접 입력
 
@@ -322,14 +322,14 @@ firebase login                                  # 인터랙티브 인증 1회
 
 ## §6 다음 단계
 
-로컬에서 앱이 뜨면 성공. 다음:
+로컬에서 앱이 뜨면 성공이에요. 다음 단계로 넘어가요:
 
 1. **Kit 조립 이해**: [`Journey 3단계 — Kit 조립`](./README.md#3-kit-조립은-어떻게--앱-유형-결정-30분) → 본인 앱 유형 확정
 2. **외부 서비스 자격 증명**: Sentry · PostHog · Firebase · 소셜 로그인 ([`4단계`](./README.md#4-발급은-어디서--외부-서비스-자격-증명-1--2시간))
 3. **첫 기능 구현**: [`Build First App`](./build-first-app.md)
 4. **배포 준비**: [`Deployment`](./deployment.md)
 
-막히면 [`Pitfalls`](./dogfood-pitfalls.md) 검색 먼저.
+막히면 [`Pitfalls`](./dogfood-pitfalls.md) 를 먼저 검색해 보세요.
 
 ---
 

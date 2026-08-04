@@ -1,8 +1,8 @@
 # Build First App — 첫 기능 완성 walkthrough
 
-파생 레포를 만들고 **첫 도메인 기능** 을 하나 구현하는 전체 흐름. 예제: **아이템 목록 앱**. 약 2~3시간.
+파생 레포를 만들고 **첫 도메인 기능** 을 하나 구현하는 전체 흐름을 따라가는 문서예요. 예제로 **아이템 목록 앱** 을 만들고, 약 2~3시간이 걸려요.
 
-> **가정**: [`Onboarding`](./onboarding.md) 를 마쳐서 시뮬레이터에 템플릿 홈이 떠 있는 상태. 앱 유형은 `backend-auth-app` recipe 선택.
+> **가정**: [`Onboarding`](./onboarding.md) 을 마쳐서 시뮬레이터에 템플릿 홈이 떠 있는 상태예요. 앱 유형은 `backend-auth-app` recipe 를 선택했다고 가정할게요.
 
 ---
 
@@ -88,7 +88,7 @@ class MyItemsPalette extends AppPalette {
 AppPaletteRegistry.install(MyItemsPalette());
 ```
 
-`flutter run` → 앱 색상이 오렌지 톤으로 전환됨 확인.
+`flutter run` 을 실행하면 앱 색상이 오렌지 톤으로 바뀐 걸 확인할 수 있어요.
 
 ---
 

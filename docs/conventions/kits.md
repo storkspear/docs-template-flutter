@@ -1,6 +1,6 @@
 # Kits 컨벤션
 
-FeatureKit 작성·제거·동기화 가이드. 15개 기본 kit + 파생 레포에서 자체 kit 추가하는 워크플로우.
+FeatureKit 을 만들고 · 제거하고 · 동기화하는 방법을 다루는 가이드예요. 15개 기본 kit 에 적용되는 규칙과, 파생 레포에서 자체 kit 을 추가하는 워크플로우까지 담았어요.
 
 > 빠른 인덱스: [15개 kit 목록 + 의존 관계도](../features/README.md). 본 문서는 **kit 을 만드는 사람** 입장의 컨벤션이에요.
 
@@ -75,7 +75,7 @@ app_kits.yaml          ←→     lib/main.dart                    →    tool/c
 Status: ISSUES FOUND
 ```
 
-→ `app_kits.yaml` 에 빠진 의존을 추가하거나, 의존하는 kit 을 함께 제거.
+→ `app_kits.yaml` 에 빠진 의존을 추가하거나, 의존하는 kit 을 함께 제거해요.
 
 > CI 자동화: `dart run tool/configure_app.dart --audit` (불일치 시 `exit 1` — pre-commit / CI 에서 호출 권장).
 
@@ -91,7 +91,7 @@ backend_api_kit (독립)
 auth_kit  payment_kit  file_kit    (셋 다 requires: backend_api_kit)
 ```
 
-나머지 11개는 모두 독립.
+나머지 11개는 모두 독립이에요.
 
 ### 3-1. 핵심 룰
 
@@ -125,7 +125,7 @@ try {
 
 ### 3-3. 미선언 cross-import 가 위험한 이유
 
-manifest `requires` 에 적지 않은 kit 을 import 하면 **다른 recipe 로 출발한 파생 레포에서 컴파일 실패**.
+manifest `requires` 에 적지 않은 kit 을 import 하면 **다른 recipe 로 출발한 파생 레포에서 컴파일이 실패해요**.
 
 규칙이 깨지면 이렇게 터져요 — `auth_kit/ui/login/login_screen.dart` 가 `observability_kit/dogfooding_panel.dart` 를 `kDebugMode` 가드 안에서 직접 import 한다고 해볼게요.
 
@@ -135,7 +135,7 @@ manifest `requires` 에 적지 않은 kit 을 import 하면 **다른 recipe 로 
 
 그래서 디버그 도구는 `observability_kit` 을 `requires` 에 선언한 화면 한 곳에서만 노출해요.
 
-이 규칙이 깨지면 사이즈 영향, 의존 관계 캐스케이드, 테스트 격리, recipe 호환성 모두 문제 발생. 자세한 근거는 [`ADR-002 · Layered Modules`](../philosophy/adr-002-layered-modules.md), [`ADR-003 · FeatureKit Registry`](../philosophy/adr-003-featurekit-registry.md).
+이 규칙이 깨지면 사이즈 영향, 의존 관계 캐스케이드, 테스트 격리, recipe 호환성 모두에 문제가 생겨요. 자세한 근거는 [`ADR-002 · Layered Modules`](../philosophy/adr-002-layered-modules.md), [`ADR-003 · FeatureKit Registry`](../philosophy/adr-003-featurekit-registry.md).
 
 ---
 
@@ -297,7 +297,7 @@ class LocationKit extends AppKit {
 - [ ] **권한** — `AndroidManifest.xml`, `Info.plist` 의 해당 kit 전용 권한 제거 (예: ads_kit 의 ATT)
 - [ ] **i18n** — 해당 kit UI 가 썼던 ARB 키 정리
 - [ ] **pubspec.yaml** — 해당 kit 만 쓰던 의존성 제거 (다른 kit 도 쓰면 유지)
-  - ⚠️ pubspec 에 남겨두면 native 플러그인 .aar 이 APK 에 그대로 포함됨 ([features/README.md tree-shaking 주의 참조](../features/README.md))
+  - ⚠️ pubspec 에 남겨두면 native 플러그인 .aar 이 APK 에 그대로 포함돼요 ([features/README.md tree-shaking 주의 참조](../features/README.md))
 - [ ] `dart run tool/configure_app.dart` → `Status: OK`
 - [ ] `flutter analyze` warning 0 건
 - [ ] `flutter test` 그린
@@ -321,7 +321,7 @@ class LocationKit extends AppKit {
 | `50` | OnboardingKit (첫 실행 시 `/onboarding`) |
 | `100` | 기본 (대부분 kit) |
 
-새 게이트 추가 시 충돌 없도록 우선순위 신중 결정. 상세는 [`ADR-018 · Redirect Priority`](../philosophy/adr-018-redirect-priority.md).
+새 게이트를 추가할 때는 충돌이 없도록 우선순위를 신중히 정해요. 상세는 [`ADR-018 · Redirect Priority`](../philosophy/adr-018-redirect-priority.md).
 
 ### 6-2. RedirectRule 시그니처
 
@@ -370,7 +370,7 @@ Listenable? get refreshListenable => _bridge ??= _AuthRefreshBridge(/* ... */);
 
 ## 7. BootStep 작성
 
-스플래시 단계에서 순차 실행. 실패해도 앱 부팅은 막지 않는 게 권장 (필수 단계는 main.dart 에서 직접 await).
+스플래시 단계에서 순차 실행돼요. 실패해도 앱 부팅은 막지 않는 걸 권장해요 (필수 단계는 main.dart 에서 직접 await 해요).
 
 ```dart
 class _MyKitInitStep implements BootStep {
@@ -394,14 +394,14 @@ class _MyKitInitStep implements BootStep {
 
 ## 8. 자주 막히는 함정
 
-CLAUDE.md §7 의 함정과 동일. 본 문서에서 강조:
+CLAUDE.md §7 의 함정과 동일해요. 본 문서에서 강조하는 것:
 
-1. **`AppKits.install` 누락** — 새 kit 만들고 main.dart 에 안 끼우면 모든 라우트/provider 가 사라진 듯 보임
-2. **`AppKits.attachContainer` 호출 순서** — ProviderContainer 생성 직후 호출해야 bootStep 내부에서 `container.read` 가능
-3. **미선언 kit cross-import** — manifest `requires` 에 없는 kit 의 import 는 다른 recipe 채택 시 컴파일 실패. 선언한 kit 의 type import 는 OK, 인스턴스는 provider 경유 (§3 참고)
-4. **`tool/configure_app.dart --audit`** 안 돌리고 커밋 — 의존성 누락이 런타임에야 발견됨
-5. **proguard-rules.pro 갱신 누락** — kit 추가 시 native 의존이 있으면 release 빌드에서 `NoClassDefFoundError`
-6. **i18n 누락** — kit UI 가 새 문자열 쓰면 ko/en ARB 양쪽에 추가 + `flutter gen-l10n`
+1. **`AppKits.install` 누락** — 새 kit 만들고 main.dart 에 안 끼우면 모든 라우트/provider 가 사라진 듯 보여요
+2. **`AppKits.attachContainer` 호출 순서** — ProviderContainer 생성 직후 호출해야 bootStep 내부에서 `container.read` 가 가능해요
+3. **미선언 kit cross-import** — manifest `requires` 에 없는 kit 의 import 는 다른 recipe 채택 시 컴파일이 실패해요. 선언한 kit 의 type import 는 OK, 인스턴스는 provider 경유 (§3 참고)
+4. **`tool/configure_app.dart --audit`** 안 돌리고 커밋 — 의존성 누락이 런타임에야 발견돼요
+5. **proguard-rules.pro 갱신 누락** — kit 추가 시 native 의존이 있으면 release 빌드에서 `NoClassDefFoundError` 가 나요
+6. **i18n 누락** — kit UI 가 새 문자열을 쓰면 ko/en ARB 양쪽에 추가하고 `flutter gen-l10n` 을 돌려요
 
 ---
 

@@ -76,7 +76,7 @@ device_info_kit (독립)
 - 나머지 11개는 독립 — 자유롭게 on/off
 - Kit 간 직접 import 는 원칙적으로 금지 ([`ADR-002`](../philosophy/adr-002-layered-modules.md)) — 인스턴스 접근은 Provider 경유. 단 `kit_manifest.requires` 에 **선언한** kit 의 타입 import (`ApiException`, `ErrorCode` 등) 는 허용해요 ([`kits.md` §3](../conventions/kits.md#3-kit-의존-관계-규칙))
 
-의존성 위반 시 `configure_app.dart --audit` 가 CI 에서 차단:
+의존성을 위반하면 `configure_app.dart --audit` 가 CI 에서 차단해요:
 ```text
 ✗ auth_kit requires backend_api_kit, which is not enabled
 ```
@@ -122,7 +122,7 @@ dart run tool/configure_app.dart
 
 ### Local-only Tracker (`recipes/local-only-tracker.yaml`)
 
-완전 로컬 · 서버 · 로그인 없음.
+서버도 로그인도 없는 완전 로컬 구성이에요.
 
 ```yaml
 kits:
@@ -136,7 +136,7 @@ kits:
 
 ### Local Notifier (`recipes/local-notifier-app.yaml`)
 
-로컬 알림 중심. 광고 포함.
+로컬 알림 중심 구성이고, 광고도 포함해요.
 
 ```yaml
 kits:
@@ -155,7 +155,7 @@ kits:
 
 ### Backend Auth (`recipes/backend-auth-app.yaml`)
 
-백엔드 연동 + JWT 인증.
+백엔드 연동에 JWT 인증을 얹은 구성이에요.
 
 ```yaml
 kits:
@@ -170,7 +170,7 @@ kits:
 
 ### Social Auth (`recipes/social-auth-app.yaml`)
 
-백엔드 연동 + 소셜 로그인 (Google · Apple · Kakao · Naver) 풀세트.
+백엔드 연동에 소셜 로그인 (Google · Apple · Kakao · Naver) 풀세트를 더한 구성이에요.
 
 ```yaml
 kits:
@@ -212,7 +212,7 @@ kits:
 5. `app_kits.yaml` · `lib/main.dart` 활성화
 6. 테스트 추가 (`test/kits/<kit_name>/`)
 
-표준 템플릿은 기존 Kit 하나 (예: `update_kit`) 복사 추천.
+표준 템플릿은 기존 Kit 하나 (예: `update_kit`) 를 복사해서 시작하는 걸 추천해요.
 
 ---
 
