@@ -1,12 +1,12 @@
 # Search Request
 
-검색 · 필터링 · 정렬 요청 DSL. 계약의 실체는 `conditions` 의 **`<field>_<op>` 키 형식**이에요 — Flutter `SearchRequest` 가 만들고, 백엔드 `QueryDslPredicateBuilder` 가 해석해요. 백엔드에 같은 이름의 클래스가 있는 건 아니에요 — [짝 스키마](#짝-스키마) 참조.
+이 문서는 검색 · 필터링 · 정렬 요청 DSL 을 다뤄요. 계약의 실체는 `conditions` 의 **`<field>_<op>` 키 형식**이에요 — Flutter `SearchRequest` 가 만들고, 백엔드 `QueryDslPredicateBuilder` 가 해석해요. 백엔드에 같은 이름의 클래스가 있는 건 아니에요 — [짝 스키마](#짝-스키마) 를 참조하세요.
 
 ---
 
 ## 기본 포맷
 
-`conditions` 는 **`<field>_<op>` 키를 가진 Map**. `page` 는 nested 객체. `direction` 은 대문자.
+`conditions` 는 **`<field>_<op>` 키를 가진 Map** 이에요. `page` 는 nested 객체고, `direction` 은 대문자를 써요.
 
 ```json
 {
@@ -40,7 +40,7 @@
 | `isNull` | `_isNull` | IS NULL | (true 고정) |
 | `isNotNull` | `_isNotNull` | IS NOT NULL | (true 고정) |
 
-> `between` 은 별도 메서드 없이 `gte` + `lte` 두 번 호출로 표현.
+> `between` 은 별도 메서드 없이 `gte` + `lte` 두 번 호출로 표현해요.
 >
 > 백엔드 파서 (`QueryDslPredicateBuilder`) 는 이 밖에 `startsWith` / `endsWith` / `between` / `empty` / 대소문자 무시 `i*` 변형 (`_ilike` 등) 도 인식해요. Flutter 빌더가 메서드로 노출하는 건 위 표까지고, 필요하면 `conditions` 맵에 키를 직접 넣을 수 있어요.
 

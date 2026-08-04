@@ -1,15 +1,12 @@
 # permissions_kit
 
-**런타임 권한 요청 + 거부 시 설정 유도 다이얼로그**. 카메라 · 위치 · 알림 등.
+카메라 · 위치 · 알림 같은 런타임 권한 요청과, 거부 시 설정 유도 다이얼로그를 처리하는 kit 이에요.
 
 ---
 
 ## 개요
 
-- **`permission_handler` 기반**: 표준 Flutter 권한 라이브러리
-- **자동 다이얼로그**: "영구 거부" 상태면 "설정으로 이동" 버튼
-- **플랫폼별 처리**: iOS · Android 권한 이름 자동 매핑
-- **순차 요청**: 여러 권한 순서대로
+표준 Flutter 권한 라이브러리인 `permission_handler` 를 기반으로 해요. "영구 거부" 상태면 "설정으로 이동" 버튼이 있는 다이얼로그를 자동으로 띄우고, iOS · Android 권한 이름은 자동 매핑돼요. 여러 권한이 필요하면 순차 요청으로 처리해요.
 
 ---
 
@@ -56,7 +53,7 @@ if (!mic) return;
 final loc = await PermissionHelper.ensure(context, Permission.location);
 ```
 
-> static 메서드라 Provider 통한 주입 불필요. 영구 거부 다이얼로그를 끄고 싶으면 `showOpenSettingsPrompt: false`.
+> static 메서드라 Provider 를 통한 주입이 필요 없어요. 영구 거부 다이얼로그를 끄고 싶으면 `showOpenSettingsPrompt: false` 를 넘겨요.
 
 ---
 

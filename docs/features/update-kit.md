@@ -1,6 +1,6 @@
 # update_kit
 
-**강제(hard)/경고(soft) 업데이트 감지 2단계**. Firebase Remote Config · 자체 API 와 연계 가능. `redirectPriority: 1` (최우선).
+강제(hard)/경고(soft) 2단계로 업데이트를 감지하는 kit 이에요. Firebase Remote Config 나 자체 API 와 연계할 수 있고, `redirectPriority: 1` 이라 모든 게이트 중 최우선으로 평가돼요.
 
 ---
 
@@ -8,8 +8,8 @@
 
 - **오버레이 게이트**: 부팅 시 `check()` 결과가 null이 아니면 `forceUpdateInfoNotifier` 방출 → `MaterialApp.builder` 의 `_ForceUpdateGate` (`lib/app.dart`) 가 전체 화면 위에 덮어씌워요(별도 라우트 없음). `info.isForce`로 분기: `true` → 닫기 불가 `ForceUpdateDialog`, `false` → 닫을 수 있는 `UpdateAvailableDialog`(경고)
 - **서비스 교체 가능**: **템플릿 기본 `main.dart`는 `BackendAppUpdateService`를 써요** — 스플래시에서 `GET /app-version`으로 게이트 마스터 스위치 `enabled`(bool)와 2단계 임계값 `forceMinVersion`/`warnMinVersion`(둘 다 nullable)을 조회해요. `enabled` 가 true 가 아니면(누락·malformed 포함) 임계값이 있어도 게이트 없음(null). enabled 일 때 클라가 **이하(≤)** 로 tier 를 계산해요 — 현재 버전 ≤ `forceMinVersion`(설정 시) → 강제(`isForce:true`), `forceMinVersion` < 현재 버전 ≤ `warnMinVersion`(설정 시) → 경고(`isForce:false`), 그 외 → 게이트 없음(`isAtOrBelow` 로 semver 비교). 불확실한 상황은 전부 **fail-open**이에요 — 조회 실패·응답 null·`enabled` 누락·임계값 malformed 는 물론, **현재 앱 버전 문자열이 파싱되지 않을 때도 게이트를 걸지 않아요**(잘못 걸면 전 사용자가 강제 업데이트로 잠기니까요). 세션 도중엔 `ApiClient.onUpgradeRequired`(426/`CMN_010`) 콜백이 항상 강제 다이얼로그로 안전망을 걸어요(서버는 426을 forceMin 미달에만 내려요). 이 기본 조립은 `backend_api_kit`이 필요해요. backend_api_kit 없는 recipe(`local-notifier-app` 등)는 `NoUpdateAppUpdateService`(`check()` 가 항상 null)로 되돌려야 해요 — 아래 "활성화" 참고
-- **Dialog**: 두 다이얼로그 모두 사용자에게 "업데이트" 버튼 제공(스토어 이동). 경고 다이얼로그는 추가로 X/"나중에" 닫기 버튼 제공
-- **`url_launcher`**: 스토어 URL 오픈
+- **Dialog**: 두 다이얼로그 모두 사용자에게 "업데이트" 버튼(스토어 이동)을 제공해요. 경고 다이얼로그는 추가로 X/"나중에" 닫기 버튼을 제공해요
+- **`url_launcher`**: 스토어 URL 오픈에 사용해요
 - **kit 자체는 backend_api_kit 을 몰라요**: `kit_manifest.yaml`의 `requires: []`는 정확해요. 위 결합은 kit 소스가 아니라 `main.dart`가 두 kit을 엮는 조립 지점에만 있어요.
 
 ---

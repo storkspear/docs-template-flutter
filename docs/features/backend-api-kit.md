@@ -1,15 +1,12 @@
 # backend_api_kit
 
-**Dio 기반 HTTP 클라이언트 + 3 인터셉터**. JWT 인증 · 에러 변환 · 로깅. 백엔드 연동 앱이면 반드시 활성화.
+Dio 기반 HTTP 클라이언트에 JWT 인증 · 에러 변환 · 로깅 3개 인터셉터를 얹은 kit 이에요. 백엔드 연동 앱이면 반드시 활성화해요 — `auth_kit` · `file_kit` · `payment_kit` 이 전부 이 kit 위에서 동작해요.
 
 ---
 
 ## 개요
 
-- **Dio** 클라이언트 하나 (`ApiClient`) 로 모든 HTTP 요청
-- **3 인터셉터** 자동 설치: Auth (토큰) · Error (예외 변환) · Logging (`AppConfig.isDev` — dev 만)
-- **응답 스키마**: 백엔드 `{data, error}` 1:1 대응 ([`ADR-009`](../philosophy/adr-009-backend-contract.md))
-- **SSL pinning** opt-in (`--dart-define=SSL_PINS=...`) ([`ADR-020`](../philosophy/adr-020-security-hardening.md))
+모든 HTTP 요청은 Dio 클라이언트 하나 (`ApiClient`) 로 나가요. 여기에 Auth (토큰) · Error (예외 변환) · Logging (`AppConfig.isDev` — dev 만) 3개 인터셉터가 자동으로 설치돼요. 응답 스키마는 백엔드의 `{data, error}` envelope 과 1:1 로 대응하고 ([`ADR-009`](../philosophy/adr-009-backend-contract.md)), SSL pinning 은 opt-in 이에요 (`--dart-define=SSL_PINS=...`, [`ADR-020`](../philosophy/adr-020-security-hardening.md)).
 
 ---
 

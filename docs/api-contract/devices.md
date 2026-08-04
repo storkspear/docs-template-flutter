@@ -1,8 +1,8 @@
 # Devices
 
-푸시 알림 발송 대상 기기 등록/해제. 짝 백엔드의 [`DeviceController`](https://github.com/storkspear/template-spring/blob/main/core/core-device-impl/src/main/java/com/factory/core/device/impl/controller/DeviceController.java) 와 1:1 결합.
+이 문서는 푸시 알림 발송 대상 기기의 등록/해제 계약을 다뤄요. 짝 백엔드의 [`DeviceController`](https://github.com/storkspear/template-spring/blob/main/core/core-device-impl/src/main/java/com/factory/core/device/impl/controller/DeviceController.java) 와 1:1 로 결합돼요.
 
-Flutter 측 호출은 [`lib/kits/backend_api_kit/device_registration.dart`](../../lib/kits/backend_api_kit/device_registration.dart) 의 `DeviceRegistration` 클래스가 담당.
+Flutter 측 호출은 [`lib/kits/backend_api_kit/device_registration.dart`](../../lib/kits/backend_api_kit/device_registration.dart) 의 `DeviceRegistration` 클래스가 담당해요.
 
 ---
 
@@ -13,7 +13,7 @@ Flutter 측 호출은 [`lib/kits/backend_api_kit/device_registration.dart`](../.
 | POST | `/api/apps/{appSlug}/devices` | 필수 | `ApiResponse<DeviceDto>` |
 | DELETE | `/api/apps/{appSlug}/devices/{id}` | 필수 | `204 No Content` |
 
-> `/api/apps/{appSlug}` prefix 가 붙어요 — `ApiClient.post` / `ApiClient.delete` 의 자동 prefix 적용 대상.
+> `/api/apps/{appSlug}` prefix 가 붙어요 — `ApiClient.post` / `ApiClient.delete` 의 자동 prefix 적용 대상이에요.
 
 ---
 
@@ -43,7 +43,7 @@ Content-Type: application/json
 
 ### Upsert 의미론
 
-**같은 user + 같은 platform** 으로 다시 호출하면 백엔드가 **기존 레코드 update** (새 token 으로 교체). 즉, FCM 토큰 갱신 시 별도 DELETE 없이 POST 만으로 갱신 가능. 이 동작은 짝 백엔드 `DeviceController.register` 의 docstring 에 명시돼요.
+**같은 user + 같은 platform** 으로 다시 호출하면 백엔드가 **기존 레코드를 update** 해요 (새 token 으로 교체). 즉, FCM 토큰 갱신 시 별도 DELETE 없이 POST 만으로 갱신할 수 있어요. 이 동작은 짝 백엔드 `DeviceController.register` 의 docstring 에 명시돼요.
 
 ### Response
 
@@ -63,9 +63,9 @@ Content-Type: application/json
 }
 ```
 
-> 필드는 짝 백엔드 `DeviceDto` record 의 8필드 그대로예요 — 계약 변경 시 이 record 가 진실의 출처.
+> 필드는 짝 백엔드 `DeviceDto` record 의 8필드 그대로예요 — 계약 변경 시 이 record 가 진실의 출처예요.
 
-응답의 `id` 를 클라가 보관해두면 향후 DELETE 시 그대로 사용 가능 (보통 로그아웃 직전 unregister 호출).
+응답의 `id` 를 클라가 보관해두면 향후 DELETE 시 그대로 쓸 수 있어요 (보통 로그아웃 직전 unregister 호출).
 
 ---
 
@@ -78,7 +78,7 @@ DELETE /api/apps/{appSlug}/devices/{id}
 Authorization: Bearer <access_token>
 ```
 
-`{id}` 는 등록 시 받은 device id.
+`{id}` 는 등록 시 받은 device id 예요.
 
 ### Response
 
@@ -86,7 +86,7 @@ Authorization: Bearer <access_token>
 204 No Content
 ```
 
-본문 없음. 본인 소유 디바이스가 아니면 `403 Forbidden` (또는 `404 Not Found` — 백엔드 정책에 따름).
+본문은 없어요. 본인 소유 디바이스가 아니면 `403 Forbidden` (또는 `404 Not Found` — 백엔드 정책에 따라요) 을 받아요.
 
 ---
 
@@ -122,7 +122,7 @@ NotificationsKit.init()
 
 ## 계약 변경 시
 
-- 새 `platform` 값 (예: `"web"`) 추가는 양쪽 동시 배포 필요. 짝 백엔드의 `Device.platform` 검증 로직 + Flutter 의 `Platform.isIOS / isAndroid` 분기 둘 다 갱신.
+- 새 `platform` 값 (예: `"web"`) 추가는 양쪽 동시 배포가 필요해요. 짝 백엔드의 `Device.platform` 검증 로직 + Flutter 의 `Platform.isIOS / isAndroid` 분기 둘 다 갱신해요.
 
 ---
 

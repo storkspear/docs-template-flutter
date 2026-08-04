@@ -1,14 +1,12 @@
 # nav_shell_kit
 
-**하단 네비게이션 셸 (`BottomNavigationBar`) + 선택적 중앙 FAB**. 2 ~ 5 개 메인 탭 구조 앱에 적합.
+하단 네비게이션 셸 (`BottomNavigationBar`) 과 선택적 중앙 FAB 을 제공하는 kit 이에요. 2 ~ 5 개 메인 탭 구조 앱에 적합해요.
 
 ---
 
 ## 개요
 
-- **go_router `StatefulShellRoute.indexedStack`** 사용 — 탭별 독립 네비게이션 스택 유지
-- **중앙 FAB** 옵션 — 주요 액션 (추가 · 녹음 등)
-- **아이콘 · 라벨** 커스터마이징
+go_router 의 `StatefulShellRoute.indexedStack` 을 사용해서 탭마다 독립된 네비게이션 스택이 유지돼요. 추가 · 녹음 같은 주요 액션을 위한 중앙 FAB 을 옵션으로 붙일 수 있고, 아이콘 · 라벨도 커스터마이징할 수 있어요.
 
 ---
 

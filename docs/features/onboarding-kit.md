@@ -1,15 +1,12 @@
 # onboarding_kit
 
-**다단계 온보딩 위자드 + 완료 플래그 영속 + 라우팅 게이트**. 첫 실행 시 사용자 온보딩 화면. `redirectPriority: 50`.
+다단계 온보딩 위자드와 완료 플래그 영속, 라우팅 게이트를 제공하는 kit 이에요. 첫 실행 시 사용자에게 온보딩 화면을 보여 주고, `redirectPriority: 50` 으로 동작해요.
 
 ---
 
 ## 개요
 
-- **라우팅 게이트**: 온보딩 미완료면 `/onboarding` 강제 이동
-- **완료 플래그**: `SharedPreferences` 에 저장 → 재시작 시에도 유지
-- **다단계 위자드**: `OnboardingStep` 인터페이스로 페이지 추가 가능
-- **Skip 버튼**: `OnboardingScaffold` 가 `onSkip` 콜백을 지원하지만, kit 의 기본 라우트는 이를 전달하지 않아요 — 쓰려면 파생 레포에서 커스텀 라우트로 `OnboardingScaffold(onSkip: ...)` 를 직접 구성해야 해요
+온보딩이 미완료면 라우팅 게이트가 `/onboarding` 으로 강제 이동시켜요. 완료 플래그는 `SharedPreferences` 에 저장돼서 재시작 후에도 유지돼요. 위자드 페이지는 `OnboardingStep` 인터페이스로 추가할 수 있어요. Skip 버튼은 `OnboardingScaffold` 가 `onSkip` 콜백으로 지원하지만, kit 의 기본 라우트는 이를 전달하지 않아요 — 쓰려면 파생 레포에서 커스텀 라우트로 `OnboardingScaffold(onSkip: ...)` 를 직접 구성해야 해요.
 
 ---
 

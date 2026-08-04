@@ -1,6 +1,6 @@
 # Error Handling
 
-모든 에러는 **`ApiException` 으로 표준화** 되어 ViewModel 에 도달해요. ViewModel 은 `safeErrorCode` · `safeErrorMessage` 로 안전 추출. UI 는 code 기반으로 i18n 번역. 이 규약의 근거는 [`ADR-009`](../philosophy/adr-009-backend-contract.md) · [`ADR-010`](../philosophy/adr-010-queued-interceptor.md) · [`ADR-011`](../philosophy/adr-011-interceptor-chain.md) 참조.
+모든 에러는 **`ApiException` 으로 표준화** 되어 ViewModel 에 도달해요. ViewModel 은 `safeErrorCode` · `safeErrorMessage` 로 안전하게 추출하고, UI 는 code 기반으로 i18n 번역해요. 이 규약의 근거는 [`ADR-009`](../philosophy/adr-009-backend-contract.md) · [`ADR-010`](../philosophy/adr-010-queued-interceptor.md) · [`ADR-011`](../philosophy/adr-011-interceptor-chain.md) 을 참조하세요.
 
 ---
 
@@ -68,7 +68,7 @@ class ApiException implements Exception {
 
 ## safeErrorCode / safeErrorMessage
 
-ViewModel 이 catch 블록에서 사용. raw exception 의 stack · 내부 경로가 UI 로 유출되는 걸 차단.
+ViewModel 이 catch 블록에서 사용해요. raw exception 의 stack · 내부 경로가 UI 로 유출되는 걸 차단해요.
 
 ```dart
 // lib/kits/backend_api_kit/api_exception.dart 발췌
@@ -116,7 +116,7 @@ Future<void> signInWithEmail(String email, String password) async {
 
 ## ErrorCode 상수
 
-서버 (Spring `CommonError` / `AuthError`) 와 **prefix 형식 (`CMN_*` / `ATH_*`) 으로 매핑**. 전체 목록 + 동기화 의무는 [`api-contract/error-codes.md`](../api-contract/error-codes.md), 설계 결정은 [`ADR-009`](../philosophy/adr-009-backend-contract.md).
+서버 (Spring `CommonError` / `AuthError`) 와 **prefix 형식 (`CMN_*` / `ATH_*`) 으로 매핑** 돼요. 전체 목록과 동기화 의무는 [`api-contract/error-codes.md`](../api-contract/error-codes.md) 에, 설계 결정은 [`ADR-009`](../philosophy/adr-009-backend-contract.md) 에 있어요.
 
 ```dart
 // lib/kits/backend_api_kit/error_code.dart 발췌
@@ -147,13 +147,13 @@ if (state.errorCode == ErrorCode.invalidCredentials) {
 }
 ```
 
-switch 쓰지 않는 이유: Dart enum 이 아니라 static const String. switch 는 컴파일 타임 constant 비교라 가능하지만 `if` 가 관용.
+switch 를 쓰지 않는 이유는 이 값들이 Dart enum 이 아니라 static const String 이기 때문이에요. switch 도 컴파일 타임 constant 비교라 가능하지만 `if` 가 관용이에요.
 
 ---
 
 ## Screen 에서 i18n 변환
 
-ViewModel 은 code 만, Screen 이 번역. [`ADR-016 · i18n 처음부터`](../philosophy/adr-016-i18n-from-start.md) 참조.
+ViewModel 은 code 만 넘기고, Screen 이 번역해요. [`ADR-016 · i18n 처음부터`](../philosophy/adr-016-i18n-from-start.md) 를 참조하세요.
 
 ```dart
 // Screen 의 helper — 케이스를 세분화하려면 ARB 양쪽에 키부터 추가 (i18n.md 참조)
@@ -172,29 +172,29 @@ String _localizedError(BuildContext context, String code) {
 
 ### 서버 `message` 를 직접 쓸 vs i18n 번역
 
-두 옵션:
+옵션은 두 가지예요:
 
 **Option A — 서버 message 그대로** (간단):
 ```dart
 Text(state.errorMessage ?? s.errorUnknown)
 ```
-- 장점: Screen 의 `_localizedError` 불필요.
-- 단점: 서버 메시지가 **한국어 고정** — 다국어 지원 안 됨.
+- 장점: Screen 의 `_localizedError` 가 필요 없어요.
+- 단점: 서버 메시지가 **한국어 고정** 이라 다국어 지원이 안 돼요.
 
 **Option B — code 기반 i18n** (다국어):
 ```dart
 Text(state.errorCode != null ? _localizedError(context, state.errorCode!) : '')
 ```
-- 장점: 영어 · 일본어 · 스페인어 대응 가능.
-- 단점: ARB 에 에러 키 추가 필요.
+- 장점: 영어 · 일본어 · 스페인어에 대응할 수 있어요.
+- 단점: ARB 에 에러 키를 추가해야 해요.
 
-**권장**: 단일 언어 앱은 Option A, 다국어 앱은 Option B. 템플릿은 Option B 를 기본 관용으로 해두되 Option A 도 허용.
+**권장**: 단일 언어 앱은 Option A, 다국어 앱은 Option B 가 맞아요. 템플릿은 Option B 를 기본 관용으로 해두되 Option A 도 허용해요.
 
 ---
 
 ## 401 자동 refresh (AuthInterceptor 의 동작)
 
-[`ADR-010`](../philosophy/adr-010-queued-interceptor.md) 참조.
+[`ADR-010`](../philosophy/adr-010-queued-interceptor.md) 을 참조하세요.
 
 ```text
 ApiClient.get('/users/me')
@@ -208,7 +208,7 @@ onTokenRefresh() 호출 → authService.refreshToken() 실행
   ↓ 실패: 원 401 전파 → ViewModel 이 수신
 ```
 
-ViewModel 은 **401 / refresh 실패를 구분 안 함** — `e.isUnauthorized` 가 true 인 `ApiException` 으로 받으면 signOut 결정.
+ViewModel 은 **401 과 refresh 실패를 구분하지 않아요** — `e.isUnauthorized` 가 true 인 `ApiException` 으로 받으면 signOut 을 결정해요.
 
 ```dart
 // 일반 API 호출은 토큰 걱정 없음 — 인터셉터가 자동
@@ -231,7 +231,7 @@ Future<void> loadProfile() async {
 
 ## 인터셉터 순서 (ApiClient 내부)
 
-[`ADR-011`](../philosophy/adr-011-interceptor-chain.md) 참조.
+[`ADR-011`](../philosophy/adr-011-interceptor-chain.md) 을 참조하세요.
 
 ```dart
 // lib/kits/backend_api_kit/api_client.dart 발췌
@@ -242,13 +242,13 @@ _dio.interceptors.addAll([
 ]);
 ```
 
-개발자가 직접 순서 바꾸면 안 돼요. 이 순서가 refresh · error 변환 흐름의 전제. LoggingInterceptor 는 무조건 설치하되 환경 분기 (`AppConfig.isDev`) 가 내부에서 처리되므로 `kDebugMode` 가드 불필요.
+개발자가 직접 순서를 바꾸면 안 돼요. 이 순서가 refresh · error 변환 흐름의 전제예요. LoggingInterceptor 는 무조건 설치하되, 환경 분기 (`AppConfig.isDev`) 가 내부에서 처리되므로 `kDebugMode` 가드는 필요 없어요.
 
 ---
 
 ## skipAuth 플래그 (비로그인 요청)
 
-로그인 · 가입 · 비번 찾기 요청은 **토큰 우회** 필요. `ApiClient.postRaw` 같은 API 가 내부적으로 `skipAuth: true` 설정.
+로그인 · 가입 · 비번 찾기 요청은 **토큰 우회** 가 필요해요. `ApiClient.postRaw` 같은 API 가 내부적으로 `skipAuth: true` 를 설정해요.
 
 ```dart
 // ApiClient 의 API
@@ -288,7 +288,7 @@ if (state.errorMessage?.contains('invalid') ?? false) {
 }
 ```
 
-**올바르게**: code 로 분기.
+**올바르게**: code 로 분기해요.
 ```dart
 if (state.errorCode == ErrorCode.invalidCredentials) {
   Text(s.loginFailed);
@@ -304,7 +304,7 @@ if (refreshFailed) {
 }
 ```
 
-**올바르게**: 원 401 전파 → ViewModel 이 상황 판단 후 signOut.
+**올바르게**: 원 401 을 그대로 전파하고, ViewModel 이 상황을 판단한 뒤 signOut 해요.
 
 ### ❌ switch 의 default 누락
 

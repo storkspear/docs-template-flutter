@@ -1,6 +1,6 @@
 # Security
 
-**5중 방어선** — Android R8 난독화 · Dart 심볼 난독화 · Cleartext 차단 · Keychain 정책 · SSL pinning (opt-in). 근거는 [`ADR-020`](../philosophy/adr-020-security-hardening.md).
+이 문서는 **5중 방어선** — Android R8 난독화 · Dart 심볼 난독화 · Cleartext 차단 · Keychain 정책 · SSL pinning (opt-in) — 을 다뤄요. 근거는 [`ADR-020`](../philosophy/adr-020-security-hardening.md) 에 있어요.
 
 ---
 
@@ -35,7 +35,7 @@ buildTypes {
 
 ### `android/app/proguard-rules.pro`
 
-플러그인별 `-keep` 규칙 유지. 주요 규칙:
+플러그인별 `-keep` 규칙을 유지해요. 주요 규칙은 이래요:
 
 ```proguard
 # android/app/proguard-rules.pro 발췌
@@ -61,7 +61,7 @@ buildTypes {
 
 ### 검증
 
-Release APK 에서 클래스명이 난독화됐는지:
+Release APK 에서 클래스명이 난독화됐는지 확인해요:
 
 ```bash
 cd android
@@ -69,7 +69,7 @@ cd android
 unzip -p app/build/outputs/apk/release/app-release.apk classes.dex | dexdump - | head
 ```
 
-`a.b.c` 같은 짧은 이름이 보이면 난독화 정상.
+`a.b.c` 같은 짧은 이름이 보이면 난독화가 정상 적용된 거예요.
 
 ---
 
@@ -84,11 +84,11 @@ flutter build appbundle \
   --split-debug-info=build/symbols
 ```
 
-`build/symbols/` 에 난독화 매핑 생성 (repo root 기준).
+`build/symbols/` 에 난독화 매핑이 생성돼요 (repo root 기준).
 
 ### Sentry 업로드 (필수)
 
-GHA 에서는 `android/fastlane/Fastfile` 의 `upload_sentry_mapping` lane 을 호출:
+GHA 에서는 `android/fastlane/Fastfile` 의 `upload_sentry_mapping` lane 을 호출해요:
 
 ```bash
 cd android
@@ -99,7 +99,7 @@ bundle exec fastlane android upload_sentry_mapping version:1.2.3
 # 둘 다 업로드 (release new → upload-proguard → upload-dif → finalize)
 ```
 
-업로드 안 하면 Sentry 대시보드의 스택 트레이스가 `a.b.c` 상태 → 디버깅 불가.
+업로드를 안 하면 Sentry 대시보드의 스택 트레이스가 `a.b.c` 상태로 남아 디버깅이 불가능해요.
 
 ---
 
@@ -134,11 +134,11 @@ bundle exec fastlane android upload_sentry_mapping version:1.2.3
 
 ### iOS
 
-`ATS (App Transport Security)` 가 기본 HTTPS 강제. 별도 설정 불필요.
+`ATS (App Transport Security)` 가 기본으로 HTTPS 를 강제해요. 별도 설정이 필요 없어요.
 
 ### 효과
 
-Release 빌드에서 `http://api.example.com` 요청 시 즉시 실패. `https://` 만 허용.
+Release 빌드에서 `http://api.example.com` 요청은 즉시 실패해요. `https://` 만 허용돼요.
 
 ---
 
@@ -162,7 +162,7 @@ static const _storage = FlutterSecureStorage(
 | `first_unlock` | 첫 unlock 이후 백그라운드도 접근 가능 (FCM · workmanager 필요) |
 | `this_device` | iCloud Keychain 백업 제외 (기기 복제 시 토큰 따라가지 않음) |
 
-상세는 [`ADR-013`](../philosophy/adr-013-token-atomic-storage.md).
+상세는 [`ADR-013`](../philosophy/adr-013-token-atomic-storage.md) 을 참고하세요.
 
 ---
 
@@ -184,7 +184,7 @@ echo | openssl s_client -servername api.example.com -connect api.example.com:443
   | openssl enc -base64
 ```
 
-출력을 `sha256/` prefix 를 붙여 사용: `sha256/BASE64_HASH=`
+출력에 `sha256/` prefix 를 붙여 사용해요: `sha256/BASE64_HASH=`
 
 > ⚠️ 핀은 **leaf 인증서 전체 DER** 의 SHA256 이에요 (SPKI 아님) — 런타임의
 > `SslPinning.computePinFromCert(cert.der)` 와 같은 방식. SPKI(`-pubkey`) 로
@@ -193,7 +193,7 @@ echo | openssl s_client -servername api.example.com -connect api.example.com:443
 
 ### 최소 2개 핀 유지
 
-인증서 갱신 시 **앱 업데이트 전** 에 기존 앱이 먹통 되지 않도록 2개 이상:
+인증서 갱신 시 **앱 업데이트 전** 에 기존 앱이 먹통 되지 않도록 2개 이상을 유지해요:
 - 현재 인증서 핀
 - 백업 (다음 발급 예정 인증서 공개키 핀)
 

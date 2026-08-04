@@ -1,16 +1,12 @@
 # notifications_kit
 
-**로컬 예약 알림 (특정 시각 · 매일 반복) + 타임존 처리**. FCM 푸시는 `NotificationService` 인터페이스를 파생 레포에서 구현해 통합.
+로컬 예약 알림 (특정 시각 · 매일 반복) 과 타임존 처리를 담당하는 kit 이에요. FCM 푸시가 필요하면 `NotificationService` 인터페이스를 파생 레포에서 구현해 통합해요.
 
 ---
 
 ## 개요
 
-- **로컬 알림**: `flutter_local_notifications` 기반. 앱 내부에서 예약
-- **타임존**: `timezone` 패키지로 DST · 지역 시간대 정확히 처리
-- **FCM 통합 옵션**: `NotificationService` 인터페이스를 파생 레포에서 구현 (백엔드 device 등록은 `backend_api_kit` 의 `DeviceRegistration` 사용)
-- **Debug 폴백**: 알림 권한 없거나 설정 전엔 콘솔 로그만
-- **권한**: `permissions_kit` 함께 쓰면 요청 UI 자동
+로컬 알림은 `flutter_local_notifications` 기반으로 앱 내부에서 예약하고, `timezone` 패키지로 DST · 지역 시간대를 정확히 처리해요. FCM 통합은 옵션이에요 — `NotificationService` 인터페이스를 파생 레포에서 구현하고, 백엔드 device 등록은 `backend_api_kit` 의 `DeviceRegistration` 을 사용해요. 알림 권한이 없거나 설정 전엔 Debug 폴백으로 콘솔 로그만 남기고, `permissions_kit` 을 함께 쓰면 권한 요청 UI 가 자동으로 붙어요.
 
 ---
 
@@ -74,7 +70,7 @@ await ref.read(scheduledAlertServiceProvider).cancel(100);
 await ref.read(scheduledAlertServiceProvider).cancelAll();
 ```
 
-> Android 12+ 에서 정시 알람 (`exactTiming: true`) 을 쓰려면 `SCHEDULE_EXACT_ALARM` 권한이 필요해요. 자세한 옵션은 `ScheduledAlertService` 인터페이스 dartdoc 참조.
+> Android 12+ 에서 정시 알람 (`exactTiming: true`) 을 쓰려면 `SCHEDULE_EXACT_ALARM` 권한이 필요해요. 자세한 옵션은 `ScheduledAlertService` 인터페이스 dartdoc 을 참조하세요.
 
 ### FCM 푸시 (선택)
 

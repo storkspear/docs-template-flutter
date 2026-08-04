@@ -1,6 +1,6 @@
 # Response Schema
 
-모든 API 응답은 **`{data, error}`** 상호 배타적 구조. 페이지네이션은 **`PageResponse<T>`** 표준.
+이 문서는 API 응답 스키마 계약을 다뤄요. 모든 API 응답은 **`{data, error}`** 상호 배타적 구조를 따르고, 페이지네이션은 **`PageResponse<T>`** 가 표준이에요.
 
 ---
 
@@ -52,10 +52,10 @@ Content-Type: application/json
 
 ### 규칙
 
-- `data` 와 `error` 는 **동시에 존재하지 않음**
-- 성공 시 `error: null`, 실패 시 `data: null`
-- **본문 없는 성공(204)은 바디 자체가 없음** — `ApiClient` 가 `ApiResponse.empty()` 로 정규화
-- `details` 는 선택 — 검증 에러 · 부가 정보
+- `data` 와 `error` 는 **동시에 존재하지 않아요**
+- 성공 시 `error: null`, 실패 시 `data: null` 이에요
+- **본문 없는 성공(204)은 바디 자체가 없어요** — `ApiClient` 가 `ApiResponse.empty()` 로 정규화해요
+- `details` 는 선택이에요 — 검증 에러 · 부가 정보에 써요
 
 ### Dart
 
@@ -79,13 +79,13 @@ class ApiError {
 }
 ```
 
-상세: [`ADR-009 · 백엔드 계약`](../philosophy/adr-009-backend-contract.md)
+상세는 [`ADR-009 · 백엔드 계약`](../philosophy/adr-009-backend-contract.md) 을 참고하세요.
 
 ---
 
 ## PageResponse<T>
 
-Spring Boot `Page<T>` 1:1 매핑.
+Spring Boot `Page<T>` 와의 1:1 매핑이에요.
 
 ### JSON
 
@@ -145,7 +145,7 @@ if (page.data!.hasNextPage) {
 
 ## 필드 네이밍
 
-**camelCase**. snake_case 금지.
+필드 이름은 **camelCase** 를 써요. snake_case 는 금지예요.
 
 ```json
 // ✅ 올바른 예
@@ -164,13 +164,13 @@ if (page.data!.hasNextPage) {
 
 ### 날짜 · 시간
 
-- **ISO 8601 UTC** (Z 접미사 또는 `+00:00`)
-- Dart: `DateTime.parse(...)` 로 자동 UTC 인식
+- **ISO 8601 UTC** (Z 접미사 또는 `+00:00`) 를 써요
+- Dart 는 `DateTime.parse(...)` 로 자동 UTC 인식해요
 
 ### 숫자
 
-- **원시 타입** (int · double) — JSON number
-- 금액: **정수 (원 단위)** 권장 — 부동소수점 정확도 문제 회피. `int amount` (예: 1500 = 1,500원)
+- **원시 타입** (int · double) — JSON number 로 보내요
+- 금액은 **정수 (원 단위)** 가 권장돼요 — 부동소수점 정확도 문제를 피할 수 있어요. `int amount` (예: 1500 = 1,500원)
 
 ---
 

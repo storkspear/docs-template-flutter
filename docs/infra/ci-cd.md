@@ -1,6 +1,6 @@
 # CI / CD
 
-GitHub Actions 기반 **CI (분석 · 테스트 · 빌드)** + **CD (스토어 배포)**.
+이 문서는 GitHub Actions 기반 **CI (분석 · 테스트 · 빌드)** 와 **CD (스토어 배포)** 를 다뤄요.
 
 ---
 
@@ -88,9 +88,9 @@ gh workflow run ci.yml --repo <owner>/<repo>
 
 ### 단계 순서
 
-1. **analyze-and-test** 먼저 통과해야
-2. **build-android** / **build-ios** 병렬 실행
-3. 실패 시 PR 머지 차단
+1. **analyze-and-test** 를 먼저 통과해야 해요
+2. 그다음 **build-android** / **build-ios** 가 병렬 실행돼요
+3. 실패 시 PR 머지가 차단돼요
 
 ### 핵심 검증
 
@@ -108,14 +108,14 @@ gh workflow run ci.yml --repo <owner>/<repo>
 
 ## release-android.yml
 
-상세는 [`android-deployment.md`](./android-deployment.md) 참조.
+상세는 [`android-deployment.md`](./android-deployment.md) 를 참조하세요.
 
-핵심 단계:
-1. Keystore · Play 자격증명 디코딩
-2. `flutter build appbundle --obfuscate --split-debug-info=...`
-3. `fastlane android beta` (Play Internal 업로드)
-4. Sentry 심볼 업로드
-5. 민감 파일 삭제
+핵심 단계는 이래요:
+1. Keystore · Play 자격증명을 디코딩해요
+2. `flutter build appbundle --obfuscate --split-debug-info=...` 로 빌드해요
+3. `fastlane android beta` 로 Play Internal 에 업로드해요
+4. Sentry 심볼을 업로드해요
+5. 민감 파일을 삭제해요
 
 ---
 
@@ -131,7 +131,7 @@ gh workflow run ci.yml --repo <owner>/<repo>
 | `SENTRY_DSN` · `SENTRY_AUTH_TOKEN` · `SENTRY_ORG` · `SENTRY_PROJECT` | Sentry |
 | `POSTHOG_KEY` | PostHog |
 
-자세한 건 [`secrets-management.md`](./secrets-management.md).
+자세한 건 [`secrets-management.md`](./secrets-management.md) 를 보세요.
 
 ---
 
@@ -154,15 +154,15 @@ updates:
     labels: [dependencies, ci]
 ```
 
-> Gradle 의존성 (`/android/app`) 은 현재 미포함 — Android native 라이브러리 교체 빈도가 낮아 수동 관리. 필요하면 `package-ecosystem: gradle` 블록 추가.
+> Gradle 의존성 (`/android/app`) 은 현재 미포함이에요 — Android native 라이브러리 교체 빈도가 낮아 수동으로 관리해요. 필요하면 `package-ecosystem: gradle` 블록을 추가하세요.
 
-추가하면 주 1회 PR 자동 생성. 테스트 통과하면 머지 (major 버전은 주의).
+추가하면 주 1회 PR 이 자동 생성돼요. 테스트가 통과하면 머지해요 (major 버전은 주의).
 
 ---
 
 ## Git Hooks (로컬)
 
-`.githooks/` 에 pre-commit · commit-msg · pre-push 훅 제공. `./scripts/init/setup.sh` 로 활성화:
+`.githooks/` 에 pre-commit · commit-msg · pre-push 훅을 제공해요. `./scripts/init/setup.sh` 로 활성화해요:
 
 ```bash
 ./scripts/init/setup.sh
@@ -170,8 +170,8 @@ updates:
 ```
 
 훅 내용:
-- **commit-msg**: `Co-Authored-By: Claude` 트레일러 차단 (AI 공동저자 표기 금지). ⚠️ Conventional Commits 포맷 자동 검증은 **하지 않아요** — 컨벤션 준수는 작성자 책임.
-- **pre-commit**: `dart format` 체크 (빠름, 1초 내) — 포맷 누락 시 commit 차단
+- **commit-msg**: `Co-Authored-By: Claude` 트레일러를 차단해요 (AI 공동저자 표기 금지). ⚠️ Conventional Commits 포맷 자동 검증은 **하지 않아요** — 컨벤션 준수는 작성자 책임이에요.
+- **pre-commit**: `dart format` 을 체크해요 (빠름, 1초 내) — 포맷 누락 시 commit 을 차단해요
 - **pre-push**: ci.yml 의 analyze-and-test job 과 동일한 5개 검사를 순서대로 실행해요 (약 35초) — ① `dart format` 재확인 ② `dart run tool/configure_app.dart --audit` ③ `bash tools/docs-check/docs-contract-test.sh` ④ `flutter analyze` ⑤ `flutter test`. `.fvmrc` 가 있고 fvm 이 설치돼 있으면 `fvm flutter` / `fvm dart` 를 경유해 `.fvmrc` 핀 버전으로 검사해요 — push CI 를 `CI_ON_PUSH` 게이트로 꺼둔 상태에서 이 훅이 CI 검증을 대신해요.
 
 ---
@@ -215,7 +215,7 @@ cd ios && pod install && cd ..
 flutter build ios --debug --no-codesign --flavor dev
 ```
 
-CI 가 실패할 때 가장 빠른 디버깅은 로컬 재현.
+CI 가 실패할 때 가장 빠른 디버깅은 로컬 재현이에요.
 
 ---
 

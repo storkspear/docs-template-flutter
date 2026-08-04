@@ -1,15 +1,12 @@
 # local_db_kit
 
-**Drift (SQLite ORM) + 마이그레이션 BootStep**. 로컬 전용 앱 · 오프라인 우선 앱의 핵심.
+Drift (SQLite ORM) 데이터베이스와 마이그레이션 BootStep 을 제공하는 kit 이에요. 로컬 전용 앱 · 오프라인 우선 앱의 핵심이에요.
 
 ---
 
 ## 개요
 
-- **Drift**: SQLite 를 Dart ORM 으로 다룸. 타입 안전 쿼리
-- **코드 생성**: `build_runner` 로 DAO · 테이블 클래스 자동 생성
-- **마이그레이션**: `DbMigrationStep` (BootStep) 이 버전 업 시 자동 실행 (Drift schema fingerprint 테스트는 템플릿 미포함 — 파생 레포가 필요 시 추가)
-- **플랫폼**: sqlite3 (3.x) 로 Android · iOS · macOS · Windows · Linux 지원
+Drift 는 SQLite 를 Dart ORM 으로 다루는 라이브러리라 타입 안전한 쿼리를 쓸 수 있어요. DAO · 테이블 클래스는 `build_runner` 코드 생성으로 만들어요. 마이그레이션은 `DbMigrationStep` (BootStep) 이 버전 업 시 자동 실행해요 (Drift schema fingerprint 테스트는 템플릿에 없어서, 필요하면 파생 레포가 추가해요). 플랫폼은 sqlite3 (3.x) 기반이라 Android · iOS · macOS · Windows · Linux 를 지원해요.
 
 ---
 
@@ -31,7 +28,7 @@ await AppKits.install([
 ]);
 ```
 
-> `database` 인자는 **인스턴스가 아닌 팩토리 함수** (`GeneratedDatabase Function()`). BootStep 에서 한 번만 호출해 캐싱.
+> `database` 인자는 **인스턴스가 아닌 팩토리 함수** 예요 (`GeneratedDatabase Function()`). BootStep 에서 한 번만 호출해 캐싱해요.
 
 ---
 
@@ -95,7 +92,7 @@ class AppDatabase extends _$AppDatabase {
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-생성 파일: `app_database.g.dart`
+생성 파일은 `app_database.g.dart` 예요.
 
 ### 4. Provider 접근
 

@@ -1,6 +1,6 @@
 # Loading UX Conventions
 
-로딩 상황은 **4가지 패턴** 중 하나. 풀스크린 블로킹 스피너 금지. 규약 근거는 [`ADR-017 · 4가지 로딩 UX 패턴`](../philosophy/adr-017-loading-ux.md) 참조.
+로딩 상황은 **4가지 패턴** 중 하나로 처리해요. 풀스크린 블로킹 스피너는 금지예요. 규약 근거는 [`ADR-017 · 4가지 로딩 UX 패턴`](../philosophy/adr-017-loading-ux.md) 을 참조하세요.
 
 ---
 
@@ -22,7 +22,7 @@
 
 ## 1. Skeleton — 첫 진입
 
-`SkeletonLoading(enabled: isLoading, child: 실제위젯)` 으로 감쌈. 로딩 중엔 shimmer 효과 자동. `skeletonizer` 패키지 기반.
+`SkeletonLoading(enabled: isLoading, child: 실제위젯)` 으로 감싸요. 로딩 중엔 shimmer 효과가 자동으로 붙어요. `skeletonizer` 패키지 기반이에요.
 
 ```dart
 Widget build(BuildContext context, WidgetRef ref) {
@@ -56,19 +56,19 @@ Widget build(BuildContext context, WidgetRef ref) {
 | GridView (3열) | 6 ~ 9 |
 | 상세 화면 | 1 |
 
-화면을 "가득 채울" 정도.
+화면을 "가득 채울" 정도로 잡아요.
 
 ### 규칙
 
-- **실제 위젯 레이아웃 유지** — 별도 Skeleton 위젯 만들지 말기
-- **더미 데이터는 `Expense.dummy()` 같은 factory** — `Text('Placeholder')` 보다 자연
-- **`skeletonizer` 가 알아서 블러 처리** — 개발자가 shimmer 색상 · 애니메이션 지정할 필요 없음
+- **실제 위젯 레이아웃을 유지해요** — 별도 Skeleton 위젯을 만들지 않아요
+- **더미 데이터는 `Expense.dummy()` 같은 factory 로 만들어요** — `Text('Placeholder')` 보다 자연스러워요
+- **`skeletonizer` 가 알아서 블러 처리해요** — 개발자가 shimmer 색상 · 애니메이션을 지정할 필요 없어요
 
 ---
 
 ## 2. Pull-to-refresh — 새로고침
 
-이미 데이터가 있는 상태에서 사용자가 당겨서 갱신.
+이미 데이터가 있는 상태에서 사용자가 당겨서 갱신하는 패턴이에요.
 
 ```dart
 RefreshIndicator(
@@ -110,15 +110,15 @@ class ExpenseListViewModel extends Notifier<ExpenseListState> {
 
 ### 규칙
 
-- **`Future` 반환 필수** — `RefreshIndicator` 가 `Future` 완료까지 스피너 유지
-- **isLoading 플래그 건드리지 말기** — RefreshIndicator 가 자체 관리
-- **기존 데이터 유지** — 새로고침 중에도 리스트는 보여줌
+- **`Future` 반환이 필수예요** — `RefreshIndicator` 가 `Future` 완료까지 스피너를 유지해요
+- **isLoading 플래그는 건드리지 않아요** — RefreshIndicator 가 자체 관리해요
+- **기존 데이터는 유지해요** — 새로고침 중에도 리스트는 보여줘요
 
 ---
 
 ## 3. 버튼 스피너 — 버튼 액션
 
-로그인 · 저장 · 제출 같은 CTA 버튼. `PrimaryButton(isLoading: state.isLoading)` 만.
+로그인 · 저장 · 제출 같은 CTA 버튼에 쓰는 패턴이에요. `PrimaryButton(isLoading: state.isLoading)` 만으로 끝나요.
 
 ```dart
 PrimaryButton(
@@ -131,9 +131,9 @@ PrimaryButton(
 ### PrimaryButton 내부 동작
 
 - `isLoading: true` 일 때:
-  - text 대신 스피너 표시 (`CircularProgressIndicator.adaptive`)
-  - `onPressed: null` 로 비활성화 → 중복 탭 방지
-  - 버튼 크기 불변 → 레이아웃 안 흔들림
+  - text 대신 스피너를 표시해요 (`CircularProgressIndicator.adaptive`)
+  - `onPressed: null` 로 비활성화돼서 중복 탭이 방지돼요
+  - 버튼 크기가 변하지 않아 레이아웃이 흔들리지 않아요
 
 ### 여러 버튼이 있는 화면
 
@@ -155,15 +155,15 @@ Column(
 
 ### 규칙
 
-- **스피너는 버튼 내부만** — 별도 CircularProgressIndicator 금지
-- **다른 버튼도 비활성화** — `onPressed: isLoading ? null : callback`
-- **TextField 비활성화는 선택** — 단순 폼은 그대로, 복잡한 multi-step 은 `IgnorePointer`
+- **스피너는 버튼 내부에만 둬요** — 별도 CircularProgressIndicator 는 금지예요
+- **다른 버튼도 비활성화해요** — `onPressed: isLoading ? null : callback`
+- **TextField 비활성화는 선택이에요** — 단순 폼은 그대로 두고, 복잡한 multi-step 은 `IgnorePointer` 를 써요
 
 ---
 
 ## 4. TopProgressBar — 백그라운드
 
-사용자가 명시적으로 기다리지 않는 작업 (동기화 · 업로드). 화면 최상단(status bar 바로 아래)의 얇은 progress. Scaffold 를 `child` 로 감싸는 오버레이라 사용자 인터랙션은 막지 않아요.
+사용자가 명시적으로 기다리지 않는 작업 (동기화 · 업로드) 에 쓰는 패턴이에요. 화면 최상단(status bar 바로 아래)에 얇은 progress 를 띄워요. Scaffold 를 `child` 로 감싸는 오버레이라 사용자 인터랙션은 막지 않아요.
 
 ```dart
 TopProgressBar(
@@ -182,19 +182,19 @@ TopProgressBar(
 | `true` | 최상단에 indeterminate `LinearProgressIndicator` |
 | `false` | 숨김 (child 만 렌더) |
 
-> 퍼센트(진행률) 모드는 기본 위젯이 지원하지 않아요 — `isLoading` bool 뿐. 색상만 `color` 로 커스터마이즈 가능.
+> 퍼센트(진행률) 모드는 기본 위젯이 지원하지 않아요 — `isLoading` bool 뿐이에요. 색상만 `color` 로 커스터마이즈할 수 있어요.
 
 ### 규칙
 
-- **Scaffold 를 `child` 로 감싼다** — AppBar.bottom 이 아니라 화면 전체를 감싸는 오버레이
-- **사용자 액션 차단 안 함** — 앱 계속 사용 가능
-- **완료 시 자동 숨김** — `isLoading: false` 로 전환
+- **Scaffold 를 `child` 로 감싸요** — AppBar.bottom 이 아니라 화면 전체를 감싸는 오버레이예요
+- **사용자 액션을 차단하지 않아요** — 앱을 계속 사용할 수 있어요
+- **완료 시 자동으로 숨어요** — `isLoading: false` 로 전환하면 돼요
 
 ---
 
 ## 5. EmptyView vs LoadingView
 
-로딩과 "데이터 없음" 은 다른 상태. 별도 위젯으로 구분.
+로딩과 "데이터 없음" 은 다른 상태예요. 별도 위젯으로 구분해요.
 
 ```dart
 Widget _body() {
@@ -225,7 +225,7 @@ Widget _body() {
 
 ## 6. 스플래시 (부팅)
 
-앱 시작 시 `SplashController` + `BootStep` 이 실행되는 구간. 전용 `LoadingView` 사용.
+앱 시작 시 `SplashController` + `BootStep` 이 실행되는 구간이에요. 전용 `LoadingView` 를 사용해요.
 
 ```dart
 // lib/common/router/app_router.dart 발췌
@@ -236,7 +236,7 @@ GoRoute(
 ),
 ```
 
-네이티브 스플래시 (`flutter_native_splash`) → Dart 스플래시 → 첫 라우트. 이 구간엔 **풀스크린 `CircularProgressIndicator` 허용** (특수 예외).
+네이티브 스플래시 (`flutter_native_splash`) → Dart 스플래시 → 첫 라우트 순으로 흘러요. 이 구간엔 **풀스크린 `CircularProgressIndicator` 를 허용해요** (특수 예외).
 
 ---
 
@@ -252,7 +252,7 @@ Stack(children: [
 ])
 ```
 
-"앱 멈춤" UX. 대신:
+"앱 멈춤" UX 가 돼요. 대신 이렇게 해요:
 - 버튼 액션이면 → `PrimaryButton(isLoading: true)`
 - 데이터 로딩이면 → `SkeletonLoading(enabled: true)`
 
@@ -267,7 +267,7 @@ class SkeletonListItem extends StatelessWidget {
 }
 ```
 
-실제 UI 와 다른 별도 코드 유지 필요. 대신 `SkeletonLoading(enabled: true, child: 실제ListTile())`.
+실제 UI 와 다른 별도 코드를 유지해야 해요. 대신 `SkeletonLoading(enabled: true, child: 실제ListTile())` 을 써요.
 
 ### ❌ 버튼 옆 스피너
 
@@ -279,7 +279,7 @@ Row(children: [
 ])
 ```
 
-버튼 크기가 왔다갔다. 대신 `PrimaryButton(isLoading: true)` 내부 통합.
+버튼 크기가 왔다갔다 해요. 대신 `PrimaryButton(isLoading: true)` 으로 내부에 통합해요.
 
 ### ❌ TopProgressBar 를 child 없이 body 안에 배치
 

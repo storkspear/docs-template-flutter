@@ -1,6 +1,6 @@
 # Testing Strategy
 
-5 레이어 테스트 전략 — **Unit · Kit 계약 · 조립 통합 · 마이그레이션 지문 · 백엔드 계약 스냅샷**. 각 레이어의 검증 대상이 다르고, 도구도 다름. Kit 계약 테스트의 상세 패턴은 [`contract-testing.md`](./contract-testing.md) 참조.
+이 문서는 5 레이어 테스트 전략 — **Unit · Kit 계약 · 조립 통합 · 마이그레이션 지문 · 백엔드 계약 스냅샷** — 을 정리해요. 각 레이어는 검증 대상이 다르고, 도구도 달라요. Kit 계약 테스트의 상세 패턴은 [`contract-testing.md`](./contract-testing.md) 를 참조하세요.
 
 ---
 
@@ -43,7 +43,7 @@
 
 ### Service (가장 단순)
 
-가짜 `HttpClientAdapter`(`MockDioAdapter`)를 **실제 `ApiClient`/Dio 에 주입**한다. 별도 fake 서비스를 만들지 않고 진짜 인터셉터·파싱 경로를 태우는 게 이 레포 컨벤션이에요. 조립은 `test/helpers/auth_test_harness.dart`(`buildAuthTestHarness`)가 한 번에 해줘요.
+가짜 `HttpClientAdapter`(`MockDioAdapter`)를 **실제 `ApiClient`/Dio 에 주입**해요. 별도 fake 서비스를 만들지 않고 진짜 인터셉터·파싱 경로를 태우는 게 이 레포 컨벤션이에요. 조립은 `test/helpers/auth_test_harness.dart`(`buildAuthTestHarness`)가 한 번에 해줘요.
 
 ```dart
 void main() {
@@ -141,7 +141,7 @@ void main() {
 
 ### Widget (특수 상황만)
 
-대부분의 UI 검증은 ViewModel 테스트로 충분. Widget 테스트는:
+대부분의 UI 검증은 ViewModel 테스트로 충분해요. Widget 테스트는 이럴 때 써요:
 - 복잡한 Gesture · 애니메이션
 - 플랫폼별 분기 (iOS vs Android)
 - Golden 이미지 비교
@@ -159,7 +159,7 @@ testWidgets('PrimaryButton shows spinner when loading', (tester) async {
 
 ## 2. Kit 계약 테스트
 
-각 Kit 의 `{kit_name}_contract_test.dart` 에서 **불변 속성** 검증:
+각 Kit 의 `{kit_name}_contract_test.dart` 에서 **불변 속성** 을 검증해요:
 
 ```dart
 void main() {
@@ -184,9 +184,9 @@ void main() {
 
 ### 왜 계약 테스트?
 
-Kit 의 `requires`, `redirectPriority`, `routes` 같은 **외부 의존적 속성** 은 실수로 바꾸면 다른 Kit · 라우터가 깨짐. 계약 테스트가 **의도된 변경인지 검토** 를 강제.
+Kit 의 `requires`, `redirectPriority`, `routes` 같은 **외부 의존적 속성** 은 실수로 바꾸면 다른 Kit · 라우터가 깨져요. 계약 테스트가 **의도된 변경인지 검토** 를 강제해요.
 
-상세는 [`contract-testing.md`](./contract-testing.md).
+상세는 [`contract-testing.md`](./contract-testing.md) 를 참고하세요.
 
 ---
 
@@ -233,10 +233,10 @@ void main() {
 
 ### 검증 포인트
 
-- 모든 Kit 이 `install` 성공
-- `requires` 검증 통과
-- BootStep 이 실패하지 않음
-- 최종 상태 (`authState`, `forceUpdate` 등) 가 기대대로
+- 모든 Kit 이 `install` 에 성공해요
+- `requires` 검증을 통과해요
+- BootStep 이 실패하지 않아요
+- 최종 상태 (`authState`, `forceUpdate` 등) 가 기대대로예요
 
 ---
 
@@ -294,7 +294,7 @@ flutter test --coverage
 
 ## 테스트 데이터 · 헬퍼
 
-`test/helpers/` 에 공용 fake·빌더 (상세 표는 [`test/helpers/README.md`](../../test/helpers/README.md)):
+`test/helpers/` 에 공용 fake·빌더가 있어요 (상세 표는 [`test/helpers/README.md`](../../test/helpers/README.md)):
 
 - `FakeSecureStorage` — 메모리 기반 `SecureStorage` (`fake_secure_storage.dart`)
 - `MockDioAdapter` — Dio 응답 조작 (`mock_dio_adapter.dart`)
@@ -303,7 +303,7 @@ flutter test --coverage
 - `installDefaultPaletteForTest()` — 팔레트 의존 위젯 테스트의 `setUpAll` 공용 설치 (`palette_test_helper.dart`)
 - `buildTestPrefs()` — mock SharedPreferences 위에 초기화된 `PrefsStorage` 생성 (`prefs_test_helper.dart`)
 
-`PrefsStorage` 가 필요한 테스트는 `buildTestPrefs()` 로 재사용 → 일관성.
+`PrefsStorage` 가 필요한 테스트는 `buildTestPrefs()` 를 재사용해 일관성을 지켜요.
 
 ---
 

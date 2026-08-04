@@ -1,12 +1,12 @@
 # Scripts
 
-루트의 `factory` 통합 dispatcher + `scripts/` 에 있는 bash 도구 + `tool/` 의 Dart 스크립트.
+이 문서는 루트의 `factory` 통합 dispatcher, `scripts/` 의 bash 도구, `tool/` 의 Dart 스크립트를 정리해요.
 
 ---
 
 ## factory (root)
 
-통합 명령어 dispatcher. `./factory install` 로 symlink 등록 후 어디서든 `<repo> <cmd>` 호출.
+통합 명령어 dispatcher 예요. `./factory install` 로 symlink 를 등록하면 어디서든 `<repo> <cmd>` 로 호출할 수 있어요.
 
 | 명령 | 용도 | 실행 시점 |
 |------|------|---------|
@@ -17,7 +17,7 @@
 | `<repo> test --with-build` | apk debug 빌드 포함 | 배포 직전 점검 |
 | `<repo> --help` | 명령 목록 + 사용법 | 항상 |
 
-env-verb dispatch — 첫 인자가 `local`/`dev`/`prod`/`all` 이면 env, 아니면 default `local`. verb `test` 는 짝 백엔드 (`template-spring`) 와 동일 — 양쪽 운영 시 일관 명령어.
+env-verb dispatch 방식이에요 — 첫 인자가 `local`/`dev`/`prod`/`all` 이면 env 고, 아니면 default `local` 이에요. verb `test` 는 짝 백엔드 (`template-spring`) 와 동일해서 양쪽 운영 시 명령어가 일관돼요.
 
 ---
 
@@ -50,7 +50,7 @@ env-verb dispatch — 첫 인자가 `local`/`dev`/`prod`/`all` 이면 env, 아�
 
 ### factory
 
-env-verb 패턴 통합 dispatcher (340줄 bash).
+env-verb 패턴 통합 dispatcher 예요 (340줄 bash).
 
 ```bash
 # 첫 사용 (clone 직후)
@@ -63,11 +63,11 @@ env-verb 패턴 통합 dispatcher (340줄 bash).
 <repo> --help                           # 명령 목록
 ```
 
-**메타 레포 가드**: `git remote get-url origin` 이 `*/template-flutter` 면 `install` 차단 — 메타 레포 자체에선 직접 `./factory <cmd>` 호출만 허용.
+**메타 레포 가드**: `git remote get-url origin` 이 `*/template-flutter` 면 `install` 을 차단해요 — 메타 레포 자체에선 직접 `./factory <cmd>` 호출만 허용해요.
 
 ### test verb (개발 준비 검증)
 
-7 step fail-fast 검증. 짝 백엔드 (`template-spring`) 의 `<repo> test` 와 동일 명령어 — 양쪽 운영 일관성.
+7 step fail-fast 검증이에요. 짝 백엔드 (`template-spring`) 의 `<repo> test` 와 동일한 명령어라 양쪽 운영이 일관돼요.
 
 ```bash
 <repo> test                             # default 동작
@@ -77,7 +77,7 @@ env-verb 패턴 통합 dispatcher (340줄 bash).
 <repo> test --verbose                   # 각 step 의 raw 출력
 ```
 
-내부적으로 `scripts/verify/readiness-check.sh` 호출. 직접 호출도 가능 (`bash scripts/verify/readiness-check.sh`) 하지만 factory 경유 권장.
+내부적으로 `scripts/verify/readiness-check.sh` 를 호출해요. 직접 호출도 가능하지만 (`bash scripts/verify/readiness-check.sh`) factory 경유가 권장돼요.
 
 | Step | 검증 |
 |---|---|
@@ -90,7 +90,7 @@ env-verb 패턴 통합 dispatcher (340줄 bash).
 | 7 | Backend ping (`$BASE_URL/actuator/health`) — `--no-backend` 로 생략 가능 |
 | 8 | Build smoke (`flutter build apk --debug --flavor dev`) — `--with-build` 로 활성. flavor 를 명시해야 해요 — 이 템플릿은 productFlavors(dev/prod)를 쓰므로 flavor 없이는 Gradle 이 `app-dev-debug.apk` 를 만드는데 flutter 는 `app-debug.apk` 를 찾다 실패해요 |
 
-마지막 출력이 "🎉 개발할 준비가 완료되었습니다" 면 코딩 시작 가능.
+마지막 출력이 "🎉 개발할 준비가 완료되었습니다" 면 코딩을 시작하면 돼요.
 
 **환경변수**: `BASE_URL` (default: `http://localhost:8081` — template-spring 기본 포트)
 
@@ -104,7 +104,7 @@ env-verb 패턴 통합 dispatcher (340줄 bash).
 git config core.hooksPath .githooks
 ```
 
-**1회 실행**. `.githooks/commit-msg` · `.githooks/pre-commit` · `.githooks/pre-push` 자동 적용.
+**1회만 실행해요**. `.githooks/commit-msg` · `.githooks/pre-commit` · `.githooks/pre-push` 가 자동 적용돼요.
 
 ```bash
 ./scripts/init/setup.sh
@@ -116,8 +116,8 @@ git config core.hooksPath .githooks
 
 ### 용도
 
-`flutter test --coverage` 실행 + `lcov` 설치 시 HTML 리포트 자동 생성 + 브라우저 오픈.
-**CI 게이트가 아닌 수동 측정 도구** — 한 달에 한 번 정도 돌려서 "테스트가 안 닿는 코드 영역" 가시화.
+`flutter test --coverage` 를 실행하고, `lcov` 가 설치돼 있으면 HTML 리포트 생성 + 브라우저 오픈까지 해줘요.
+**CI 게이트가 아닌 수동 측정 도구** 예요 — 한 달에 한 번 정도 돌려서 "테스트가 안 닿는 코드 영역" 을 가시화해요.
 
 ### 사용법
 
@@ -139,7 +139,7 @@ git config core.hooksPath .githooks
 
 ### 게이트가 아닌 이유
 
-솔로 운영 컨텍스트에서 임계값 자동 차단보다 **시각화 + 정기 점검** 이 ROI 좋다고 판단. 자세한 트레이드오프는 별도 ADR 없음 (단순 도구라 결정 가벼움).
+솔로 운영 컨텍스트에서 임계값 자동 차단보다 **시각화 + 정기 점검** 이 ROI 가 좋다고 판단했어요. 자세한 트레이드오프를 다룬 별도 ADR 은 없어요 (단순 도구라 결정이 가벼워요).
 
 ---
 
@@ -147,7 +147,7 @@ git config core.hooksPath .githooks
 
 ### 용도
 
-파생 레포 생성 직후 앱 정체성 일괄 변경.
+파생 레포 생성 직후 앱 정체성을 일괄 변경해요.
 
 ### 사용법
 
@@ -166,7 +166,7 @@ git config core.hooksPath .githooks
 - `android/app/src/main/AndroidManifest.xml` 의 `android:label` → `<DisplayName>`
 - Android Kotlin 파일의 `package` 선언 + 디렉토리 이동
 - iOS Bundle ID — `ios/Flutter/AppEnv-{dev,prod}.xcconfig` 의 `BUNDLE_ID_BASE` → `<bundle_id>`
-  (`PRODUCT_BUNDLE_IDENTIFIER` 는 `$(BUNDLE_ID_BASE)$(BUNDLE_ID_SUFFIX)` 로 변수화돼 pbxproj 엔 직접 박혀있지 않아요. `Info.plist` 의 `CFBundleIdentifier` 도 `$(PRODUCT_BUNDLE_IDENTIFIER)` 변수 참조라 자동 반영. iOS Swift 파일은 건드리지 않음.)
+  (`PRODUCT_BUNDLE_IDENTIFIER` 는 `$(BUNDLE_ID_BASE)$(BUNDLE_ID_SUFFIX)` 로 변수화돼 pbxproj 엔 직접 박혀있지 않아요. `Info.plist` 의 `CFBundleIdentifier` 도 `$(PRODUCT_BUNDLE_IDENTIFIER)` 변수 참조라 자동 반영돼요. iOS Swift 파일은 건드리지 않아요.)
 - `ios/Runner/Info.plist` 의 `CFBundleDisplayName` · `CFBundleName`
 - `app_kits.yaml` 의 `app.name` · `app.slug`
 - `android/fastlane/Appfile` 의 `package_name` → `<bundle_id>`
@@ -174,8 +174,8 @@ git config core.hooksPath .githooks
 
 ### 주의
 
-- **번들 ID 는 unique + 되돌리기 어려움**. App Store · Play Store 등록 후 변경 불가.
-- 스토어 등록 전에 마지막으로 체크.
+- **번들 ID 는 unique 하고 되돌리기 어려워요**. App Store · Play Store 등록 후엔 변경할 수 없어요.
+- 스토어 등록 전에 마지막으로 체크하세요.
 
 ---
 
@@ -183,7 +183,7 @@ git config core.hooksPath .githooks
 
 ### 용도
 
-`flutter_launcher_icons.yaml` · `flutter_native_splash.yaml` 변경 후 아이콘 · 스플래시 재생성.
+`flutter_launcher_icons.yaml` · `flutter_native_splash.yaml` 변경 후 아이콘 · 스플래시를 재생성해요.
 
 ### 사용법
 
@@ -200,11 +200,11 @@ dart run flutter_launcher_icons -f flutter_launcher_icons.yaml
 dart run flutter_native_splash:create --path=flutter_native_splash.yaml
 ```
 
-전제: `assets/icon/app_icon.png` (1024×1024) · `assets/icon/app_icon_foreground.png` · `assets/splash/logo.png` 교체 완료.
+전제: `assets/icon/app_icon.png` (1024×1024) · `assets/icon/app_icon_foreground.png` · `assets/splash/logo.png` 교체가 완료돼 있어야 해요.
 
 ### 커스터마이징
 
-아이콘 / 스플래시 이미지 경로는 각 YAML 파일에서:
+아이콘 / 스플래시 이미지 경로는 각 YAML 파일에서 바꿔요:
 
 ```yaml
 # flutter_launcher_icons.yaml 발췌
@@ -224,7 +224,7 @@ flutter_launcher_icons:
 
 ### 용도
 
-Android 업로드 keystore 생성 (Play App Signing 에 등록할 키).
+Android 업로드 keystore 를 생성해요 (Play App Signing 에 등록할 키).
 
 ### 사용법
 
@@ -242,10 +242,10 @@ Android 업로드 keystore 생성 (Play App Signing 에 등록할 키).
 
 ### 백업 필수
 
-이 파일을 잃으면 **Play Store 에 같은 앱을 다시 업로드 불가**. Play App Signing 으로 복구 가능하지만 지원 요청 필요 · 시간 소요.
+이 파일을 잃으면 **Play Store 에 같은 앱을 다시 업로드할 수 없어요**. Play App Signing 으로 복구할 수는 있지만 지원 요청이 필요하고 시간이 걸려요.
 
-- Bitwarden · 1Password 에 base64 인코딩해서 저장
-- 물리 USB 에 사본
+- Bitwarden · 1Password 에 base64 인코딩해서 저장해요
+- 물리 USB 에 사본을 둬요
 
 ---
 
@@ -253,7 +253,7 @@ Android 업로드 keystore 생성 (Play App Signing 에 등록할 키).
 
 ### 용도
 
-`~/Documents/keystores-pending/` 에 쌓인 여러 앱의 keystore 를 한 번에 영구 백업 (앱 공장 운영 시).
+`~/Documents/keystores-pending/` 에 쌓인 여러 앱의 keystore 를 한 번에 영구 백업해요 (앱 공장 운영 시).
 
 ### 사용법
 
@@ -263,9 +263,9 @@ Android 업로드 keystore 생성 (Play App Signing 에 등록할 키).
 
 동작:
 
-1. pending 폴더의 앱들을 **암호화 7z 아카이브** (`keystores-<타임스탬프>.7z`, 비밀번호 자동 생성 + 헤더 암호화) 로 묶어 `<backup-dir>` 에 생성
-2. 아카이브 비밀번호를 화면에 출력 — **업무 노트에 저장 필수** (분실 시 복구 불가)
-3. 저장 확인 (y) 후 pending 폴더 비움
+1. pending 폴더의 앱들을 **암호화 7z 아카이브** (`keystores-<타임스탬프>.7z`, 비밀번호 자동 생성 + 헤더 암호화) 로 묶어 `<backup-dir>` 에 생성해요
+2. 아카이브 비밀번호를 화면에 출력해요 — **업무 노트에 꼭 저장하세요** (분실 시 복구 불가)
+3. 저장 확인 (y) 후 pending 폴더를 비워요
 
 의존성: `7z` (`brew install p7zip`).
 
@@ -275,7 +275,7 @@ Android 업로드 keystore 생성 (Play App Signing 에 등록할 키).
 
 ### 용도
 
-Android **서명 Secrets 4종** 을 GHA Secrets 에 자동 업로드. (`.env` 파싱이나 Play JSON 자동 업로드는 하지 않아요.)
+Android **서명 Secrets 4종** 을 GHA Secrets 에 자동 업로드해요. (`.env` 파싱이나 Play JSON 자동 업로드는 하지 않아요.)
 
 ### 사용법
 
@@ -301,9 +301,9 @@ gh secret set SENTRY_PROJECT
 
 ### 전제
 
-- `./scripts/signing/generate-upload-keystore.sh <app-slug>` 선행 (pending 폴더가 있어야 함)
-- `gh` CLI 설치 + `gh auth login` 완료 + 파생 레포 git 루트에서 실행
-- 레포에 write 권한
+- `./scripts/signing/generate-upload-keystore.sh <app-slug>` 이 선행돼야 해요 (pending 폴더가 있어야 해요)
+- `gh` CLI 설치 + `gh auth login` 완료 + 파생 레포 git 루트에서 실행해요
+- 레포에 write 권한이 필요해요
 
 ---
 
@@ -352,7 +352,7 @@ Status: OK
 Status: ISSUES FOUND
 ```
 
-자세한 건 [`ADR-004`](../philosophy/adr-004-manual-sync-ci-audit.md) · [`Conventions Overview`](../conventions/README.md).
+자세한 건 [`ADR-004`](../philosophy/adr-004-manual-sync-ci-audit.md) · [`Conventions Overview`](../conventions/README.md) 를 보세요.
 
 ---
 
@@ -378,7 +378,7 @@ fi
 # 실제 로직
 ```
 
-실행 권한: `chmod +x scripts/<기능폴더>/new-script.sh`
+실행 권한은 `chmod +x scripts/<기능폴더>/new-script.sh` 로 줘요.
 
 ---
 

@@ -1,6 +1,6 @@
 # Architecture — 코딩 규약
 
-MVVM 패턴 · 모듈 의존 방향 · 에러 처리. **코드 작성 시 따라야 할 규약** 에 초점.
+MVVM 패턴 · 모듈 의존 방향 · 에러 처리를 다루는 규약 문서예요. **코드를 작성할 때 따라야 할 규약** 에 초점을 맞춰요.
 
 > 모듈 구조 / 의존 관계 / 부트 시퀀스 같은 한눈 요약은 [`journey/architecture.md`](../journey/architecture.md) 가 더 친절해요. 본 문서는 **새 화면을 만들 때 어떤 패턴을 따라야 하는가** 를 다뤄요.
 
@@ -23,11 +23,11 @@ Service / Repository
 ApiClient (Dio)
 ```
 
-- **Screen**: UI 만 — 비즈니스 로직 0
-- **ViewModel**: 상태 관리 + 도메인 호출 — UI 위젯 직접 생성 금지
-- **Service / Repository**: API 호출 / 로컬 DB / 외부 SDK 추상 — Riverpod 의존 X (테스트 용이)
+- **Screen**: UI 만 맡아요 — 비즈니스 로직은 없어요
+- **ViewModel**: 상태 관리와 도메인 호출을 맡아요 — UI 위젯은 직접 생성하지 않아요
+- **Service / Repository**: API 호출 / 로컬 DB / 외부 SDK 를 추상화해요 — Riverpod 에 의존하지 않아 테스트가 쉬워요
 
-상세 패턴은 [`viewmodel-mvvm.md`](./viewmodel-mvvm.md), 근거는 [`ADR-005`](../philosophy/adr-005-riverpod-mvvm.md).
+상세 패턴은 [`viewmodel-mvvm.md`](./viewmodel-mvvm.md) 에, 근거는 [`ADR-005`](../philosophy/adr-005-riverpod-mvvm.md) 에 있어요.
 
 ### 1-2. ViewModel 표준 양식
 
@@ -92,9 +92,9 @@ final expenseListViewModelProvider =
 ```
 
 **핵심 패턴**:
-- `copyWith` 로 상태 갱신 (immutable)
-- `errorCode` 는 서버 코드 (`ATH_001` 등) 또는 ViewModel 별 fallback (`FETCH_FAILED`)
-- `errorMessage` 는 서버 i18n 메시지 — 없으면 Screen 에서 errorCode 기반으로 i18n 매핑
+- `copyWith` 로 상태를 갱신해요 (immutable)
+- `errorCode` 는 서버 코드 (`ATH_001` 등) 또는 ViewModel 별 fallback (`FETCH_FAILED`) 이에요
+- `errorMessage` 는 서버 i18n 메시지예요 — 없으면 Screen 에서 errorCode 기반으로 i18n 매핑해요
 - riverpod 3 의 provider 는 기본이 **non-autoDispose** — 화면 단위 ViewModel 은 `isAutoDispose: true` 를 명시해야 화면을 떠날 때 정리돼요
 
 ### 1-3. Screen 표준 양식
@@ -147,10 +147,10 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
 ```
 
 **핵심 패턴**:
-- `ConsumerStatefulWidget` 으로 initState 활용 (`ConsumerWidget` 보다 hooks-friendly)
-- `Future.microtask` 로 build 직후 첫 로드 (initState 안에서 ref.read 직접 X — Riverpod 권고)
-- 에러 상태에서 server message > i18n key fallback
-- 로딩/에러/성공 3분기 명확
+- `ConsumerStatefulWidget` 으로 initState 를 활용해요 (`ConsumerWidget` 보다 hooks-friendly)
+- `Future.microtask` 로 build 직후 첫 로드를 걸어요 (initState 안에서 ref.read 를 직접 부르지 않는 게 Riverpod 권고예요)
+- 에러 상태에선 server message 를 우선하고 i18n key 로 fallback 해요
+- 로딩/에러/성공 3분기를 명확히 나눠요
 
 ---
 
@@ -175,12 +175,12 @@ final expenseDetailProvider = FutureProvider.family<Expense, int>((ref, id) => .
 ```
 
 **규칙**:
-- 이름 끝에 항상 `Provider` (예: `apiClientProvider`)
-- ViewModel 은 `xxxViewModelProvider` (예: `loginViewModelProvider`)
-- 도메인 객체 단순 조회는 `xxxProvider` (예: `currentUserProvider`)
-- Family/AutoDispose 는 명시적 사용 — 메모리 라이프사이클이 다르므로
+- 이름 끝엔 항상 `Provider` 를 붙여요 (예: `apiClientProvider`)
+- ViewModel 은 `xxxViewModelProvider` 로 지어요 (예: `loginViewModelProvider`)
+- 도메인 객체 단순 조회는 `xxxProvider` 로 지어요 (예: `currentUserProvider`)
+- Family/AutoDispose 는 명시적으로 사용해요 — 메모리 라이프사이클이 다르기 때문이에요
 
-상세는 [`naming.md`](./naming.md).
+상세는 [`naming.md`](./naming.md) 에 있어요.
 
 ---
 
@@ -196,9 +196,9 @@ Dio → DioException → ErrorInterceptor → ApiException → ViewModel.catch
                                                   Screen i18n 매핑 → UI
 ```
 
-- **API 계층**: `ApiException` (서버 코드 또는 NETWORK/TIMEOUT/UNKNOWN)
-- **ViewModel 계층**: `safeErrorCode(e, fallbackCode: '...')` 로 안전한 코드 추출
-- **UI 계층**: `errorCode` → i18n 매핑 → 사용자 메시지
+- **API 계층**: `ApiException` 으로 통일돼요 (서버 코드 또는 NETWORK/TIMEOUT/UNKNOWN)
+- **ViewModel 계층**: `safeErrorCode(e, fallbackCode: '...')` 로 안전한 코드를 추출해요
+- **UI 계층**: `errorCode` 를 i18n 매핑해 사용자 메시지로 변환해요
 
 ### 3-2. ApiException 분기 처리
 
@@ -221,13 +221,13 @@ try {
 }
 ```
 
-전체 에러 코드 매핑은 [`api-contract/error-codes.md`](../api-contract/error-codes.md).
+전체 에러 코드 매핑은 [`api-contract/error-codes.md`](../api-contract/error-codes.md) 에 있어요.
 
 ### 3-3. PII 보호
 
-- **`message` 직접 노출 금지**: 서버가 디버그 정보를 잘못 흘릴 수 있음 — `safeErrorMessage()` 거쳐서만 사용
-- **stack trace 노출 금지**: 운영 빌드에선 `e.toString()` 사용 X. Sentry 에 reportError 후 사용자에겐 i18n 메시지만
-- **상세 PII**: `e.details` 의 `email`, `userId` 등은 운영 로그에만 — UI 에 노출 X
+- **`message` 직접 노출 금지**: 서버가 디버그 정보를 잘못 흘릴 수 있어요 — `safeErrorMessage()` 를 거쳐서만 사용해요
+- **stack trace 노출 금지**: 운영 빌드에선 `e.toString()` 을 쓰지 않아요. Sentry 에 reportError 한 뒤 사용자에겐 i18n 메시지만 보여줘요
+- **상세 PII**: `e.details` 의 `email`, `userId` 등은 운영 로그에만 남겨요 — UI 에 노출하지 않아요
 
 ### 3-4. Sentry 연동
 
@@ -238,10 +238,10 @@ try {
 }
 ```
 
-- **모든 비즈니스 catch 에서 `reportError` 호출 권장** — 강제는 아니나 운영 디버깅에 필수
-- DSN 미주입 시 Debug 폴백 (`DebugCrashService`) 으로 자동 처리 — 콘솔만
+- **모든 비즈니스 catch 에서 `reportError` 호출을 권장해요** — 강제는 아니지만 운영 디버깅에 필수예요
+- DSN 미주입 시 Debug 폴백 (`DebugCrashService`) 으로 자동 처리돼요 — 콘솔에만 남아요
 
-상세는 [`error-handling.md`](./error-handling.md), [`integrations/sentry.md`](../integrations/sentry.md).
+상세는 [`error-handling.md`](./error-handling.md) 와 [`integrations/sentry.md`](../integrations/sentry.md) 에 있어요.
 
 ---
 
@@ -252,22 +252,22 @@ features/  →  common/  →  kits/  →  core/
 ```
 
 **규칙**:
-- 단방향만 허용. 화살표 역방향 import 금지.
-- `core/` 는 모든 곳에서 import 가능
-- `kits/` 끼리 직접 import 금지 — `requires` 로 명시 + provider 경유 ([kits.md §3](./kits.md))
-- `features/` 는 `common/` 의 provider 만 사용 (kits 직접 import 자제)
+- 단방향만 허용해요. 화살표 역방향 import 는 금지예요.
+- `core/` 는 모든 곳에서 import 할 수 있어요
+- `kits/` 끼리 직접 import 는 금지예요 — `requires` 로 명시하고 provider 를 경유해요 ([kits.md §3](./kits.md))
+- `features/` 는 `common/` 의 provider 만 사용해요 (kits 직접 import 는 자제해요)
 
 **예외 — `core/` 인터페이스 import**:
-- `core/storage/token_storage.dart` 같은 인터페이스 클래스는 어디서든 import OK
-- `core/cache/cached_repository.dart` 같은 추상 헬퍼도 OK
+- `core/storage/token_storage.dart` 같은 인터페이스 클래스는 어디서든 import 해도 돼요
+- `core/cache/cached_repository.dart` 같은 추상 헬퍼도 괜찮아요
 
-상세 근거는 [`ADR-002 · Layered Modules`](../philosophy/adr-002-layered-modules.md).
+상세 근거는 [`ADR-002 · Layered Modules`](../philosophy/adr-002-layered-modules.md) 에 있어요.
 
 ---
 
 ## 5. 새 화면 추가 — Step by Step
 
-페르소나 시나리오: "가계부 앱이라 `ExpenseListScreen` 추가". 1-2년차가 막힘 없이 따라갈 수 있는 절차.
+"가계부 앱이라 `ExpenseListScreen` 을 추가한다" 는 페르소나 시나리오로 진행해요. 1-2년차가 막힘 없이 따라갈 수 있게 절차를 밟아요.
 
 ### 5-1. 디렉토리 생성
 
@@ -312,7 +312,7 @@ class Expense {
 }
 ```
 
-> 응답 스키마 규칙은 [`api-contract/response-schema.md`](../api-contract/response-schema.md). camelCase, ISO 8601 UTC, 금액은 정수 (원 단위).
+> 응답 스키마 규칙은 [`api-contract/response-schema.md`](../api-contract/response-schema.md) 에 있어요. camelCase, ISO 8601 UTC 를 따르고 금액은 정수 (원 단위) 를 써요.
 
 ### 5-3. Repository (선택 — 단순한 경우 ViewModel 에서 직접 호출 OK)
 
@@ -340,11 +340,11 @@ final expenseRepositoryProvider = Provider<ExpenseRepository>(
 
 ### 5-4. ViewModel + Screen 작성
 
-위 §1-2, §1-3 양식 따라 작성.
+위 §1-2, §1-3 양식을 따라 작성해요.
 
 ### 5-5. 라우트 등록
 
-GoRouter 통합은 두 가지 옵션:
+GoRouter 통합엔 두 가지 옵션이 있어요:
 
 **옵션 A — `common/router/app_router.dart` 의 routes 에 직접 추가** (단순한 경우):
 
@@ -363,7 +363,7 @@ GoRoute(
 
 **옵션 B — 도메인 kit 으로 분리** (커진 경우):
 
-`lib/kits/expense_kit/` 만들어 `routes` 기여 — [`kits.md §4`](./kits.md) 참조.
+`lib/kits/expense_kit/` 을 만들어 `routes` 를 기여해요 — [`kits.md §4`](./kits.md) 를 참조하세요.
 
 ### 5-6. i18n
 
@@ -388,7 +388,7 @@ test/features/expense/
 └── models/expense_test.dart              # fromJson 테스트
 ```
 
-상세는 [`testing/testing-strategy.md`](../testing/testing-strategy.md).
+상세는 [`testing/testing-strategy.md`](../testing/testing-strategy.md) 에 있어요.
 
 ### 5-8. 검증
 
@@ -403,11 +403,11 @@ flutter run                  # 화면 라우팅 동작 확인
 ## 6. 자주 빠지는 함정
 
 1. **화면 수명 상태에 `isAutoDispose: true` 를 빼먹음** — riverpod 3 의 provider 는 기본이 non-autoDispose 라, 명시하지 않으면 화면을 벗어나도 상태가 남아요. 앱 전체 수명 상태는 [`viewmodel-mvvm.md`](./viewmodel-mvvm.md) 의 autoDispose 예외 패턴을 쓰세요
-2. **`copyWith` 안 쓰고 `state.x = ...`** — Dart 의 `final` 필드라 컴파일 에러. 또는 mutable 필드면 UI 갱신 안 됨
-3. **에러 catch 후 reportError 누락** — 운영에서 무엇이 실패했는지 모름
-4. **i18n 키만 추가하고 `flutter gen-l10n` 안 돌림** — 빌드 실패
-5. **도메인 모델 안 만들고 `Map<String, dynamic>` 직접 사용** — 타입 안전 X, 리팩토링 어려움
-6. **PageResponse 안 쓰고 List 직접 받음** — 페이지네이션 깨짐
+2. **`copyWith` 안 쓰고 `state.x = ...`** — Dart 의 `final` 필드라 컴파일 에러가 나요. mutable 필드면 UI 가 갱신되지 않아요
+3. **에러 catch 후 reportError 누락** — 운영에서 무엇이 실패했는지 알 수 없어요
+4. **i18n 키만 추가하고 `flutter gen-l10n` 안 돌림** — 빌드가 실패해요
+5. **도메인 모델 안 만들고 `Map<String, dynamic>` 직접 사용** — 타입 안전이 깨지고 리팩토링이 어려워져요
+6. **PageResponse 안 쓰고 List 직접 받음** — 페이지네이션이 깨져요
 
 ---
 

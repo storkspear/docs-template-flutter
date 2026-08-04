@@ -1,6 +1,6 @@
 # FeatureKit Contract
 
-`AppKit` 추상 클래스 + `AppKits` 레지스트리의 **전체 명세**. 각 속성 · 메서드의 역할 · 호출 시점 · 주의점. 설계 근거는 [`ADR-003`](../philosophy/adr-003-featurekit-registry.md) 참조.
+이 문서는 `AppKit` 추상 클래스 + `AppKits` 레지스트리의 **전체 명세** 예요. 각 속성 · 메서드의 역할 · 호출 시점 · 주의점을 정리해요. 설계 근거는 [`ADR-003`](../philosophy/adr-003-featurekit-registry.md) 을 참조하세요.
 
 ---
 
@@ -40,12 +40,12 @@ abstract class AppKit {
 - **타입**: `List<Type>`
 - **호출 시점**: `AppKits.install` 시 검증
 - **예**: `requires: [BackendApiKit]`
-- **주의**: Kit 클래스 Type 만. 다른 Kit 의 Provider · 클래스를 import 하진 않음 (타입만)
+- **주의**: Kit 클래스 Type 만 선언해요. 다른 Kit 의 Provider · 클래스를 import 하진 않아요 (타입만)
 
 ### `redirectPriority` — 라우팅 우선순위
 
 - **타입**: `int` (기본 100)
-- **규칙**: 낮을수록 먼저 실행
+- **규칙**: 낮을수록 먼저 실행돼요
 - **권장**: `UpdateKit: 1`, `AuthKit: 10`, `OnboardingKit: 50`
 - 상세: [`ADR-018`](../philosophy/adr-018-redirect-priority.md)
 
@@ -80,15 +80,15 @@ abstract class AppKit {
 
 - **타입**: `List<BootStep>`
 - **호출 시점**: `AppKits.allBootSteps` 수집 → `SplashController.run()`
-- **전제**: `AppKits.attachContainer` 호출 후에야 유의미한 값 반환 (container.read 접근)
+- **전제**: `AppKits.attachContainer` 호출 후에야 유의미한 값을 반환해요 (container.read 접근)
 - 상세: [`ADR-008`](../philosophy/adr-008-boot-step.md)
 
 ### `buildRedirect` — 라우팅 규칙
 
 - **타입**: `RedirectRule? Function()` → 반환값은 `String? Function(BuildContext, GoRouterState)`
 - **호출 시점**: 라우팅 평가 시 (refreshListenable 트리거)
-- **null 반환**: 개입 안 함 → 다음 Kit 의 rule 실행
-- **String 반환**: 해당 경로로 리다이렉트 (첫 non-null 이 최종)
+- **null 반환**: 개입하지 않아요 → 다음 Kit 의 rule 이 실행돼요
+- **String 반환**: 해당 경로로 리다이렉트해요 (첫 non-null 이 최종)
 - 상세: [`ADR-018`](../philosophy/adr-018-redirect-priority.md)
 
 ### `refreshListenable` — 라우터 리빌드 트리거
@@ -103,7 +103,7 @@ abstract class AppKit {
 - **타입**: `Future<void>`
 - **호출 시점**: `install([...])` 중 해당 Kit 설치 직후, container 생성 전
 - **용도**: Kit 내부 초기화 (채널 등록 등)
-- **제한**: container 아직 없음 → Provider 접근 불가
+- **제한**: container 가 아직 없어서 Provider 접근이 불가해요
 
 ### `onDispose` — 정리 후크
 
@@ -112,7 +112,7 @@ abstract class AppKit {
   1. `install` 실패 시 역순 롤백
   2. `resetForTest()` 호출 시
 - **용도**: 스트림 구독 해제 · 네이티브 채널 정리
-- **예외 처리**: 내부에서 throw 해도 상위에서 삼킴 (best-effort)
+- **예외 처리**: 내부에서 throw 해도 상위에서 삼켜요 (best-effort)
 
 ---
 
@@ -170,7 +170,7 @@ class AppKits {
 11. runApp(UncontrolledProviderScope(container: container, child: const App()))
 ```
 
-**순서 강제**: 7 ↔ 8 바뀌면 BootStep 에서 `container.read` 가 StateError.
+**순서 강제**: 7 ↔ 8 이 바뀌면 BootStep 에서 `container.read` 가 StateError 를 던져요.
 
 ---
 
@@ -209,7 +209,7 @@ class MyKit extends AppKit {
 }
 ```
 
-함께 작성:
+다음 파일도 함께 작성해요:
 - `lib/kits/my_kit/kit_manifest.yaml`
 - `lib/kits/my_kit/README.md`
 - `test/kits/my_kit/my_kit_contract_test.dart`

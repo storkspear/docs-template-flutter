@@ -1,17 +1,12 @@
 # auth_kit
 
-**JWT 인증 + 소셜 로그인 4종 (Google · Apple · Kakao · Naver) + 로그인 · 비번찾기 · 이메일 인증 · 2FA 화면**. `backend_api_kit` 에 의존.
+JWT 인증과 소셜 로그인 4종 (Google · Apple · Kakao · Naver) 을 제공하고, 로그인 · 비번찾기 · 이메일 인증 · 2FA 화면까지 표준 UI 로 갖춘 kit 이에요. HTTP 통신은 `backend_api_kit` 에 의존해요.
 
 ---
 
 ## 개요
 
-- **인증 방식**: 이메일/비번 · Google Sign-In · Sign in with Apple · Kakao · Naver (kakao/naver 는 한국 시장 앱에서 활성)
-- **토큰 저장**: `SecureStorage` + 원자적 ([`ADR-013`](../philosophy/adr-013-token-atomic-storage.md))
-- **401 자동 refresh**: `AuthInterceptor` 가 투명 처리 ([`ADR-010`](../philosophy/adr-010-queued-interceptor.md))
-- **부팅 시 토큰 검증**: `AuthCheckStep` BootStep
-- **라우팅 게이트**: `redirectPriority: 10` ([`ADR-018`](../philosophy/adr-018-redirect-priority.md))
-- **제공 화면**: `/login`, `/forgot-password`, `/verify-email`, `/login/2fa` (+ `twoFactorEnabled` 시 `/settings/2fa` 관리 3종)
+인증 방식은 이메일/비번에 Google Sign-In · Sign in with Apple · Kakao · Naver 를 더한 구성이에요 (kakao/naver 는 한국 시장 앱에서 활성화해요). 토큰은 `SecureStorage` 에 원자적으로 저장하고 ([`ADR-013`](../philosophy/adr-013-token-atomic-storage.md)), 401 이 떨어지면 `AuthInterceptor` 가 투명하게 refresh 해요 ([`ADR-010`](../philosophy/adr-010-queued-interceptor.md)). 부팅 시엔 `AuthCheckStep` BootStep 이 토큰을 검증하고, `redirectPriority: 10` 라우팅 게이트가 미인증 접근을 막아요 ([`ADR-018`](../philosophy/adr-018-redirect-priority.md)). 화면은 `/login`, `/forgot-password`, `/verify-email`, `/login/2fa` 를 기본 제공하고, `twoFactorEnabled` 시 `/settings/2fa` 관리 3종이 더해져요.
 
 ---
 
@@ -40,9 +35,9 @@ await AppKits.install([
 ]);
 ```
 
-> `providers` 는 `app_kits.yaml` 의 `auth_kit.providers` 와 1:1 동기화. `tool/configure_app.dart` 가 불일치 검증.
+> `providers` 는 `app_kits.yaml` 의 `auth_kit.providers` 와 1:1 로 동기화해야 해요. `tool/configure_app.dart` 가 불일치를 검증해요.
 
-의존성 순서 주의: `backend_api_kit` 이 먼저.
+의존성 순서에 주의하세요 — `backend_api_kit` 이 먼저예요.
 
 ---
 
@@ -111,7 +106,7 @@ await authService.withdraw();
 final success = await authService.refreshToken();
 ```
 
-> 보통은 `LoginScreen` 이 제공하는 SocialLoginBar 위젯이 provider SDK 호출 + 토큰 추출 + `signInWithXxx()` 호출까지 처리하므로 직접 호출할 일은 드물어요. 커스텀 로그인 화면 작성 시에만 위 메서드 직접 사용.
+> 보통은 `LoginScreen` 이 제공하는 SocialLoginBar 위젯이 provider SDK 호출 + 토큰 추출 + `signInWithXxx()` 호출까지 처리하므로 직접 호출할 일은 드물어요. 커스텀 로그인 화면을 작성할 때만 위 메서드를 직접 사용해요.
 
 ### AuthState 구독
 
@@ -175,13 +170,13 @@ AuthKit(
 )
 ```
 
-> API endpoint (`/api/apps/{slug}/auth/email/signin` 등) 는 [`api_endpoints.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/api_endpoints.dart) 에서 관리. 백엔드와 1:1 일치 필요해서 일반적으로 변경하지 않아요.
+> API endpoint (`/api/apps/{slug}/auth/email/signin` 등) 는 [`api_endpoints.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/api_endpoints.dart) 에서 관리해요. 백엔드와 1:1 로 일치해야 해서 일반적으로 변경하지 않아요.
 
 ---
 
 ## 시연 모드 (Dev Mock)
 
-백엔드 · OAuth SDK 키 없이 로그인 → home 흐름까지 keyless 시연하는 모드. 솔로 dev 가 새 파생 레포 첫 `flutter run` 에서 가장 자주 쓸 옵션이에요.
+백엔드 · OAuth SDK 키 없이 로그인 → home 흐름까지 keyless 로 시연하는 모드예요. 솔로 dev 가 새 파생 레포 첫 `flutter run` 에서 가장 자주 쓸 옵션이에요.
 
 ```bash
 flutter run --dart-define=AUTH_DEV_MOCK=true
@@ -189,9 +184,9 @@ flutter run --dart-define=AUTH_DEV_MOCK=true
 
 활성 조건: dart-define 주입 + 백엔드 unreachable. 자동으로 `BackendReachability.probe()` 가 baseUrl 의 `/actuator/health` 핑 → 실패 시 `DevOfflineAuthInterceptor` 가 `/auth/*` 응답을 fake JWT 로 가로채요.
 
-> ⚠️ **운영 빌드 절대 금지** — release 에 `AUTH_DEV_MOCK=true` 박으면 모든 인증이 fake JWT.
+> ⚠️ **운영 빌드에선 절대 금지예요** — release 에 `AUTH_DEV_MOCK=true` 를 박으면 모든 인증이 fake JWT 가 돼요.
 
-자세한 메커니즘 · 핵심 코드 위치 · 운영 빌드 안전장치는 [`auth_kit/README.md` Dev Mock 섹션](../../lib/kits/auth_kit/README.md#dev-mock-백엔드-없이-시연) 참고.
+자세한 메커니즘 · 핵심 코드 위치 · 운영 빌드 안전장치는 [`auth_kit/README.md` Dev Mock 섹션](../../lib/kits/auth_kit/README.md#dev-mock-백엔드-없이-시연) 을 참고하세요.
 
 ---
 
@@ -199,7 +194,7 @@ flutter run --dart-define=AUTH_DEV_MOCK=true
 
 ### 로그인 화면 (이미 제공됨)
 
-`/login` 라우트는 `AuthKit` 이 자동으로 기여. 파생 레포에서 커스텀 로그인 화면 원하면 위 경로를 override + 자체 Screen 등록.
+`/login` 라우트는 `AuthKit` 이 자동으로 기여해요. 파생 레포에서 커스텀 로그인 화면을 원하면 위 경로를 override 하고 자체 Screen 을 등록하면 돼요.
 
 ### 로그아웃 버튼
 

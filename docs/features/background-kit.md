@@ -1,15 +1,12 @@
 # background_kit
 
-**`workmanager` 기반 주기 · 1회성 백그라운드 태스크**. 앱 종료 후에도 실행 가능.
+`workmanager` 기반으로 주기 · 1회성 백그라운드 태스크를 등록하는 kit 이에요. 앱이 종료된 후에도 실행될 수 있어요.
 
 ---
 
 ## 개요
 
-- **주기 태스크**: 최소 15분 간격 (Android WorkManager 제약) · iOS 는 시스템이 실행 시점을 결정 (보장 없음)
-- **1회성 태스크**: 지연 실행 (예: 10분 후)
-- **제약 조건**: 네트워크 연결 · 충전 중 · Wi-Fi 만 등
-- **플랫폼 차이**: iOS 는 background fetch API, Android 는 WorkManager
+주기 태스크는 최소 15분 간격이에요 (Android WorkManager 제약). iOS 는 시스템이 실행 시점을 결정하기 때문에 실행 보장이 없어요. 1회성 태스크는 지연 실행 (예: 10분 후) 이 가능하고, 네트워크 연결 · 충전 중 · Wi-Fi 만 같은 제약 조건도 걸 수 있어요. 플랫폼별 백엔드가 달라서 iOS 는 background fetch API, Android 는 WorkManager 를 써요.
 
 ---
 
@@ -41,7 +38,7 @@ await AppKits.install([
 ]);
 ```
 
-> `callbackDispatcher` 는 **top-level 함수** + `@pragma('vm:entry-point')` 필수 (Dart AOT 가 트리쉐이킹하지 않도록).
+> `callbackDispatcher` 는 **top-level 함수** 여야 하고 `@pragma('vm:entry-point')` 가 필수예요 (Dart AOT 가 트리쉐이킹하지 않도록).
 
 ---
 
@@ -80,7 +77,7 @@ await ref.read(backgroundTaskSchedulerProvider).cancel('daily_sync');
 await ref.read(backgroundTaskSchedulerProvider).cancelAll();
 ```
 
-> 추가 제약 (네트워크 / 충전 / Wi-Fi 등) 은 `WorkmanagerTaskScheduler` 가 workmanager 의 옵션을 직접 노출하지 않아요. 필요 시 파생 레포에서 `Scheduler` 인터페이스 자체 구현체로 확장.
+> 추가 제약 (네트워크 / 충전 / Wi-Fi 등) 은 `WorkmanagerTaskScheduler` 가 workmanager 의 옵션을 직접 노출하지 않아요. 필요하면 파생 레포에서 `Scheduler` 인터페이스의 자체 구현체로 확장해요.
 
 ---
 
