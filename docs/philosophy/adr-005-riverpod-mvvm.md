@@ -117,7 +117,10 @@ class LoginViewModel extends Notifier<LoginState> {
 
 /// riverpod 3 는 `.autoDispose` 수식어 대신 `isAutoDispose:` 인자를 써요 (기본값 false).
 final NotifierProvider<LoginViewModel, LoginState> loginViewModelProvider =
-    NotifierProvider<LoginViewModel, LoginState>(LoginViewModel.new);
+    NotifierProvider<LoginViewModel, LoginState>(
+      LoginViewModel.new,
+      isAutoDispose: true,
+    );
 ```
 
 ### Screen 표준 형태
@@ -162,7 +165,7 @@ final crashServiceProvider = Provider<CrashService>((ref) => DebugCrashService()
 ### 설계 선택 포인트
 
 **포인트 1 — autoDispose 는 riverpod 3 에서 기본값이 아니에요**  
-riverpod 3 의 provider 는 **기본이 non-autoDispose**(`isAutoDispose = false`) 예요. riverpod 2 의 `StateNotifierProvider.autoDispose` 와 같은 수명을 유지하려면 `isAutoDispose: true` 를 넘겨야 해요 — 빼먹으면 ViewModel 이 앱 수명 내내 살아남아 화면을 떠나도 이전 에러 문구·단계와 private 필드(비밀번호·2FA 토큰)가 남아요. (riverpod 2 시절엔 `StateNotifierProvider.autoDispose` 를 명시했어요). 화면이 stack 에서 빠지면 즉시 dispose → 불필요한 상태 · 구독 누적 방지. 예외는 "앱 전체 수명 = 상태 수명" 인 경우 (예: `authStateProvider`) 만 `ref.keepAlive()` 로 유지해요.
+riverpod 3 의 provider 는 **기본이 non-autoDispose**(`isAutoDispose = false`) 예요. riverpod 2 의 `StateNotifierProvider.autoDispose` 와 같은 수명을 유지하려면 `isAutoDispose: true` 를 넘겨야 해요 — 빼먹으면 ViewModel 이 앱 수명 내내 살아남아 화면을 떠나도 이전 에러 문구·단계와 private 필드(비밀번호·2FA 토큰)가 남아요. (riverpod 2 시절엔 `StateNotifierProvider.autoDispose` 를 명시했어요). 화면이 stack 에서 빠지면 즉시 dispose → 불필요한 상태 · 구독 누적 방지. 예외는 "앱 전체 수명 = 상태 수명" 인 경우 (예: `authStateProvider`) — 이때는 기본값(non-autoDispose)을 그대로 쓰면 돼요.
 
 **포인트 2 — ViewModel 은 `code` 만, UI 는 i18n 메시지**  
 ViewModel 의 `state.errorCode` 는 서버 `ErrorCode` enum 문자열 또는 로컬 키 (`LOGIN_FAILED` 등). 실제 화면 표시 문구는 Screen 에서 `S.of(context).loginFailed` 같이 번역. **이유**: ViewModel 은 `BuildContext` 를 가지지 않으므로 i18n 에 직접 의존하면 안 됨. 테스트에서도 "code 비교" 가 "문구 비교" 보다 깨지지 않아요.
