@@ -137,11 +137,17 @@ class ApiClient {
     required this.onTokenRefresh,
   }) {
     _dio = Dio(...);
+    _refreshDio = Dio(...);   // ← refresh · 재시도 전용 (AuthInterceptor 없음)
     _dio.interceptors.addAll([
-      AuthInterceptor(dio: _dio, tokenStorage: tokenStorage, onTokenRefresh: onTokenRefresh),
+      AuthInterceptor(
+        tokenStorage: tokenStorage,
+        dio: _refreshDio,     // ← 같은 _dio 로 재시도하면 self-deadlock (ADR-010 · ADR-011)
+        onTokenRefresh: onTokenRefresh,
+      ),
       ErrorInterceptor(),
       LoggingInterceptor(),
     ]);
+    _refreshDio.interceptors.addAll([ErrorInterceptor(), LoggingInterceptor()]);
   }
 }
 ```

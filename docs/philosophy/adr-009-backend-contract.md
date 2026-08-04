@@ -295,8 +295,8 @@ OpenAPI / freezed / json_serializable 같은 코드 생성 도구는 **수십 �
 
 **계약 구현** (클라이언트)
 - [`lib/kits/backend_api_kit/api_response.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/api_response.dart) — `ApiResponse<T>` · `ApiError` · `PageResponse<T>` (80줄)
-- [`lib/kits/backend_api_kit/error_code.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/error_code.dart) — 에러 코드 상수 (75줄)
-- [`lib/kits/backend_api_kit/api_exception.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/api_exception.dart) — `ApiException` + `safeErrorCode` / `safeErrorMessage` (94줄)
+- [`lib/kits/backend_api_kit/error_code.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/error_code.dart) — 에러 코드 상수 (107줄)
+- [`lib/kits/backend_api_kit/api_exception.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/api_exception.dart) — `ApiException` + `safeErrorCode` / `safeErrorMessage` (96줄)
 - [`lib/kits/backend_api_kit/api_client.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/api_client.dart) — `ApiClient.get/post<T>` 에서 `fromData` 콜백 받아 파싱
 
 **ViewModel 에서 사용**

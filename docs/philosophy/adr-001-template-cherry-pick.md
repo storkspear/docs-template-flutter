@@ -67,11 +67,17 @@
 ./scripts/app/rename-app.sh <slug> com.<org>.<slug>
 ```
 
+> ⚠️ **slug 는 소문자 · 숫자 · 하이픈만 써요 — 언더스코어는 안 돼요.** `AppConfig` 가 부트 시점에 `^[a-z][a-z0-9-]*$` 로 검증하고, 어긋나면 `ArgumentError` 를 던져 앱이 그 자리에서 크래시해요 (백엔드 `AppSlugExtractor` 규칙과 같아야 라우팅이 성립하기 때문). 스크립트도 같은 정규식으로 인자를 먼저 검증하니 `my_tracker` 를 넣으면 아무것도 바꾸지 않고 거부해요.
+>
+> Bundle ID 는 **영숫자와 점만** 써요. Apple 은 언더스코어를, Android 는 하이픈을 거부하는데 이 스크립트는 양쪽에 같은 문자열을 넣기 때문이에요 — `com.example.myTracker` 처럼 넣어요.
+
 이 스크립트가 바꾸는 곳:
 - `pubspec.yaml` 의 `name:`
-- `android/app/build.gradle.kts` 의 `applicationId`
-- iOS Bundle ID — `ios/Flutter/AppEnv-{dev,prod}.xcconfig` 의 `BUNDLE_ID_BASE` (Info.plist 의 `CFBundleIdentifier` 는 `$(PRODUCT_BUNDLE_IDENTIFIER)` 변수 참조라 자동 반영)
+- `lib/main.dart` 의 `AppConfig.init(appSlug: ...)`
+- `android/app/build.gradle.kts` 의 `applicationId` + `AndroidManifest.xml` 의 app label
+- iOS Bundle ID — `ios/Flutter/AppEnv-{dev,prod}.xcconfig` 의 `BUNDLE_ID_BASE` (Info.plist 의 `CFBundleIdentifier` 는 `$(PRODUCT_BUNDLE_IDENTIFIER)` 변수 참조라 자동 반영) + iOS Display Name
 - Kotlin `MainActivity` 의 패키지 선언 + Android Fastlane `Appfile` 의 `package_name`
+- `app_kits.yaml` 의 `app.name` · `app.slug` + Dart import 경로 일괄 치환
 
 ### 3. 템플릿 → 파생 전파 (cherry-pick)
 

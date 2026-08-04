@@ -90,8 +90,23 @@ on:
     tags: ['v*']
 
 jobs:
+  # 태그 push 는 ci.yml 을 트리거하지 않아서(main 브랜치 push·PR 전용)
+  # 같은 검사를 릴리스 워크플로가 직접 들고 있어요.
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib/ test/
+      - run: dart run tool/configure_app.dart --audit
+      - run: bash tools/docs-check/docs-contract-test.sh
+      - run: flutter analyze
+      - run: flutter test --reporter=expanded
+
   release-android:
     runs-on: ubuntu-latest
+    needs: verify          # verify 가 그린일 때만 빌드·업로드로 넘어가요
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2

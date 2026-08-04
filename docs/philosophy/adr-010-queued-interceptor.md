@@ -1,6 +1,6 @@
 # Queued_Interceptor
 
-**Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 line 수 갱신. `lib/kits/backend_api_kit/interceptors/auth_interceptor.dart` (91줄) 에서 `QueuedInterceptor` 사용. 동시 401 · 무한루프 · refresh 실패 시나리오를 모두 다뤄요.
+**Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 line 수 갱신. `lib/kits/backend_api_kit/interceptors/auth_interceptor.dart` (89줄) 에서 `QueuedInterceptor` 사용. 동시 401 · 무한루프 · refresh 실패 시나리오를 모두 다뤄요.
 
 ## 결론부터
 
@@ -250,7 +250,7 @@ Dio 일반 `Interceptor.onError` 는 `void` 반환인데 안에서 `async` 가�
 ## Code References
 
 **인터셉터 구현**
-- [`lib/kits/backend_api_kit/interceptors/auth_interceptor.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/interceptors/auth_interceptor.dart) — 91줄, `QueuedInterceptor` 확장
+- [`lib/kits/backend_api_kit/interceptors/auth_interceptor.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/interceptors/auth_interceptor.dart) — 89줄, `QueuedInterceptor` 확장
 
 **콜백 주입**
 - [`lib/common/providers.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/common/providers.dart) — `onTokenRefresh: () => ref.read(authServiceProvider).refreshToken()`

@@ -1,6 +1,6 @@
 # FeatureKit_Registry
 
-**Status**: Accepted. 현재 유효 (2026-07-29 기준). `lib/core/kits/app_kit.dart` (54줄 계약) + `lib/core/kits/app_kits.dart` (184줄 레지스트리) + 15개 Kit 구현.
+**Status**: Accepted. 현재 유효 (2026-07-29 기준). `lib/core/kits/app_kit.dart` (54줄 계약) + `lib/core/kits/app_kits.dart` (185줄 레지스트리) + 15개 Kit 구현.
 
 ## 결론부터
 
@@ -112,11 +112,21 @@ class AppKits {
 ### 실제 조립 (main.dart)
 
 ```dart
-// lib/main.dart 발췌
+// lib/main.dart 발췌 (인자 일부 생략)
 await AppKits.install([
   BackendApiKit(),
-  AuthKit(),
-  UpdateKit(service: NoUpdateAppUpdateService()),
+  AuthKit(
+    providers: const {AuthProvider.email, AuthProvider.google, AuthProvider.apple},
+    loginPath: Routes.login,
+    twoFactorEnabled: true,
+    twoFactorLoginPath: Routes.twoFactorLogin,
+    twoFactorSettingsPath: Routes.twoFactorSettings,
+  ),
+  FileKit(),
+  UpdateKit(
+    // 스플래시에서 GET /app-version 으로 서버 최소버전 조회
+    service: BackendAppUpdateService(() async { /* ... */ }),
+  ),
   ObservabilityKit(),
 ]);
 
@@ -135,7 +145,7 @@ AppKits.attachContainer(container);                   // ← BootStep/Listenable
 `requires` 가 `List<Type>` 이에요. `List<String>` 대신 `Type` 을 택한 이유는 **컴파일 시점에 오타를 잡기 위함** 이에요. `requires: [BackendApiKit]` 은 해당 클래스가 import 되어야 컴파일되므로, `requires: ['backned_api_kit']` 같은 오타가 원천 차단돼요.
 
 **포인트 2 — 우선순위 정렬 (redirectPriority)**  
-여러 Kit 이 리다이렉트 규칙을 가지면 충돌이 나요 (예: AuthKit 이 `/login` 으로 보내는데 UpdateKit 은 `/force-update` 로 보냄). 낮은 숫자가 먼저 실행되는 **안정 정렬** 로 해결: `UpdateKit=1 → AuthKit=10 → OnboardingKit=50`. 동일 우선순위는 install 순서가 결정.
+여러 Kit 이 리다이렉트 규칙을 가지면 충돌이 나요 (예: AuthKit 은 `/login` 으로 보내는데 OnboardingKit 은 `/onboarding` 으로 보냄). 낮은 숫자가 먼저 실행되는 **안정 정렬** 로 해결하고, 동일 우선순위는 install 순서가 결정해요. 지금 규칙을 기여하는 Kit 은 `AuthKit=10` · `OnboardingKit=50` 둘뿐이에요 — `UpdateKit` 은 `1` 을 선언하지만 `buildRedirect()` 가 없어 체인에 들어가지 않아요 (강제 업데이트는 `app.dart` 의 오버레이가 담당). 자세한 건 [`ADR-018`](./adr-018-redirect-priority.md) 참조.
 
 **포인트 3 — 롤백 메커니즘**  
 `onInit` 중 한 Kit 이 실패하면 이미 초기화된 Kit 들을 **역순으로 onDispose** 한 뒤 레지스트리에서 제거. 반쪽 초기화 상태를 남기지 않아요. 테스트에선 `resetForTest()` 가 같은 일을 해서 상태 누적을 막아요.
@@ -166,7 +176,7 @@ AppKits.attachContainer(container);                   // ← BootStep/Listenable
 
 `app_kits.yaml` 한 줄 주석만으로 Kit 이 꺼지려면, **그 Kit 에 의존하는 다른 Kit 이 같이 꺼져야** 하고 **runtime 에러 없이 깔끔해야** 해요. 이걸 위해 `requires` 검증 · 롤백 · tree-shaking 친화적 설계 모두 필요했어요. "단순히 `if` 문 추가하면 될 걸" 하고 시작했다가 레지스트리 178줄 + 테스트 다수가 붙었어요.
 
-**교훈**: 선언적 조립의 단순함은 비선언적 복잡함을 내부에 숨긴 결과예요. "선언 안전성" 을 목표로 잡으면 꽤 깊게 파게 됩니다 (현재 184줄 + 의존성 검증 + 롤백 + 테스트).
+**교훈**: 선언적 조립의 단순함은 비선언적 복잡함을 내부에 숨긴 결과예요. "선언 안전성" 을 목표로 잡으면 꽤 깊게 파게 됩니다 (현재 185줄 + 의존성 검증 + 롤백 + 테스트).
 
 ### 교훈 2 — 컨테이너 부착 시점이 혼란의 주범
 
@@ -192,7 +202,7 @@ UpdateKit(1) · AuthKit(10) · OnboardingKit(50) 처럼 숫자를 띄워두니, 
 
 **핵심 구현** (템플릿 원본)
 - [`lib/core/kits/app_kit.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/kits/app_kit.dart) — `AppKit` 추상 클래스 · `RedirectRule` typedef (54줄)
-- [`lib/core/kits/app_kits.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/kits/app_kits.dart) — 레지스트리 · 롤백 · 우선순위 정렬 (184줄)
+- [`lib/core/kits/app_kits.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/kits/app_kits.dart) — 레지스트리 · 롤백 · 우선순위 정렬 (185줄)
 - [`lib/main.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/main.dart) — `install → container → attach` 실제 호출 순서
 - [`app_kits.yaml`](https://github.com/storkspear/template-flutter/blob/main/app_kits.yaml) — 활성 Kit 선언 (YAML 진실 출처)
 - [`tool/configure_app.dart`](https://github.com/storkspear/template-flutter/blob/main/tool/configure_app.dart) — YAML ↔ Dart 정합성 검증 (ADR-004 참조)
@@ -201,7 +211,7 @@ UpdateKit(1) · AuthKit(10) · OnboardingKit(50) 처럼 숫자를 띄워두니, 
 - [`lib/kits/auth_kit/auth_kit.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/auth_kit.dart) — `requires: [BackendApiKit]` · `redirectPriority: 10` · `bootSteps: [AuthCheckStep()]` 모두 기여
 - [`lib/kits/backend_api_kit/backend_api_kit.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/backend_api_kit.dart) — provider only 기여
 - [`lib/kits/observability_kit/observability_kit.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/observability_kit/observability_kit.dart) — 환경 변수 기반 조건부 override
-- [`lib/kits/update_kit/update_kit.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/update_kit/update_kit.dart) — `redirectPriority: 1` 최우선 게이트
+- [`lib/kits/update_kit/update_kit.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/update_kit/update_kit.dart) — provider override + bootStep + `refreshListenable` 기여 (리다이렉트는 기여하지 않음)
 
 **Recipe 샘플**
 - [`recipes/local-only-tracker.yaml`](https://github.com/storkspear/template-flutter/blob/main/recipes/local-only-tracker.yaml)

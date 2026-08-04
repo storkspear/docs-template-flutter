@@ -101,6 +101,8 @@ auth_kit  payment_kit  file_kit    (셋 다 requires: backend_api_kit)
 | 다른 kit 의 **인스턴스 접근** | ❌ 직접 생성 금지<br>✅ provider 경유 | `ref.read(apiClientProvider)` (○) <br>`ApiClient(...)` 직접 생성 (✗) |
 | **미선언 kit** 의 cross-import (manifest `requires` 에 없는 kit) | ❌ **절대 금지** | `auth_kit` 이 manifest 선언 없이 `observability_kit/dogfooding_panel.dart` import → 그 recipe 에 observability 빠지면 컴파일 실패 |
 | `core/` import (인터페이스/공용 위젯) | ✅ 항상 허용 | `core/storage/token_storage.dart`, `core/widgets/...` |
+| `common/providers.dart` · `common/splash/boot_step.dart` import | ✅ **허용 예외 (이 두 파일만)** | `import '.../common/splash/boot_step.dart'` 로 `BootStep` 구현, `import '.../common/providers.dart'` 로 전역 Provider 읽기 |
+| 그 밖의 `common/` import (`router/`, `splash/splash_controller.dart` 등) | ❌ 금지 | 조립 지점은 kit 이 몰라야 해요 — 반대로 `common/` 이 kit 을 조립하는 방향이 정상 |
 
 ### 3-2. 왜 type import 는 허용하는가
 

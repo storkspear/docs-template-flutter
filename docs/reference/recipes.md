@@ -24,7 +24,7 @@
 # recipes/local-only-tracker.yaml
 app:
   name: My Tracker
-  slug: my_tracker
+  slug: my-tracker
   environment: prod
   palette_class: DefaultPalette
 
@@ -65,7 +65,7 @@ kits:
 # recipes/local-notifier-app.yaml
 app:
   name: Notifier App
-  slug: notifier_app
+  slug: notifier-app
   environment: prod
   palette_class: DefaultPalette
 
@@ -92,7 +92,8 @@ kits:
 
 - **update_kit 조립 교체 필수**: 이 recipe 는 `backend_api_kit` 이 없어서 템플릿 기본 `BackendAppUpdateService` 를 그대로 두면 컴파일이 깨져요. `lib/main.dart` 에서 `UpdateKit(service: NoUpdateAppUpdateService())` 로 바꾸고 `ApiClient.onUpgradeRequired` 글루 블록 + import 2개(`backend_api_kit.dart`, `upgrade_required.dart`)를 지워요 ([`update-kit.md`](../features/update-kit.md) 참고).
 - **ads_kit 활성**: 첫 실행 시 ATT (iOS) · UMP (GDPR) 다이얼로그가 자동 노출돼요
-- **출시 전**: `Info.plist` 의 `NSUserTrackingUsageDescription` 을 다듬고 AdMob 실제 ID 를 입력해요
+- **ads_kit 활성 시 플랫폼 키**: `Info.plist` 에 `NSUserTrackingUsageDescription` · `SKAdNetworkItems` 를 추가하고, `AndroidManifest.xml` 에서 광고 권한을 막아 둔 `tools:node="remove"` 줄을 지워요 ([`ads_kit/README.md`](../../lib/kits/ads_kit/README.md))
+- **출시 전**: AdMob 실제 ID 를 입력해요 (Android meta-data · iOS `GADApplicationIdentifier` 기본값은 Google 테스트 ID 예요)
 
 ### 대표 사례
 
@@ -108,7 +109,7 @@ kits:
 # recipes/backend-auth-app.yaml
 app:
   name: Authed App
-  slug: authed_app
+  slug: authed-app
   environment: prod
   palette_class: DefaultPalette
 
@@ -149,7 +150,7 @@ kits:
 # recipes/social-auth-app.yaml
 app:
   name: Social Login App
-  slug: social_app
+  slug: social-app
   environment: prod
   palette_class: DefaultPalette
 

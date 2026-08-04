@@ -94,7 +94,7 @@ GHA 에서는 `android/fastlane/Fastfile` 의 `upload_sentry_mapping` lane 을 �
 cd android
 bundle exec fastlane android upload_sentry_mapping version:1.2.3
 # 내부적으로 sentry-cli 가
-#   1) ProGuard mapping (Kotlin/Java R8) — build/app/outputs/mapping/release/mapping.txt
+#   1) ProGuard mapping (Kotlin/Java R8) — build/app/outputs/mapping/prodRelease/mapping.txt
 #   2) Dart split-debug-info — build/symbols
 # 둘 다 업로드 (release new → upload-proguard → upload-dif → finalize)
 ```

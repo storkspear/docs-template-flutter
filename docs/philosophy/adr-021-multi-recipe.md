@@ -238,6 +238,10 @@ YAML 파일 상단에 "이건 로컬 전용" · "ads_kit 활성 시 ATT 자동 �
 **포인트 3 — `app.slug` · `app.name` 은 placeholder**  
 recipe 의 `slug: my_tracker` 는 그대로 쓰지 말고 파생 레포의 본인 slug 로 교체. `rename-app.sh` 가 자동 변환.
 
+**slug 는 소문자 · 숫자 · 하이픈만 써요 — 언더스코어는 못 써요.** `AppConfig` 가 부트에서 `^[a-z][a-z0-9-]*$` 로 검증하고 어긋나면 `ArgumentError` 로 앱이 크래시해요 (백엔드 `AppSlugExtractor` 와 같은 규칙이라 어긋난 slug 는 서버 라우팅부터 실패해요). `recipes/*.yaml` 4개의 `slug` 값 (`my-tracker` · `notifier-app` · `authed-app` · `social-app`) 은 전부 **자리 표시용 이름** 이라 파생 레포의 본인 slug 로 바꿔야 해요. `rename-app.sh` 도 같은 정규식으로 인자를 검증하니 언더스코어를 넣으면 그 자리에서 거부돼요.
+
+**Bundle ID 는 영숫자와 점만 써요.** Apple 은 언더스코어를, Android 는 하이픈을 허용하지 않아서 두 플랫폼이 함께 받아들이는 문자는 영숫자뿐이에요. `rename-app.sh` 는 Android 와 iOS 에 같은 문자열을 넣으므로 둘 중 하나라도 거부하는 문자가 있으면 인자 단계에서 막아요 — `./scripts/app/rename-app.sh my-tracker com.example.myTracker` 처럼 넣어요.
+
 **포인트 4 — recipe 와 `app_kits.yaml` 의 포맷 동일**  
 recipe 는 단지 **샘플 `app_kits.yaml`**. 별도 포맷 아님. 복사 = 그대로 쓰기.
 

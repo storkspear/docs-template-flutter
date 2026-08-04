@@ -95,7 +95,7 @@ git fetch template
 <repo> local init                       # 또는 interactive prompt
 
 # 예
-<repo> local init my_tracker com.example.mytracker
+<repo> local init my-tracker com.example.myTracker
 ```
 
 > 옵션: `<repo> local init --skip-rename` (이미 rename 한 경우), `<repo> local init --reinit` (강제 재실행).
@@ -110,7 +110,9 @@ rename 단계에서 변경되는 곳:
 - `ios/Flutter/AppEnv-{dev,prod}.xcconfig` 의 `BUNDLE_ID_BASE`
   (iOS PRODUCT_BUNDLE_IDENTIFIER 가 `$(BUNDLE_ID_BASE)$(BUNDLE_ID_SUFFIX)` 변수로
   박혀있어 dev 빌드는 `<bundle_id>.dev`, prod 빌드는 `<bundle_id>` 로 자동 결정)
-- `ios/Runner/Info.plist` 의 `CFBundleDisplayName` · `CFBundleName`
+- `ios/Runner.xcodeproj/project.pbxproj` 의 RunnerTests config 6개가 들고 있는 `BUNDLE_ID_BASE`
+  (이 타깃은 `Pods-RunnerTests.*.xcconfig` 를 base 로 써서 `AppEnv-*.xcconfig` 를 상속하지 않아요)
+- `ios/Flutter/AppEnv-{dev,prod}.xcconfig` 의 `APP_DISPLAY_NAME` (`Info.plist` 의 `CFBundleDisplayName` 이 참조하는 값) · `ios/Runner/Info.plist` 의 `CFBundleName`
 - `app_kits.yaml` 의 `app.name` · `app.slug`
 - `android/fastlane/Appfile` 의 `package_name`
 - import 경로 (`package:app_template/...` → `package:<APP_NAME>/...`, lib/ + test/ 일괄)

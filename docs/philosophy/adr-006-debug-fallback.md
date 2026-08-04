@@ -238,9 +238,9 @@ Debug 환경이면 콘솔 print, 프로덕션 환경이면 Sentry 전송. ViewMo
 
 ### 교훈 3 — `--dart-define` 확인이 어려움
 
-Sentry 가 안 찍혀서 "Sentry SDK 버그?" 의심했는데 원인은 `--dart-define=SENTRY_DSN=...` 누락. 런타임 검증 로직 (`ObservabilityEnv.isSentryEnabled`) 을 추가해서 부팅 로그에 `[Observability] Sentry: enabled/disabled` 를 출력하니 디버깅 30분 → 5초.
+Sentry 가 안 찍혀서 "Sentry SDK 버그?" 의심했는데 원인은 `--dart-define=SENTRY_DSN=...` 누락. 런타임 검증 로직 (`ObservabilityEnv.isSentryEnabled`) 은 지금도 조건부 override 판단에 쓰이지만, **그 값을 부팅 로그로 내보내지는 않아요**. 부팅 때 `Sentry: enabled/disabled` 한 줄을 찍도록 하면 이런 종류의 디버깅이 30분에서 5초로 줄어요.
 
-**교훈**: 환경 변수 기반 기능은 **부팅 시 상태 로그** 를 반드시 출력. "어 이게 켜진 건가?" 를 5초 안에 확인 가능하게.
+**교훈**: 환경 변수 기반 기능은 **부팅 시 상태 로그** 를 내보내는 게 좋아요. "어 이게 켜진 건가?" 를 5초 안에 확인 가능하게.
 
 ## 관련 사례 (Prior Art)
 

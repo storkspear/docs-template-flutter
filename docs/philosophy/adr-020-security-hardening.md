@@ -4,7 +4,7 @@
 
 ## 결론부터
 
-**보안은 5중 방어선** — Android R8 난독화 · Dart 심볼 난독화 · Cleartext HTTP 차단 · SSL pinning (opt-in) · Keychain / EncryptedSharedPreferences. 각각 공격 유형이 달라서 한 층이 뚫려도 나머지가 막아요. 추가 비용은 CI 설정 약간 + Sentry 심볼 업로드 · 핀 관리. 인디 앱이 과도하게 엔터프라이즈 보안을 흉내 내는 건 피하되, **기본선은 지켜요**.
+**보안은 5중 방어선** — Android R8 난독화 · Dart 심볼 난독화 · Cleartext HTTP 차단 · SSL pinning (opt-in) · iOS Keychain / Android KeyStore. 각각 공격 유형이 달라서 한 층이 뚫려도 나머지가 막아요. 추가 비용은 CI 설정 약간 + Sentry 심볼 업로드 · 핀 관리. 인디 앱이 과도하게 엔터프라이즈 보안을 흉내 내는 건 피하되, **기본선은 지켜요**.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -63,7 +63,7 @@ RASP (Runtime Application Self-Protection) · 디버거 감지 · root/jailbreak
 1. Android R8 난독화 (기본 활성)
 2. Dart 심볼 난독화 + Sentry 업로드 (기본 활성)
 3. Cleartext HTTP 차단 (release 기본 활성)
-4. Keychain / EncryptedSharedPreferences (ADR-013, 기본 활성)
+4. iOS Keychain / Android KeyStore (ADR-013, 기본 활성)
 5. SSL pinning (opt-in, `--dart-define=SSL_PINS=...`)
 
 - **압력 A 만족**: 기본선 충족, 엔터프라이즈 과투자 회피.
@@ -115,7 +115,7 @@ buildTypes {
 lane :build_release do
   # --obfuscate: Dart 클래스/함수 이름 축약, --split-debug-info: 심볼 매핑 보존
   # defines: SENTRY_DSN · POSTHOG_KEY 등을 ENV → --dart-define 으로 주입
-  sh "cd ../.. && flutter build appbundle --release " \
+  sh "cd ../.. && flutter build appbundle --release --flavor prod " \
      "--obfuscate --split-debug-info=build/symbols " \
      "#{defines.join(' ')}"
 end
@@ -124,7 +124,7 @@ lane :upload_sentry_mapping do |options|
   sh <<~SH
     sentry-cli --auth-token #{auth_token} \
       upload-proguard -o #{org} -p #{project} \
-      ../../build/app/outputs/mapping/release/mapping.txt
+      ../../build/app/outputs/mapping/prodRelease/mapping.txt
     sentry-cli --auth-token #{auth_token} \
       upload-dif -o #{org} -p #{project} \
       ../../build/symbols
@@ -158,12 +158,11 @@ end
 
 iOS 는 ATS (App Transport Security) 가 기본 HTTPS 강제.
 
-### 방어선 4 — Keychain / EncryptedSharedPreferences (ADR-013 상세)
+### 방어선 4 — iOS Keychain / Android KeyStore (ADR-013 상세)
 
 ```dart
 // lib/core/storage/secure_storage.dart 발췌
 static const _storage = FlutterSecureStorage(
-  aOptions: AndroidOptions(encryptedSharedPreferences: true),
   iOptions: IOSOptions(
     accessibility: KeychainAccessibility.first_unlock_this_device,
   ),
@@ -172,7 +171,9 @@ static const _storage = FlutterSecureStorage(
 
 효과:
 - iOS: Keychain 의 AES-256 암호화. `first_unlock` 으로 백그라운드 접근 가능, `this_device` 로 iCloud 백업 제외.
-- Android 6.0+: EncryptedSharedPreferences (AES-256). Root 권한 없이는 추출 불가.
+- Android: `flutter_secure_storage` 기본 구현인 KeyStore 기반 cipher 로 암호화. Root 권한 없이는 추출 불가.
+
+Android 쪽에 `aOptions` 가 없는 건 **의도** 예요. Android 구현은 기본이 KeyStore 기반 cipher 라 고를 옵션이 없고, 예전에 쓰이던 `AndroidOptions(encryptedSharedPreferences: true)` 는 Jetpack Security 의 deprecate 와 함께 deprecated 돼서 (v11 제거 예정) 지금은 지정해도 무시돼요.
 
 상세는 [`ADR-013`](./adr-013-token-atomic-storage.md) 참조.
 
@@ -258,7 +259,7 @@ Android keystore · Play store JSON key · Apple p12 등은 `.gitignore` + GitHu
 
 - **기본 공격 차단**: `strings app.so` 로 API 엔드포인트 · 비밀 추출 어려움.
 - **MITM 방어 (opt-in)**: SSL pinning 활성화 시 공용 Wi-Fi 에서도 안전.
-- **토큰 하드웨어 보호**: Keychain · EncryptedSharedPreferences 로 탈옥/루팅 방어.
+- **토큰 하드웨어 보호**: iOS Keychain · Android KeyStore 로 탈옥/루팅 방어.
 - **크래시 여전히 디버깅 가능**: Sentry 심볼 업로드 덕분에 난독화해도 원본 스택 확인.
 - **release 실수 방지**: Cleartext 차단이 `http://` 실수 배포 원천 차단.
 

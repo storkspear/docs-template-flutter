@@ -73,10 +73,13 @@ git push --tags
 ```
 
 `.github/workflows/release-android.yml` 이 트리거되어:
-1. Keystore 디코딩
-2. AAB 빌드 (Sentry / PostHog DSN 자동 주입)
-3. fastlane 으로 Play Console Internal 업로드
-4. Sentry 심볼 업로드 (난독화 매핑 보존)
+1. `verify` 게이트 (format · configure audit · docs contract · analyze · test)
+2. Keystore 디코딩
+3. AAB 빌드 (Sentry / PostHog DSN 자동 주입)
+4. fastlane 으로 Play Console Internal 업로드
+5. Sentry 심볼 업로드 (난독화 매핑 보존)
+
+1번이 빨간불이면 업로드까지 가지 않아요. 태그 push 는 `ci.yml` 을 트리거하지 않아서, 검증을 릴리스 워크플로가 직접 들고 있어요.
 
 ---
 

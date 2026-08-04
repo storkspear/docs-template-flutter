@@ -1,10 +1,10 @@
 # Token_Atomic_Storage
 
-**Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 line 수 갱신. `lib/core/storage/token_storage.dart` (72줄) 가 `saveTokens` 원자 저장 + `repairIfPartial` 복구 담당. iOS Keychain: `first_unlock_this_device`, Android: EncryptedSharedPreferences.
+**Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 line 수 갱신. `lib/core/storage/token_storage.dart` (72줄) 가 `saveTokens` 원자 저장 + `repairIfPartial` 복구 담당. iOS Keychain: `first_unlock_this_device`, Android: flutter_secure_storage 기본 KeyStore 기반 cipher.
 
 ## 결론부터
 
-토큰 (access + refresh) 은 **SecureStorage** (iOS Keychain, Android EncryptedSharedPreferences) 에, 일반 설정은 **SharedPreferences** 에 저장해요. 토큰 저장은 **두 개를 원자적으로** 처리 — 둘 다 성공하거나 둘 다 롤백. 반쪽 상태 (access 만 있고 refresh 없음) 는 signOut 루프의 주범이라, 부팅 시 `repairIfPartial()` 로 일관성 복구해요.
+토큰 (access + refresh) 은 **SecureStorage** (iOS Keychain, Android KeyStore) 에, 일반 설정은 **SharedPreferences** 에 저장해요. 토큰 저장은 **두 개를 원자적으로** 처리 — 둘 다 성공하거나 둘 다 롤백. 반쪽 상태 (access 만 있고 refresh 없음) 는 signOut 루프의 주범이라, 부팅 시 `repairIfPartial()` 로 일관성 복구해요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -59,7 +59,7 @@ HTTP only cookie 로 서버가 토큰 관리. 클라 코드에서 접근 안 함
 - `TokenStorage.saveTokens(access, refresh)` — 둘 다 성공 or 둘 다 롤백
 - `TokenStorage.repairIfPartial()` — 부팅 시 반쪽 상태 복구
 
-- **상황 A 만족**: Keychain · EncryptedSharedPreferences 로 하드웨어 지원 암호화.
+- **상황 A 만족**: iOS Keychain · Android KeyStore 로 하드웨어 지원 암호화.
 - **상황 B 만족**: `saveTokens` 가 실패 시 `clearTokens()` 로 둘 다 삭제. `repairIfPartial` 가 부팅 시 복구.
 - **상황 C 만족**: iOS accessibility `first_unlock_this_device` → 첫 unlock 후 백그라운드 접근 가능.
 - **상황 D 만족**: `this_device` suffix → iCloud 백업에서 제외.
@@ -70,24 +70,41 @@ HTTP only cookie 로 서버가 토큰 관리. 클라 코드에서 접근 안 함
 
 ```dart
 // lib/core/storage/secure_storage.dart 전체
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+/// 안전 저장소 (iOS Keychain / Android KeyStore 기반 암호화).
+///
+/// 토큰 등 민감 정보 전용. 일반 설정은 [PrefsStorage] 사용.
 class SecureStorage {
-  /// iOS: KeychainAccessibility.first_unlock_this_device
+  /// iOS: [KeychainAccessibility.first_unlock_this_device]
   /// - `thisDevice` → iCloud Keychain 백업 대상에서 제외 (기기 복원 시 토큰 이전 방지)
   /// - `first_unlock` → 첫 unlock 후 접근 가능, 백그라운드 refresh 허용
-  /// Android: EncryptedSharedPreferences.
+  ///
+  /// Android: 기본이 KeyStore 기반 커스텀 cipher 라 별도 옵션이 없다.
+  /// `encryptedSharedPreferences` 는 주지 않는다 — Jetpack Security deprecate 와 함께
+  /// deprecated 됐고(v11 제거 예정) 지정해도 무시된다.
   static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
     iOptions: IOSOptions(
       accessibility: KeychainAccessibility.first_unlock_this_device,
     ),
   );
 
+  /// 키로 읽기. 없으면 null.
   Future<String?> read(String key) => _storage.read(key: key);
-  Future<void> write(String key, String value) => _storage.write(key: key, value: value);
+
+  /// 저장 (기존 값 덮어씀).
+  Future<void> write(String key, String value) =>
+      _storage.write(key: key, value: value);
+
+  /// 특정 키 삭제.
   Future<void> delete(String key) => _storage.delete(key: key);
+
+  /// 모든 키 삭제. 로그아웃/탈퇴 시 사용.
   Future<void> deleteAll() => _storage.deleteAll();
 }
 ```
+
+**Android 쪽에 옵션이 없는 게 정상이에요.** `flutter_secure_storage` 의 Android 구현은 기본이 KeyStore 기반 커스텀 cipher 라 우리가 고를 값이 없어요. 예전에 쓰이던 `AndroidOptions(encryptedSharedPreferences: true)` 는 Jetpack Security 의 deprecate 와 함께 deprecated 됐고 (v11 에서 제거 예정) 지금은 지정해도 무시돼요. 그래서 코드에 `aOptions` 자체가 없어요 — 빠뜨린 게 아니라 **의도적으로 뺀** 거예요.
 
 ### TokenStorage 원자 저장
 
@@ -236,7 +253,7 @@ access 삭제가 실패해도 refresh 삭제는 **반드시** 시도. 두 토큰
 
 ### 긍정적 결과
 
-- **토큰 하드웨어 암호화**: Keychain / EncryptedSharedPreferences 로 탈옥/루팅 방어.
+- **토큰 하드웨어 암호화**: iOS Keychain / Android KeyStore 로 탈옥/루팅 방어.
 - **반쪽 상태 → signOut 루프 제거**: `repairIfPartial` 덕분에 "access 만 남아 401 → refresh 실패 → 또 401" 루프 없음.
 - **iCloud 복제 방지**: 기기 이전 시 토큰 따라가지 않음. 새 기기 = 새 로그인.
 - **백그라운드 작업 가능**: `first_unlock` 으로 FCM · workmanager 에서 토큰 접근 가능.
@@ -246,7 +263,7 @@ access 삭제가 실패해도 refresh 삭제는 **반드시** 시도. 두 토큰
 ### 부정적 결과
 
 - **두 매체 관리 복잡**: 어떤 데이터를 어디에 넣을지 선택 피로. "유저 설정 중 민감한 건 뭐?" 판단.
-- **Android 호환성**: EncryptedSharedPreferences 는 Android 6.0(API 23) 이상 요구인데, 템플릿 minSdk 는 24(7.0)라 이 제약은 실질적으로 걸리지 않아요.
+- **Android 암호화가 라이브러리 손에 있음**: Android 쪽은 `flutter_secure_storage` 가 KeyStore 기반 cipher 로 알아서 처리해서 우리가 조정할 옵션이 없어요. 설정 부담은 0 이지만, 라이브러리 구현이 바뀌면 그대로 따라가고 우리 문서 · 감사 답변도 같이 갱신해야 해요.
 - **iOS Keychain 동기화 이슈**: 앱 삭제 후 재설치 시 Keychain 이 남아있는 경우 (OS 버전별 동작 차이). "첫 실행 체크" 로 clearAll 필요 시 있음.
 - **원자성 구현이 완벽하지 않음**: 2개 쓰기 사이에 **OS 가 프로세스 kill** 하면 둘 다 쓰임 없이 멈춤. 그래도 반쪽은 안 됨. 극단적 시나리오 (첫 쓰기 성공 후 kill) 에선 반쪽 → 다음 부팅 `repairIfPartial` 로 복구.
 
@@ -274,14 +291,14 @@ access 삭제가 실패해도 refresh 삭제는 **반드시** 시도. 두 토큰
 
 - [flutter_secure_storage 공식 문서](https://pub.dev/packages/flutter_secure_storage) — 본 ADR 의 기반 라이브러리
 - [Apple Keychain Services Guide](https://developer.apple.com/documentation/security/keychain_services) — accessibility 옵션 상세
-- [Android EncryptedSharedPreferences](https://developer.android.com/reference/androidx/security/crypto/EncryptedSharedPreferences) — Android 6.0+ 하드웨어 지원 암호화
+- [Android Keystore system](https://developer.android.com/privacy-and-security/keystore) — flutter_secure_storage 의 Android 구현이 기대는 하드웨어 지원 키 저장소
 - [OWASP Mobile Top 10 — M5 Insufficient Cryptography](https://owasp.org/www-project-mobile-top-10/) — 토큰 저장 보안 지침
 - [Database Transaction Patterns](https://en.wikipedia.org/wiki/Atomicity_(database_systems)) — 원자성 원리의 일반 개념
 
 ## Code References
 
 **토큰 저장**
-- [`lib/core/storage/secure_storage.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/storage/secure_storage.dart) — 30줄, iOS/Android 옵션 설정
+- [`lib/core/storage/secure_storage.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/storage/secure_storage.dart) — 32줄, iOS Keychain accessibility 지정 (Android 는 기본 KeyStore cipher 라 옵션 없음)
 - [`lib/core/storage/token_storage.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/storage/token_storage.dart) — 72줄, 원자 저장 + 복구
 
 **일반 설정**

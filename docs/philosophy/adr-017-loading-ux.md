@@ -132,7 +132,7 @@ TopProgressBar(
 )
 ```
 
-AppBar 하단의 얇은 선형 progress. **0% / 지정값 / indeterminate** 모두 지원. 사용자는 계속 앱 사용 가능, 작업 진행이 시각적으로만.
+AppBar 하단의 얇은 선형 progress. **indeterminate 전용** 이에요 — 생성자가 받는 건 `isLoading` (bool) · `child` · `color` 뿐이고, 내부의 `LinearProgressIndicator` 에 `value` 를 넘기지 않아요. 진행률 퍼센트를 보여주려면 위젯에 `value` 파라미터를 먼저 추가해야 해요. 사용자는 계속 앱 사용 가능하고, 작업 진행은 시각적으로만 알려요.
 
 ### 금지 사항
 

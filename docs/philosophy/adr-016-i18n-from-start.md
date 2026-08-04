@@ -212,7 +212,11 @@ gen_l10n 의 기본은 `S.maybeOf(context)` (nullable) + `S.of(context)` (non-nu
 ViewModel 은 `errorCode`, Screen 에서 `S.of(context)` 변환. 이 관용은 **ADR-009 (백엔드 계약)** 의 `ErrorCode` enum 과 자연 연결 — 서버 에러 코드가 UI i18n 키로 직결.
 
 **포인트 5 — 새 문자열 추가 시 양쪽 ARB 모두**  
-한쪽만 추가하고 `gen-l10n` 돌리면 **빌드 실패** (다른 언어 파일에 키 없음). 이 제약이 오히려 안전장치 — "한국어만 넣고 영어 까먹음" 을 빌드에서 잡음.
+한쪽 ARB 에만 키를 넣어도 **빌드는 그대로 통과해요.** gen_l10n 이 빠진 번역을 템플릿 언어 (ko) 로 fallback 처리하기 때문에 컴파일 에러가 나지 않아요. `l10n.yaml` 에도 이걸 에러로 올리는 strict 설정을 두지 않았어요.
+
+그래서 "한국어만 넣고 영어 까먹음" 은 **테스트가 잡아요** — `test/core/i18n/arb_parity_test.dart` 가 ko / en 의 메시지 키 집합이 같은지 비교하고, 다르면 어느 쪽에 없는 키인지 이름까지 찍어줘요. 이 테스트는 `flutter test` 에 묶여 있어서 `.githooks/pre-push` 와 CI (`.github/workflows/ci.yml`) 에서 돌아요.
+
+**즉 `flutter build` 만 돌려서는 이 실수가 드러나지 않아요.** ARB 를 건드렸으면 `flutter gen-l10n` 뒤에 `flutter test` 까지 돌려야 안전장치가 작동해요.
 
 **포인트 6 — `flutter gen-l10n` 은 수동 호출**  
 빌드 시 자동 실행되게 할 수도 있지만, 명시적 수동 호출이 디버깅에 낫음. 새 키 추가 → `flutter gen-l10n` → 빌드 순서.
@@ -282,6 +286,11 @@ ViewModel 은 `errorCode`, Screen 에서 `S.of(context)` 변환. 이 관용은 *
 **사용 예시**
 - [`lib/common/router/app_router.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/common/router/app_router.dart) — `S.of(context).loading` 호출
 - [`lib/kits/auth_kit/ui/login/login_screen.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/ui/login/login_screen.dart) — Screen 에서 번역
+
+**ko / en 키 누락 차단**
+- [`test/core/i18n/arb_parity_test.dart`](https://github.com/storkspear/template-flutter/blob/main/test/core/i18n/arb_parity_test.dart) — 두 ARB 의 메시지 키 집합 비교. 빌드가 아니라 이 테스트가 누락을 막아요
+- [`.github/workflows/ci.yml`](https://github.com/storkspear/template-flutter/blob/main/.github/workflows/ci.yml) — PR 에서 `flutter test` 실행
+- [`.githooks/pre-push`](https://github.com/storkspear/template-flutter/blob/main/.githooks/pre-push) — push 전 로컬 `flutter test`
 
 **관련 ADR**:
 - [`ADR-005 · Riverpod + MVVM`](./adr-005-riverpod-mvvm.md) — ViewModel 이 i18n 의존 안 하는 원칙

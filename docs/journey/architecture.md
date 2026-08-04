@@ -248,7 +248,8 @@ xcconfig 계층:
     #include "AppEnv-dev.xcconfig"               (env 분기 변수)
     
   AppEnv-dev.xcconfig (committed — placeholder 값만):
-    BUNDLE_ID_BASE / BUNDLE_ID_SUFFIX / APP_ENV / DISPLAY_NAME_SUFFIX
+    BUNDLE_ID_BASE / BUNDLE_ID_SUFFIX / APP_ENV
+    DISPLAY_NAME_SUFFIX / APP_DISPLAY_NAME       ← 홈 화면 표시 이름 (dev 는 "… (DEV)")
     GID_CLIENT_ID =                              ← 빈 default
     GID_REVERSED_CLIENT_ID =
     #include? "AppEnv-secrets-dev.xcconfig"      ← optional include (gitignored)
@@ -263,6 +264,7 @@ xcconfig 계층:
 ```text
 ios/Runner/Info.plist (committed):
   CFBundleIdentifier  = $(PRODUCT_BUNDLE_IDENTIFIER)
+  CFBundleDisplayName = $(APP_DISPLAY_NAME)             ← AppEnv-<env>.xcconfig 값
   GIDClientID         = $(GID_CLIENT_ID)                ← AppEnv-secrets-<env>.xcconfig 값
   CFBundleURLSchemes  = $(GID_REVERSED_CLIENT_ID)
 ```

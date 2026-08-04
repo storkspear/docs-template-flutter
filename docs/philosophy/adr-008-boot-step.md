@@ -1,6 +1,6 @@
 # Boot_Step
 
-**Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 line 수 갱신. `lib/common/splash/boot_step.dart` (6줄 계약), `lib/common/splash/splash_controller.dart` (55줄) + 각 Kit 이 기여하는 BootStep (`AuthCheckStep` 등).
+**Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 line 수 갱신. `lib/common/splash/boot_step.dart` (6줄 계약), `lib/common/splash/splash_controller.dart` (61줄) + 각 Kit 이 기여하는 BootStep (`AuthCheckStep` 등).
 
 ## 결론부터
 
@@ -95,7 +95,7 @@ abstract class BootStep {
 
 최소주의 극단. 이름 하나 + 실행 하나. 파라미터 없음 — 필요한 의존성은 Kit 이 주입.
 
-### SplashController (55줄)
+### SplashController (61줄)
 
 ```dart
 // lib/common/splash/splash_controller.dart 발췌
@@ -189,11 +189,12 @@ class AuthCheckStep implements BootStep {
 ### main.dart 통합
 
 ```dart
-// lib/main.dart 발췌
+// lib/main.dart 발췌 (Kit 생성자 인자는 생략 — install 순서만 보면 돼요)
 await AppKits.install([
   BackendApiKit(),
-  AuthKit(),
-  UpdateKit(service: NoUpdateAppUpdateService()),
+  AuthKit(/* providers, loginPath, 2FA 경로 */),
+  FileKit(),
+  UpdateKit(service: BackendAppUpdateService(/* GET /app-version */)),
   ObservabilityKit(),
 ]);
 
@@ -280,7 +281,7 @@ BootStep 이 실패해도 `crashService` 가 off 면 원인 모름. `[Splash] ru
 
 **계약 + 실행기**
 - [`lib/common/splash/boot_step.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/common/splash/boot_step.dart) — 6줄 인터페이스
-- [`lib/common/splash/splash_controller.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/common/splash/splash_controller.dart) — 55줄 실행기
+- [`lib/common/splash/splash_controller.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/common/splash/splash_controller.dart) — 61줄 실행기
 
 **Kit 측 기여**
 - [`lib/core/kits/app_kit.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/kits/app_kit.dart) — `bootSteps` getter 정의

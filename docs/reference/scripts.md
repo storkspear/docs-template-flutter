@@ -26,9 +26,8 @@ env-verb dispatch 방식이에요 — 첫 인자가 `local`/`dev`/`prod`/`all` �
 | 파일 | 용도 | 실행 시점 |
 |------|------|---------|
 | `lib/common.sh` | 공용 헬퍼 (info/ok/warn/fail/section) | factory 및 다른 sh 가 source |
-| `lib/init-common.sh` | init 3종 공용 (prereq 검증 · .env 생성 · REQUIRED 키 검증) | init-*.sh 가 source |
+| `lib/init-common.sh` | init 3종 공용 (prereq 검증 · 공동 작업자 모드 감지 · .env 생성 · placeholder 채움) | init-*.sh 가 source |
 | `lib/firebase.sh` | Firebase 프로젝트/앱 생성 · plist/json 다운로드 헬퍼 | init-dev/prod 가 source |
-| `lib/xcode-config.sh` | xcconfig 조작 헬퍼 | link-oauth 등이 source |
 | `verify/readiness-check.sh` | 개발 준비 7 step 검증 | factory 의 `test` verb |
 | `init/setup.sh` | git hooks 활성화 | clone 직후 1회 |
 | `app/rename-app.sh` | 앱 이름 · Bundle ID 일괄 치환 | 파생 레포 생성 시 |
@@ -155,7 +154,7 @@ git config core.hooksPath .githooks
 ./scripts/app/rename-app.sh <slug> <bundle_id>
 
 # 예
-./scripts/app/rename-app.sh my_tracker com.example.mytracker
+./scripts/app/rename-app.sh my-tracker com.example.myTracker
 ```
 
 ### 변경 범위
@@ -166,11 +165,20 @@ git config core.hooksPath .githooks
 - `android/app/src/main/AndroidManifest.xml` 의 `android:label` → `<DisplayName>`
 - Android Kotlin 파일의 `package` 선언 + 디렉토리 이동
 - iOS Bundle ID — `ios/Flutter/AppEnv-{dev,prod}.xcconfig` 의 `BUNDLE_ID_BASE` → `<bundle_id>`
-  (`PRODUCT_BUNDLE_IDENTIFIER` 는 `$(BUNDLE_ID_BASE)$(BUNDLE_ID_SUFFIX)` 로 변수화돼 pbxproj 엔 직접 박혀있지 않아요. `Info.plist` 의 `CFBundleIdentifier` 도 `$(PRODUCT_BUNDLE_IDENTIFIER)` 변수 참조라 자동 반영돼요. iOS Swift 파일은 건드리지 않아요.)
-- `ios/Runner/Info.plist` 의 `CFBundleDisplayName` · `CFBundleName`
+  (Runner 타깃의 `PRODUCT_BUNDLE_IDENTIFIER` 는 `$(BUNDLE_ID_BASE)$(BUNDLE_ID_SUFFIX)` 로 변수화돼 pbxproj 엔 직접 박혀있지 않아요. `Info.plist` 의 `CFBundleIdentifier` 도 `$(PRODUCT_BUNDLE_IDENTIFIER)` 변수 참조라 자동 반영돼요. iOS Swift 파일은 건드리지 않아요.)
+- iOS RunnerTests 번들 ID — `project.pbxproj` 의 RunnerTests config 6개가 들고 있는 `BUNDLE_ID_BASE` → `<bundle_id>`
+  (이 타깃은 baseConfiguration 이 `Pods-RunnerTests.*.xcconfig` 라 `AppEnv-*.xcconfig` 를 상속하지 않아요.)
+- iOS 표시 이름 — `AppEnv-{dev,prod}.xcconfig` 의 `APP_DISPLAY_NAME` → `<DisplayName>`
+  (`Info.plist` 의 `CFBundleDisplayName` 은 `$(APP_DISPLAY_NAME)` 변수 참조예요. dev 는 `DISPLAY_NAME_SUFFIX` 가 붙어 `<DisplayName> (DEV)` 로 보여요.)
+- `ios/Runner/Info.plist` 의 `CFBundleName`
 - `app_kits.yaml` 의 `app.name` · `app.slug`
 - `android/fastlane/Appfile` 의 `package_name` → `<bundle_id>`
 - import 경로 (`package:app_template/...` → `package:<APP_NAME>/...`, lib/ + test/ 일괄)
+
+### 입력 규칙
+
+- `<slug>` — 소문자 · 숫자 · 하이픈만 (`^[a-z][a-z0-9-]*$`). `AppConfig` 가 부팅 때 같은 정규식으로 검증하고 어긋나면 `ArgumentError` 로 크래시하므로 언더스코어는 거부해요 (`my_tracker` ✗ → `my-tracker` ✓).
+- `<bundle_id>` — 영숫자 segment 2개 이상 (`com.example.myTracker`). Android 와 iOS 에 **같은 문자열** 이 들어가는데 Apple 은 언더스코어를, Android 는 하이픈을 허용하지 않아서 교집합인 영숫자만 받아요. 단어 구분이 필요하면 camelCase 를 쓰세요 (`com.foo.my_app` ✗ → `com.foo.myApp` ✓).
 
 ### 주의
 
@@ -213,7 +221,7 @@ flutter_launcher_icons:
   android: "launcher_icon"
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
-  min_sdk_android: 21
+  min_sdk_android: 24
   ios: true
   remove_alpha_ios: true
 ```

@@ -64,9 +64,11 @@ Scaffold(
 - [ ] [AdMob Console](https://apps.admob.com/) 앱 등록
 - [ ] 광고 단위 생성 (배너 · 전면 · 리워드)
 - [ ] Unit ID 복사 → `AdsKit(config: AdConfig(androidBannerUnitId: ..., iosBannerUnitId: ...))`
-- [ ] `android/app/src/main/AndroidManifest.xml` 의 `com.google.android.gms.ads.APPLICATION_ID` meta-data 업데이트
-- [ ] `ios/Runner/Info.plist` 의 `GADApplicationIdentifier` 업데이트
-- [ ] `NSUserTrackingUsageDescription` 문구 앱 성격에 맞게 다듬기
+- [ ] `android/app/src/main/AndroidManifest.xml` 의 `com.google.android.gms.ads.APPLICATION_ID` meta-data 업데이트 (기본값은 Google 테스트 ID 예요)
+- [ ] 같은 파일에서 광고 권한을 막아 둔 `tools:node="remove"` 줄 삭제 (`AD_ID` · `ACCESS_ADSERVICES_*` · `RECEIVE_BOOT_COMPLETED`) → [`ads_kit/README.md`](../../lib/kits/ads_kit/README.md) 의 "활성화 시 추가할 플랫폼 키"
+- [ ] Play Console 데이터 보안 양식에 광고 ID(`AD_ID`) 수집 선언
+- [ ] `ios/Runner/Info.plist` 의 `GADApplicationIdentifier` 업데이트 (기본값은 Google 테스트 ID 예요)
+- [ ] `ios/Runner/Info.plist` 에 `NSUserTrackingUsageDescription` · `SKAdNetworkItems` 추가 (템플릿엔 없어요 — kit 활성 시 넣어요)
 - [ ] UMP: [Google 문서](https://developers.google.com/admob/flutter/privacy) 에 따라 privacy policy URL 등록
 - [ ] 테스트: 실제 기기 (에뮬레이터 아님) 에서 광고 로딩 확인
 

@@ -78,25 +78,34 @@ Dio 가 제공하는 `Interceptor` 인터페이스를 3개 구현. `ApiClient` �
 // lib/kits/backend_api_kit/api_client.dart 발췌
 class ApiClient {
   late final Dio _dio;
+  late final Dio _refreshDio;
 
   ApiClient({
     required TokenStorage tokenStorage,
     required Future<bool> Function() onTokenRefresh,
+    Duration connectTimeout = const Duration(seconds: 10),
+    Duration receiveTimeout = const Duration(seconds: 30),
   }) {
-    _dio = Dio(BaseOptions(
-      baseUrl: AppConfig.instance.baseUrl,
-      connectTimeout: Duration(seconds: 10),
-      receiveTimeout: Duration(seconds: 30),
-    ));
+    _dio = Dio(_baseOptions(connectTimeout, receiveTimeout));
+    // refresh · 재시도 전용 Dio — AuthInterceptor 없이 구성 (재진입 데드락 회피)
+    _refreshDio = Dio(_baseOptions(connectTimeout, receiveTimeout));
 
     _dio.interceptors.addAll([
-      AuthInterceptor(dio: _dio, tokenStorage: tokenStorage, onTokenRefresh: onTokenRefresh),
+      AuthInterceptor(
+        tokenStorage: tokenStorage,
+        dio: _refreshDio,        // ← 재시도는 반드시 _refreshDio 로
+        onTokenRefresh: onTokenRefresh,
+      ),
       ErrorInterceptor(),
       LoggingInterceptor(),  // ← 내부에서 AppConfig.instance.isDev 분기
     ]);
+    // refresh Dio 는 error 매핑 · 로깅만 — auth 인터셉터 없음
+    _refreshDio.interceptors.addAll([ErrorInterceptor(), LoggingInterceptor()]);
   }
 }
 ```
+
+**`dio: _refreshDio` 를 `dio: _dio` 로 바꾸면 안 돼요.** `AuthInterceptor` 는 `QueuedInterceptor` 라, 재시도를 같은 `_dio` 로 보내면 그 재시도가 실패했을 때 에러가 진행 중인 `onError` 뒤 `_errorQueue` 에 큐잉돼요. 서로를 기다리며 요청이 영영 끝나지 않는 self-deadlock 이에요. 그래서 refresh 전용 Dio 는 **Error · Logging 2개만** 달고, AuthInterceptor 는 빼요. 자세한 건 [`ADR-010`](./adr-010-queued-interceptor.md) 참조.
 
 ### 3개 인터셉터의 역할
 
@@ -263,7 +272,7 @@ Dio 의 onError 체인은 설치 순이라 `Auth → Error → Logging`. Auth �
 
 ### 긍정적 결과
 
-- **파일 당 < 100줄**: auth 91줄, error 49줄, logging 44줄. 각 파일 한눈에.
+- **파일 당 < 100줄**: auth 89줄, error 49줄, logging 44줄. 각 파일 한눈에.
 - **단일 책임**: 각 인터셉터는 자기 관심사만. 테스트도 개별 가능.
 - **추가 관심사 확장 용이**: Tracing 추가 시 `TracingInterceptor` 새 파일, ApiClient 생성자에 설치만 추가.
 - **ApiException 일관성**: 모든 에러가 `ErrorInterceptor` 를 거쳐 `ApiException` 으로 표준화. ViewModel 은 Dio 특이성 모름.
@@ -308,7 +317,7 @@ Dio 의 onError 체인은 설치 순이라 `Auth → Error → Logging`. Auth �
 ## Code References
 
 **3개 인터셉터 구현**
-- [`lib/kits/backend_api_kit/interceptors/auth_interceptor.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/interceptors/auth_interceptor.dart) — 91줄
+- [`lib/kits/backend_api_kit/interceptors/auth_interceptor.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/interceptors/auth_interceptor.dart) — 89줄
 - [`lib/kits/backend_api_kit/interceptors/error_interceptor.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/interceptors/error_interceptor.dart) — 49줄
 - [`lib/kits/backend_api_kit/interceptors/logging_interceptor.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/interceptors/logging_interceptor.dart) — 44줄
 

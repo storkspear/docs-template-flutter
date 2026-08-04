@@ -134,18 +134,19 @@ void main() async {
 # android/fastlane/Fastfile 발췌
 lane :build_release do
   # --obfuscate + --split-debug-info: 원본 심볼 매핑을 build/symbols/ 에 저장
-  sh "cd ../.. && flutter build appbundle --release " \
+  sh "cd ../.. && flutter build appbundle --release --flavor prod " \
      "--obfuscate --split-debug-info=build/symbols " \
      "#{defines.join(' ')}"
 end
 
 lane :upload_sentry_mapping do |options|
-  # 1) ProGuard mapping (R8) — 네이티브 스택 심볼화
+  # 1) ProGuard mapping (R8) — 네이티브 스택 심볼화.
+  #    prod flavor 빌드라 variant 는 prodRelease 이고 mapping 도 그 아래에 생겨요.
   # 2) Dart split-debug-info — 난독화된 Dart 프레임 심볼화
   sh <<~SH
     sentry-cli --auth-token #{auth_token} \
       upload-proguard -o #{org} -p #{project} \
-      ../../build/app/outputs/mapping/release/mapping.txt
+      ../../build/app/outputs/mapping/prodRelease/mapping.txt
     sentry-cli --auth-token #{auth_token} \
       upload-dif -o #{org} -p #{project} \
       ../../build/symbols

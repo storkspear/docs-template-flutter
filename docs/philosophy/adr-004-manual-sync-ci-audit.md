@@ -70,26 +70,44 @@ YAML 과 Dart **둘 다 작성**. 개발자가 양쪽을 맞춰야 함. 단 CI �
 **`app_kits.yaml`** — 활성 Kit 이름 + 설정 파라미터 (문자열 · 기본값 수준):
 
 ```yaml
-# app_kits.yaml
+# app_kits.yaml 발췌
 kits:
   update_kit: {}
   backend_api_kit: {}
-  auth_kit: {}
+  auth_kit:
+    providers:
+      - email
+      - google
+      - apple
+    two_factor_enabled: true
+  file_kit: {}
   observability_kit: {}
   # local_db_kit:
   #   database_class: AppDatabase      # 주석 처리로 비활성
 ```
 
-**`lib/main.dart`** — 같은 Kit 의 실제 생성자 호출:
+**`lib/main.dart`** — 같은 Kit 의 실제 생성자 호출 (install 순서는 의존성 순서라 YAML 나열 순서와 달라도 돼요):
 
 ```dart
+// lib/main.dart 발췌 (UpdateKit 의 fetch 콜백 본문은 생략)
 await AppKits.install([
   BackendApiKit(),
-  AuthKit(),
-  UpdateKit(service: NoUpdateAppUpdateService()),
+  AuthKit(
+    providers: const {AuthProvider.email, AuthProvider.google, AuthProvider.apple},
+    loginPath: Routes.login,
+    twoFactorEnabled: true,                        // ← yaml 의 two_factor_enabled 와 짝
+    twoFactorLoginPath: Routes.twoFactorLogin,
+    twoFactorSettingsPath: Routes.twoFactorSettings,
+  ),
+  FileKit(),                                       // ← yaml 의 file_kit 와 짝
+  UpdateKit(
+    service: BackendAppUpdateService(() async { /* GET /app-version */ }),
+  ),
   ObservabilityKit(),
 ]);
 ```
+
+`NoUpdateAppUpdateService` 는 `appUpdateServiceProvider` 의 **기본값** 이지 `main.dart` 가 설치하는 구현체가 아니에요. 템플릿 기본 조립은 `BackendAppUpdateService` 를 쓰고, `backend_api_kit` 을 안 켜는 recipe 만 `NoUpdateAppUpdateService` 로 되돌려요.
 
 ### 2. 각 Kit 의 `kit_manifest.yaml`
 
@@ -224,7 +242,7 @@ jobs:
 - **의존성 정합성 CI 차단**: `app_kits.yaml` 의 kit 선언 + `requires` 누락이 `--audit` exit 1 로 잡힘. (단, `app_kits.yaml` ↔ `main.dart` 줄 단위 일치 여부는 아직 자동 검증 대상이 아니에요 — 부정적 결과의 "수동 동기화" 참조.)
 - **의존성 자동 검증**: `auth_kit` 넣고 `backend_api_kit` 빼먹으면 CI 에서 차단.
 - **Recipe 시스템 자연 통합** (ADR-021): `recipes/*.yaml` 가 `app_kits.yaml` 와 동일 포맷이라 복사만으로 적용.
-- **단일 Dart 스크립트**: `tool/configure_app.dart` 270줄. 이해 · 수정 쉬움.
+- **단일 Dart 스크립트**: `tool/configure_app.dart` 288줄. 이해 · 수정 쉬움.
 
 ### 부정적 결과
 
@@ -264,7 +282,7 @@ jobs:
 ## Code References
 
 **검증 도구**
-- [`tool/configure_app.dart`](https://github.com/storkspear/template-flutter/blob/main/tool/configure_app.dart) — 270줄 단일 Dart 스크립트
+- [`tool/configure_app.dart`](https://github.com/storkspear/template-flutter/blob/main/tool/configure_app.dart) — 288줄 단일 Dart 스크립트
 - [`.github/workflows/ci.yml`](https://github.com/storkspear/template-flutter/blob/main/.github/workflows/ci.yml) — `--audit` 호출 지점
 
 **선언 파일**

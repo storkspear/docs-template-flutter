@@ -4,7 +4,9 @@
 
 ## 결론부터
 
-여러 Kit 이 라우팅 게이트 (리다이렉트 규칙) 를 가질 때, **낮은 숫자일수록 먼저 실행** 하는 `redirectPriority` 정수로 순서 표현. 권장 기본값: `UpdateKit=1` · `AuthKit=10` · `OnboardingKit=50` · 기본 `100`. 동일 우선순위는 **install 순서로 안정 정렬**. 각 규칙은 `null` 반환 시 개입 안 함 — 첫 non-null 결과가 최종 리다이렉트.
+여러 Kit 이 라우팅 게이트 (리다이렉트 규칙) 를 가질 때, **낮은 숫자일수록 먼저 실행** 하는 `redirectPriority` 정수로 순서 표현. 기본값은 `100`, 동일 우선순위는 **install 순서로 안정 정렬**. 각 규칙은 `null` 반환 시 개입 안 함 — 첫 non-null 결과가 최종 리다이렉트.
+
+지금 `buildRedirect()` 를 실제로 구현하는 Kit 은 **`AuthKit` (10) 과 `OnboardingKit` (50) 둘뿐** 이에요. `UpdateKit` 은 `redirectPriority = 1` 을 선언하지만 `buildRedirect()` 를 구현하지 않아 체인에 들어가지 않아요 — 강제 업데이트는 리다이렉트가 아니라 **Navigator 밖 다이얼로그 오버레이** 로 처리해요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -124,17 +126,7 @@ String? _composedRedirect(BuildContext context, GoRouterState state) {
 
 ### Kit 별 우선순위 예
 
-**UpdateKit (priority 1)** — 최우선:
-```dart
-@override
-int get redirectPriority => 1;
-
-@override
-RedirectRule? buildRedirect() => (ctx, state) {
-  if (_isUpdateRequired()) return '/force-update';
-  return null;
-};
-```
+리다이렉트 체인에 실제로 들어가는 Kit 은 둘이에요.
 
 **AuthKit (priority 10)** — 인증:
 ```dart
@@ -144,63 +136,82 @@ int get redirectPriority => 10;
 
 @override
 RedirectRule? buildRedirect() => (ctx, state) {
+  final container = AppKits.maybeContainer ?? ProviderScope.containerOf(ctx);
   final status = container.read(authStateProvider).current.status;
-  if (status == AuthStatus.unknown) return splashPath;
-  if (!isAuthed && !isOnAuthFlow) return loginPath;
-  if (isAuthed && isOnLogin) return homePath;
-  return null;
+  return computeRedirect(          // ← 분기는 순수 함수로 분리해 단위 테스트
+    status: status,
+    path: state.matchedLocation,
+    loginPath: loginPath,
+    homePath: homePath,
+    splashPath: splashPath,
+    forgotPasswordPath: forgotPasswordPath,
+    verifyEmailPath: verifyEmailPath,
+    twoFactorLoginPath: twoFactorLoginPath,
+  );
 };
 ```
 
 **OnboardingKit (priority 50)** — 온보딩:
 ```dart
+// lib/kits/onboarding_kit/onboarding_kit.dart 발췌
 @override
 int get redirectPriority => 50;
 
 @override
 RedirectRule? buildRedirect() => (ctx, state) {
-  if (!_isOnboardingComplete && !state.matchedLocation.startsWith('/onboarding')) {
-    return '/onboarding';
-  }
+  final isOnboardingPath = state.matchedLocation == onboardingPath;
+  if (!isComplete.value && !isOnboardingPath) return onboardingPath;
+  if (isComplete.value && isOnboardingPath) return completedRedirectPath;
   return null;
 };
 ```
 
+### 강제 업데이트는 리다이렉트 게이트가 아니에요
+
+`UpdateKit` 은 `redirectPriority => 1` 을 선언하지만 `buildRedirect()` 를 **구현하지 않아요**. `AppKit.buildRedirect()` 의 기본 구현이 `null` 을 반환하고 `AppKits._buildRedirectRules()` 는 non-null 인 규칙만 모으니, UpdateKit 은 체인에 아예 들어가지 않아요. 그래서 지금 이 Kit 의 `redirectPriority = 1` 은 **아무 데서도 읽히지 않는 예약값** 이에요 — 최우선 게이트 자리를 비워두는 표시로만 남아 있어요. `/force-update` 라우트도 없어요 (`lib/common/router/routes.dart` 에는 splash · login · home · settings · 로그인 2FA · 설정 2FA 여섯 개만 있어요).
+
+강제 업데이트는 대신 **Navigator 밖 오버레이** 로 처리해요.
+
+```dart
+// lib/app.dart 발췌
+MaterialApp.router(
+  routerConfig: _appRouter.router,
+  builder: (context, child) => _ForceUpdateGate(child: child),  // ← Navigator 밖
+)
+```
+
+`UpdateKit` 의 부트 단계가 `service.check()` 결과를 `forceUpdateInfoNotifier` 에 넣으면, `_ForceUpdateGate` 가 그 값을 듣고 화면 전체를 `ModalBarrier` + `ForceUpdateDialog` 로 덮어요 (`info.isForce` 가 false 면 닫을 수 있는 `UpdateAvailableDialog`). 라우팅을 건드리지 않으니 어느 화면에 있든 즉시 덮이고, 리다이렉트 체인의 순서 경쟁에서도 자유로워요.
+
 ### 실행 흐름 예시
 
-상황: 미인증 + 온보딩 미완료 + 업데이트 필요 상태에서 앱 진입.
+상황: 미인증 + 온보딩 미완료 상태에서 앱 진입 (OnboardingKit 을 설치한 앱 기준).
 
-1. `AppKits.redirectRules` = `[UpdateKit rule, AuthKit rule, OnboardingKit rule]` (priority 정렬)
-2. UpdateKit rule 실행 → `'/force-update'` 반환
-3. 첫 non-null 이므로 AuthKit · OnboardingKit 은 실행 안 됨
-4. `/force-update` 로 이동
-
-업데이트 설치 후 재진입:
-
-1. UpdateKit rule → null (업데이트 완료)
-2. AuthKit rule → `'/login'` (미인증)
-3. `/login` 으로 이동
+1. `AppKits.redirectRules` = `[AuthKit rule, OnboardingKit rule]` (priority 정렬)
+2. AuthKit rule 실행 → `'/login'` 반환 (미인증)
+3. 첫 non-null 이므로 OnboardingKit 은 실행 안 됨
+4. `/login` 으로 이동
 
 로그인 후:
 
-1. UpdateKit → null
-2. AuthKit → null (인증됐고 홈 접근)
-3. OnboardingKit rule → `'/onboarding'` (온보딩 미완료)
-4. `/onboarding` 로 이동
+1. AuthKit rule → null (인증됐고 홈 접근)
+2. OnboardingKit rule → `'/onboarding'` (온보딩 미완료)
+3. `/onboarding` 로 이동
 
 온보딩 완료 후: 모든 rule null → 홈 유지.
+
+여기에 업데이트 필요 상태가 겹쳐도 위 흐름은 그대로예요. `_ForceUpdateGate` 가 그 결과 화면 **위** 를 덮으니, 사용자는 `/login` 화면 위에서 강제 업데이트 다이얼로그를 봐요. 두 메커니즘이 서로를 가로채지 않아요.
 
 ### 권장 우선순위 범위
 
 | 카테고리 | 범위 | 예 |
 |---------|------|---|
-| **최우선 게이트** (앱 사용 금지) | 1~9 | UpdateKit, MaintenanceKit |
+| **최우선 게이트** (앱 사용 금지) | 1~9 | MaintenanceKit (`1` 은 UpdateKit 이 예약) |
 | **인증 게이트** | 10~19 | AuthKit |
 | **온보딩 · 동의** | 50~59 | OnboardingKit, TosConsentKit |
 | **기능 게이트** | 60~99 | FeatureFlagKit, ABTestKit |
 | **기본** | 100 | 대부분 |
 
-**숫자 사이를 띄워둬요** — `1, 2, 3` 이 아닌 `1, 10, 50` 로 하면 나중에 "UpdateKit 과 AuthKit 사이" 에 새 게이트 (priority 5) 삽입 가능.
+**숫자 사이를 띄워둬요** — `1, 2, 3` 이 아닌 `1, 10, 50` 로 하면 나중에 "최우선 게이트와 AuthKit 사이" 에 새 게이트 (priority 5) 삽입 가능.
 
 ### 설계 선택 포인트
 
@@ -217,7 +228,7 @@ tie-break 규칙이 "install 순" 이라 예측 가능. 같은 priority 쓰는 �
 모든 rule 을 순회하며 **중첩 리다이렉트** 하지 않음. 첫 non-null 에서 중단. 이유: 체인 리다이렉트는 무한 루프 위험.
 
 **포인트 5 — `buildRedirect()` 가 nullable**  
-Kit 이 라우팅 개입 안 해도 됨. `BackendApiKit` · `ObservabilityKit` 은 리다이렉트 없음 → `buildRedirect()` 반환 null → `redirectRules` 에서 빠짐.
+Kit 이 라우팅 개입 안 해도 됨. `BackendApiKit` · `ObservabilityKit` · `UpdateKit` 은 리다이렉트 없음 → `buildRedirect()` 를 override 하지 않아 기본 구현이 null 반환 → `redirectRules` 에서 빠짐. 현재 템플릿에서 체인에 남는 건 `AuthKit` · `OnboardingKit` 둘뿐이에요.
 
 ## 이 선택이 가져온 것
 
@@ -232,9 +243,9 @@ Kit 이 라우팅 개입 안 해도 됨. `BackendApiKit` · `ObservabilityKit` �
 ### 부정적 결과
 
 - **숫자 선택 피로**: "이 게이트 priority 30? 40?" 결정. 권장 범위 표가 있지만 여전히 판단.
-- **충돌 디버깅**: "AuthKit 의 `/login` 리다이렉트가 왜 발동 안 하지?" 를 찾으려면 UpdateKit 이 null 아닌 값을 먼저 반환했는지 확인. flow 추적 비용.
+- **충돌 디버깅**: "OnboardingKit 의 `/onboarding` 리다이렉트가 왜 발동 안 하지?" 를 찾으려면 우선순위가 앞선 AuthKit 이 null 아닌 값을 먼저 반환했는지 확인. flow 추적 비용.
 - **Kit 파생 관리**: 파생 레포에서 새 Kit 추가 시 "이 게이트 우선순위 얼마?" 를 템플릿 값과 조율 필요.
-- **숫자 낭비**: 1~100 범위에 현재 3~4개만 쓰고 나머지 비어있음. 의도된 여유 공간이지만 "이 숫자가 맞나?" 혼란 가능.
+- **숫자 낭비**: 1~100 범위에 실제 규칙은 2개 (10 · 50) 뿐이고 나머지는 비어있음. 의도된 여유 공간이지만 "이 숫자가 맞나?" 혼란 가능.
 
 ## 교훈
 
@@ -273,7 +284,11 @@ Kit 이 라우팅 개입 안 해도 됨. `BackendApiKit` · `ObservabilityKit` �
 
 **Kit 별 설정 예**
 - [`lib/kits/auth_kit/auth_kit.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/auth_kit.dart) — `redirectPriority: 10` + `buildRedirect`
-- [`lib/kits/update_kit/update_kit.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/update_kit/update_kit.dart) — `redirectPriority: 1`
+- [`lib/kits/onboarding_kit/onboarding_kit.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/onboarding_kit/onboarding_kit.dart) — `redirectPriority: 50` + `buildRedirect`
+- [`lib/kits/update_kit/update_kit.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/update_kit/update_kit.dart) — `redirectPriority: 1` 을 선언하지만 `buildRedirect` 는 없음 (미사용 예약값)
+
+**강제 업데이트 오버레이**
+- [`lib/app.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/app.dart) — `MaterialApp.router(builder:)` 의 `_ForceUpdateGate` (Navigator 밖 `ModalBarrier` + 다이얼로그)
 
 **테스트**
 - [`test/common/router/auth_guard_test.dart`](https://github.com/storkspear/template-flutter/blob/main/test/common/router/auth_guard_test.dart) — `AuthKit.computeRedirect` 순수 함수 테스트

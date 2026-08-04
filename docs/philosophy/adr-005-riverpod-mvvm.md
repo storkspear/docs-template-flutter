@@ -235,7 +235,7 @@ Flutter 커뮤니티에선 매년 "어떤 상태 관리가 최고?" 토론이 �
 - [`lib/main.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/main.dart) — `ProviderContainer` 생성 + `UncontrolledProviderScope` 주입
 
 **ViewModel 파일럿**
-- [`lib/kits/auth_kit/ui/login/login_view_model.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/ui/login/login_view_model.dart) — 본 ADR 의 샘플. 227줄
+- [`lib/kits/auth_kit/ui/login/login_view_model.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/ui/login/login_view_model.dart) — 본 ADR 의 샘플. 301줄
 - [`lib/kits/auth_kit/ui/password_reset/password_reset_view_model.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/ui/password_reset/password_reset_view_model.dart)
 - [`lib/kits/auth_kit/ui/verify_email/verify_email_view_model.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/ui/verify_email/verify_email_view_model.dart)
 

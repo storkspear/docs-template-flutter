@@ -111,11 +111,12 @@ gh workflow run ci.yml --repo <owner>/<repo>
 상세는 [`android-deployment.md`](./android-deployment.md) 를 참조하세요.
 
 핵심 단계는 이래요:
-1. Keystore · Play 자격증명을 디코딩해요
-2. `flutter build appbundle --obfuscate --split-debug-info=...` 로 빌드해요
-3. `fastlane android beta` 로 Play Internal 에 업로드해요
-4. Sentry 심볼을 업로드해요
-5. 민감 파일을 삭제해요
+1. `verify` job 이 먼저 돌아요 — format · configure audit · docs contract · analyze · test 로 `ci.yml` 의 analyze-and-test 와 같은 검사예요. 태그 push 는 `ci.yml` 을 트리거하지 않기 때문에(그쪽은 main 브랜치 push·PR 전용) 릴리스 경로에도 같은 게이트를 둬요. 이 job 이 실패하면 뒤 단계는 아예 시작하지 않아요.
+2. Keystore · Play 자격증명을 디코딩해요
+3. `flutter build appbundle --obfuscate --split-debug-info=...` 로 빌드해요
+4. `fastlane android beta` 로 Play Internal 에 업로드해요
+5. Sentry 심볼을 업로드해요 (`SENTRY_AUTH_TOKEN` · `SENTRY_ORG` · `SENTRY_PROJECT` 셋 중 하나라도 없으면 경고만 남기고 건너뛰어요)
+6. 민감 파일을 삭제해요
 
 ---
 
