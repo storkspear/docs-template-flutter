@@ -83,7 +83,7 @@
 | "`core/`, `kits/`, `common/`, `features/` 는 어떻게 다른가?" | [`ADR-002: 3계층 모듈 구조`](./adr-002-layered-modules.md) |
 | "Kit 은 왜 런타임에 조립되는가?" | [`ADR-003: FeatureKit 동적 레지스트리`](./adr-003-featurekit-registry.md) |
 | "왜 `app_kits.yaml` 과 `main.dart` 두 곳에 kit 선언?" | [`ADR-004: 수동 동기화 + CI 검증`](./adr-004-manual-sync-ci-audit.md) |
-| "상태 관리는 왜 Riverpod + MVVM?" | [`ADR-005: Riverpod + StateNotifier`](./adr-005-riverpod-mvvm.md) |
+| "상태 관리는 왜 Riverpod + MVVM?" | [`ADR-005: Riverpod + Notifier`](./adr-005-riverpod-mvvm.md) |
 | "왜 서비스는 인터페이스 + Debug 구현체 패턴?" | [`ADR-006: 인터페이스 기반 서비스 교체`](./adr-006-debug-fallback.md) |
 | "ApiClient ↔ AuthService 순환 의존을 어떻게?" | [`ADR-007: Late Binding`](./adr-007-late-binding.md) |
 | "스플래시 중 뭘 하는가?" | [`ADR-008: 부팅 단계 추상화`](./adr-008-boot-step.md) |
@@ -156,7 +156,7 @@ ADR-004 (YAML ↔ Dart 수동 동기화 + CI 검증)
 
 **이 테마가 답하는 물음**: "솔로 개발자가 감당 가능한 상태 관리와 DI 구조는 무엇인가?"
 
-- [`ADR-005 · Riverpod + MVVM (StateNotifier + ConsumerWidget)`](./adr-005-riverpod-mvvm.md)
+- [`ADR-005 · Riverpod + MVVM (Notifier + ConsumerWidget)`](./adr-005-riverpod-mvvm.md)
 - [`ADR-006 · 인터페이스 기반 서비스 교체 + Debug 폴백`](./adr-006-debug-fallback.md)
 - [`ADR-007 · Late Binding 으로 순환 의존 해결`](./adr-007-late-binding.md)
 - [`ADR-008 · 부팅 단계 추상화 (BootStep + SplashController)`](./adr-008-boot-step.md)

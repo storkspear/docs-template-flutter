@@ -297,6 +297,8 @@ class ItemListViewModel extends Notifier<ItemListState> {
 
 final itemListViewModelProvider = NotifierProvider<ItemListViewModel, ItemListState>(
   ItemListViewModel.new,
+  // 화면 단위 ViewModel 은 필수 — riverpod 3 기본값이 non-autoDispose 예요.
+  isAutoDispose: true,
 );
 ```
 

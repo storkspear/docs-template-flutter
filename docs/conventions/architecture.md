@@ -86,6 +86,8 @@ class ExpenseListViewModel extends Notifier<ExpenseListState> {
 final expenseListViewModelProvider =
     NotifierProvider<ExpenseListViewModel, ExpenseListState>(
   ExpenseListViewModel.new,
+  // 화면 단위 ViewModel 은 필수 — riverpod 3 기본값이 non-autoDispose 예요.
+  isAutoDispose: true,
 );
 ```
 
@@ -93,7 +95,7 @@ final expenseListViewModelProvider =
 - `copyWith` 로 상태 갱신 (immutable)
 - `errorCode` 는 서버 코드 (`ATH_001` 등) 또는 ViewModel 별 fallback (`FETCH_FAILED`)
 - `errorMessage` 는 서버 i18n 메시지 — 없으면 Screen 에서 errorCode 기반으로 i18n 매핑
-- riverpod 3 는 `autoDispose` 가 default — 메모리 누수 방지
+- riverpod 3 의 provider 는 기본이 **non-autoDispose** — 화면 단위 ViewModel 은 `isAutoDispose: true` 를 명시해야 화면을 떠날 때 정리돼요
 
 ### 1-3. Screen 표준 양식
 
