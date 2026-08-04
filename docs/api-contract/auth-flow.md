@@ -241,15 +241,16 @@ TokenStorage.clearTokens() + authState.emit(unauthenticated)
 ```
 
 **refresh 실패 시 signOut 은 `AuthService.refreshToken()` 이 직접 수행합니다.** refresh 는
-전용 Dio(`ApiClient.postRefresh`)로 나가며, 실패 시 곧바로 토큰을 정리하고 `false` 를
-반환해요. `AuthInterceptor` 는 refresh 가 false 면 원 401 을 그대로 전파할 뿐 signOut 을
-직접 호출하지 않습니다 — refresh 흐름의 소유자(AuthService)가 단일 지점에서 정리하도록 한
-설계예요.
+전용 Dio(`ApiClient.postRefresh`)로 나가며, 서버가 refresh token 을 **거절**한 경우
+(ATH_002 만료 / ATH_003 무효 / 401)에만 토큰을 정리하고 `false` 를 반환해요. 네트워크
+단절·타임아웃·5xx 같은 일시 장애는 refresh token 이 멀쩡할 수 있으므로 토큰을 보존한 채
+`false` 만 반환해요 (온라인 복귀 후 다음 401 에서 재시도). `AuthInterceptor` 는 refresh 가
+false 면 원 401 을 그대로 전파할 뿐 signOut 을 직접 호출하지 않습니다 — refresh 흐름의
+소유자(AuthService)가 단일 지점에서 정리하도록 한 설계예요.
 
-> `ApiException` 의 `isRefreshTokenExpired`/`isRefreshTokenInvalid` 등 의미 getter 는
-> 파생 레포의 ViewModel 이 401 을 세분 처리(예: 저장 안 된 입력 보호 후 수동 signOut)하고
-> 싶을 때 쓰라고 노출한 **공개 API** 예요. 템플릿 기본 흐름은 위처럼 AuthService 가 자동
-> 처리하므로 이 getter 들을 쓰지 않습니다.
+> `ApiException` 의 `isRefreshTokenExpired`/`isRefreshTokenInvalid` 의미 getter 가 위
+> 거절 판정에 쓰여요. 파생 레포의 ViewModel 이 401 을 세분 처리(예: 저장 안 된 입력 보호
+> 후 수동 signOut)하고 싶을 때 쓸 수 있는 **공개 API** 이기도 해요.
 
 ---
 
