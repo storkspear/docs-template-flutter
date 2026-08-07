@@ -353,6 +353,7 @@ Apple 사용자가 "Hide My Email" 을 선택하면 첫 로그인 후 identity t
 | `resendEmailVerification` | `POST /api/apps/{slug}/auth/resend-verification` | 인증 메일 재발송 (인증 필요, 204) |
 | `requestPasswordReset` | `POST /api/apps/{slug}/auth/password-reset/request` | 재설정 메일 발송 (204) |
 | `confirmPasswordReset` | `POST /api/apps/{slug}/auth/password-reset/confirm` | 토큰으로 재설정 (204) |
+| `changePassword` | `PATCH /api/apps/{slug}/auth/password` | 로그인 상태 비번 변경 (인증 필요, 현재 비번 검증, 204) |
 | `withdraw` | `POST /api/apps/{slug}/auth/withdraw` | 회원 탈퇴 (인증 필요, 204) |
 | `setupTotp` | `POST /api/apps/{slug}/auth/me/2fa/setup` | TOTP 등록 시작 (인증 필요, 200 `{secret, otpAuthUrl}`) |
 | `verifyAndEnableTotp` | `POST /api/apps/{slug}/auth/me/2fa/verify` | TOTP 코드 검증 + 활성화 (인증 필요, 200 `{backupCodes}`) |
@@ -360,8 +361,6 @@ Apple 사용자가 "Hide My Email" 을 선택하면 첫 로그인 후 identity t
 | `regenerateBackupCodes` | `POST /api/apps/{slug}/auth/me/2fa/backup-codes/regenerate` | 백업코드 재발급 (인증 필요, 200 `{backupCodes}`) |
 | _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/auth/phone/request` | 휴대폰 OTP 발송 (public, `{data:{devCode}}` — devCode 는 non-prod 만) |
 | _(미구현 — 파생 레포)_ | `POST /api/apps/{slug}/auth/phone/verify` | OTP 검증 + 토큰 발급 (public, 유저 find-or-create) |
-
-> 백엔드 `PATCH /api/apps/{slug}/auth/password` (인증 비번 변경) 는 contract에 있지만 `AuthService` 메서드는 미구현이에요 (파생 레포에서 필요 시 직접 호출).
 
 > 경로의 단일 진실의 출처는 백엔드 `common-web/ApiEndpoints.java` 의 `Auth.*` 상수예요. Flutter 쪽 경로 상수도 1:1 일치가 권장돼요.
 

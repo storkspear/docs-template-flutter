@@ -133,6 +133,7 @@ if (current.isAuthenticated) { /* ... */ }
 | `/login` | `LoginScreen` | 이메일/소셜 로그인 · 가입 토글 |
 | `/forgot-password` | `PasswordResetScreen` | 비번 재설정 요청 |
 | `/verify-email` | `VerifyEmailScreen` | 이메일 인증 (가입 후) |
+| `/settings/password` | `PasswordChangeScreen` | 비번 변경 (로그인 상태 — 현재 비번으로 본인 확인) |
 | `/login/2fa` | `TwoFactorLoginScreen` | 2FA 2단계 로그인 (서버 결정 — 상시 등록) |
 | `/settings/2fa`(+`/setup`·`/disable`·`/backup-codes`) | `TwoFactor*Screen` | 2FA 관리 (**`twoFactorEnabled: true`** 일 때만) |
 
@@ -158,6 +159,7 @@ if (current.isAuthenticated) { /* ... */ }
 `AuthKit` 의 default 값:
 - `loginPath: '/login'`, `homePath: '/'`, `splashPath: '/splash'`
 - `forgotPasswordPath: '/forgot-password'`, `verifyEmailPath: '/verify-email'`
+- `changePasswordPath: '/settings/password'`
 
 이 경로들은 **Flutter GoRouter 의 클라 라우트** 예요 (백엔드 API endpoint 와 무관). 파생 레포가 변경하려면:
 
