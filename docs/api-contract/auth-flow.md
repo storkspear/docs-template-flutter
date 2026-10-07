@@ -205,12 +205,14 @@ backup code 8개는 발급 시 1회만 노출돼요 — 화면이 즉시 표시 
 
 ## 로그아웃 (signOut)
 
-> ⚠️ **백엔드에 로그아웃 endpoint 가 없어요** (의도적 결정). 로그아웃은 **클라단 동작**이에요. 서버 측 토큰 무효화는 refresh 시도 시 자연스럽게 일어나거나, 회원 탈퇴(`/auth/withdraw`) 시 일괄 처리돼요.
+`POST /api/apps/{slug}/auth/logout` (body `{refreshToken}`, 204) — 이 기기 세션의 refresh token 을 서버에서 폐기해요. 인증 헤더 없이 refresh token 만으로 호출하는 공개 경로예요.
 
 ```text
 사용자가 "로그아웃" 버튼 누름
   ↓
 authService.signOut() 호출
+  ↓
+refresh token 을 읽어 둠
   ↓
 TokenStorage.clearTokens()         ← Secure storage 의 access/refresh 제거
 authState.emit(unauthenticated)
@@ -218,9 +220,19 @@ authState.emit(unauthenticated)
 GoRouter refreshListenable 트리거
   ↓
 AuthKit.buildRedirect → /login 라우터 경로로 이동
+  ↓ (화면 전환과 별개로 이어서)
+POST /auth/logout { refreshToken }  ← best-effort, 최대 5초
 ```
 
-**왜 백엔드 로그아웃이 없나**: 짧은 access TTL (15분) + refresh 회전 + replay 감지 (`ATH_003 INVALID_TOKEN`) 조합으로 충분해요. 추가 endpoint 는 공격 표면만 늘려요. 회원 탈퇴 시에는 `withdraw` 가 모든 refresh 토큰을 일괄 무효화해요.
+**로컬 정리가 먼저, 서버 폐기는 best-effort**: 화면은 서버 응답을 기다리지 않고 바로 로그인으로 넘어가요. 서버 호출이 오프라인 · 타임아웃 · 5xx 로 실패해도 로그아웃은 성공이에요. 그 경우 서버의 refresh token 은 만료(TTL)까지 남아요 — 재시도 큐는 두지 않아요.
+
+**서버가 폐기하는 범위**: 제출한 refresh token 이 속한 family, 즉 이 기기의 세션 하나예요. 같은 계정으로 로그인한 다른 기기는 그대로예요. 전 기기 무효화는 회원 탈퇴(`/auth/withdraw`)와 비밀번호 변경 · 재설정이 해요. 이미 발급된 access token 은 자체 TTL 까지 유효해요.
+
+**왜 필요한가**: 로그아웃한 앱은 refresh 를 다시 부르지 않아요. 서버 폐기가 없으면 그 refresh token 은 회전도 재사용 감지도 거치지 않은 채 만료일까지 유효하게 남아요.
+
+**호출은 refresh 전용 Dio(`ApiClient.postRefresh`)** 로 나가요. 방금 지운 세션에 토큰을 첨부하거나 401 자동 refresh 를 태우지 않기 위해서예요.
+
+> refresh 거절(아래)과 `withdraw()` 는 `/auth/logout` 을 부르지 않고 로컬 정리만 해요. 앞은 서버가 이미 그 토큰을 버린 경우고, 뒤는 탈퇴가 성공하면 서버가 유저의 토큰을 전부 무효화하기 때문이에요.
 
 ---
 
@@ -233,19 +245,20 @@ refresh 응답: 401 { error: { code: "ATH_002" or "ATH_003" } }
   ↓ (refresh token 만료 또는 무효)
 AuthService.refreshToken() 의 `on ApiException` 이 감지
   ↓
-authService.signOut() **직접 호출** (refresh 소유자가 정리 책임)
+로컬 세션 정리를 **직접 수행** (refresh 소유자가 정리 책임)
   ↓
 TokenStorage.clearTokens() + authState.emit(unauthenticated)
+  (서버가 이미 거절한 토큰이라 /auth/logout 은 부르지 않음)
   ↓
 원 요청은 원래의 401 을 그대로 throw → 라우터가 unauthenticated 상태를 보고 /login 리다이렉트
 ```
 
-**refresh 실패 시 signOut 은 `AuthService.refreshToken()` 이 직접 수행합니다.** refresh 는
+**refresh 실패 시 로컬 세션 정리는 `AuthService.refreshToken()` 이 직접 수행합니다.** refresh 는
 전용 Dio(`ApiClient.postRefresh`)로 나가며, 서버가 refresh token 을 **거절**한 경우
 (ATH_002 만료 / ATH_003 무효 / 401)에만 토큰을 정리하고 `false` 를 반환해요. 네트워크
 단절·타임아웃·5xx 같은 일시 장애는 refresh token 이 멀쩡할 수 있으므로 토큰을 보존한 채
 `false` 만 반환해요 (온라인 복귀 후 다음 401 에서 재시도). `AuthInterceptor` 는 refresh 가
-false 면 원 401 을 그대로 전파할 뿐 signOut 을 직접 호출하지 않습니다 — refresh 흐름의
+false 면 원 401 을 그대로 전파할 뿐 세션을 직접 정리하지 않습니다 — refresh 흐름의
 소유자(AuthService)가 단일 지점에서 정리하도록 한 설계예요.
 
 > `ApiException` 의 `isRefreshTokenExpired`/`isRefreshTokenInvalid` 의미 getter 가 위
@@ -354,6 +367,7 @@ Apple 사용자가 "Hide My Email" 을 선택하면 첫 로그인 후 identity t
 | `requestPasswordReset` | `POST /api/apps/{slug}/auth/password-reset/request` | 재설정 메일 발송 (204) |
 | `confirmPasswordReset` | `POST /api/apps/{slug}/auth/password-reset/confirm` | 토큰으로 재설정 (204) |
 | `changePassword` | `PATCH /api/apps/{slug}/auth/password` | 로그인 상태 비번 변경 (인증 필요, 현재 비번 검증, 204) |
+| `signOut` | `POST /api/apps/{slug}/auth/logout` | 이 기기 세션의 refresh token 폐기 (body `{refreshToken}`, 204, best-effort) |
 | `withdraw` | `POST /api/apps/{slug}/auth/withdraw` | 회원 탈퇴 (인증 필요, 204) |
 | `setupTotp` | `POST /api/apps/{slug}/auth/me/2fa/setup` | TOTP 등록 시작 (인증 필요, 200 `{secret, otpAuthUrl}`) |
 | `verifyAndEnableTotp` | `POST /api/apps/{slug}/auth/me/2fa/verify` | TOTP 코드 검증 + 활성화 (인증 필요, 200 `{backupCodes}`) |
