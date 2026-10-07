@@ -96,7 +96,7 @@ await authService.confirmPasswordReset(token: 'token-from-email', newPassword: '
 await authService.verifyEmail(email: 'x@y.com', token: 'token-from-email');
 await authService.resendEmailVerification();
 
-// 로그아웃 — 클라단 동작 (백엔드 endpoint 없음)
+// 로그아웃 — 로컬 정리 후 서버에 refresh token 폐기 요청 (best-effort)
 await authService.signOut();
 
 // 회원 탈퇴 — 백엔드 호출 + 로컬 정리
@@ -279,6 +279,7 @@ try {
   - `POST /api/apps/{slug}/auth/email/signin` (200)
   - `POST /api/apps/{slug}/auth/{google|apple|kakao|naver}` (200)
   - `POST /api/apps/{slug}/auth/refresh` (200, AuthTokens — 회전)
+  - `POST /api/apps/{slug}/auth/logout` (204, body `{refreshToken}` — 이 기기 세션 폐기)
   - `POST /api/apps/{slug}/auth/withdraw` (204, 인증 필요)
   - `POST /api/apps/{slug}/auth/verify-email` (204)
   - `POST /api/apps/{slug}/auth/resend-verification` (204, 인증 필요)
@@ -286,7 +287,7 @@ try {
   - `POST /api/apps/{slug}/auth/password-reset/confirm` (204)
   - `PATCH /api/apps/{slug}/auth/password` (204, 인증 필요)
   - `GET /api/apps/{slug}/users/me` (인증 필요)
-- [ ] **로그아웃 endpoint 는 없음** — 클라단 `signOut()` 만으로 충분 ([auth-flow.md §로그아웃](../api-contract/auth-flow.md) 참조)
+- [ ] **로그아웃은 `signOut()` 하나로 충분** — 로컬 정리 + 서버 `POST /auth/logout` 폐기 요청까지 처리 ([auth-flow.md §로그아웃](../api-contract/auth-flow.md) 참조)
 - [ ] 응답 envelope `{data, error}`, signin/signup 은 `{user, tokens: {accessToken, refreshToken}}` nested, refresh 는 `{accessToken, refreshToken}` root
 
 ---

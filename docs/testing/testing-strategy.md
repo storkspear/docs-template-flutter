@@ -278,7 +278,7 @@ flutter test test/contract/
 | 레이어 | 목표 커버리지 |
 |------|------------|
 | Service · ViewModel | 80%+ |
-| Kit 계약 | 핵심 Kit (현재 `auth_kit` · `backend_api_kit` · `payment_kit` · `file_kit`) 우선. 메타가 단순한 Kit 은 통합 테스트로 흡수 |
+| Kit 계약 | 핵심 Kit (현재 `auth_kit` · `backend_api_kit` · `payment_kit` · `file_kit`) 우선. SDK 를 직접 부르는 Kit (`ads_kit` · `permissions_kit`) 은 이음매나 플랫폼 인터페이스 가짜로 분기를 덮어요. 메타가 단순한 Kit 은 통합 테스트로 흡수 |
 | 조립 통합 | 1개 유효 (smoke test 수준 — `test/integration/main_assembly_test.dart`) |
 | 마이그레이션 지문 | 전 스키마 버전 (Drift 사용 시) |
 | 백엔드 계약 스냅샷 | 클라가 호출하는 전 경로·전 ErrorCode |
