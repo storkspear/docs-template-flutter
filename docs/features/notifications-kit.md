@@ -105,8 +105,7 @@ FirebaseMessaging.onMessage.listen((RemoteMessage message) {
 
 ### 타임존
 
-- [ ] `timezone` 패키지 초기화 (`tz.initializeTimeZones()` 는 자동)
-- [ ] 사용자 지역 시간대 감지 · 저장 (`flutter_timezone` 패키지 권장)
+- [x] `timezone` 패키지 초기화와 기기 시간대 적용은 `LocalScheduledAlertService.init()` 이 해요 (`flutter_timezone` 으로 읽고, 못 읽으면 `Asia/Seoul`)
 
 ---
 

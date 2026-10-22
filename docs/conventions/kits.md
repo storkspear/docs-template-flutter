@@ -297,6 +297,7 @@ class LocationKit extends AppKit {
 - [ ] **import** 정리 — IDE 가 unused 표시
 - [ ] **Provider 사용처** — 해당 kit 이 export 했던 provider 를 쓰던 코드 정리
 - [ ] **권한** — `AndroidManifest.xml`, `Info.plist` 의 해당 kit 전용 권한 제거 (예: ads_kit 의 ATT)
+- [ ] **매니페스트 컴포넌트** — kit 플러그인을 가리키는 `<receiver>`·`<service>` 제거 (예: notifications_kit 의 `ScheduledNotificationReceiver`·`ScheduledNotificationBootReceiver`. 플러그인을 빼고 남기면 클래스를 못 찾아 죽음)
 - [ ] **i18n** — 해당 kit UI 가 썼던 ARB 키 정리
 - [ ] **pubspec.yaml** — 해당 kit 만 쓰던 의존성 제거 (다른 kit 도 쓰면 유지)
   - ⚠️ pubspec 에 남겨두면 native 플러그인 .aar 이 APK 에 그대로 포함돼요 ([features/README.md tree-shaking 주의 참조](../features/README.md))
