@@ -254,6 +254,25 @@ POST /auth/logout { refreshToken }  ← best-effort, 최대 5초
 
 ---
 
+## 비밀번호 재설정 (requestPasswordReset → confirmPasswordReset)
+
+```text
+① POST /auth/password-reset/request { email }            → 204 (존재 여부와 무관 — 계정 열거 방지)
+② 메일의 6자리 코드 입력
+③ POST /auth/password-reset/confirm { email, token, newPassword } → 204
+```
+
+③ 의 `email` 은 ① 때 입력한 값이에요 — `PasswordResetViewModel` 이 `state.email` 로 보존했다가 함께 보내요. 서버는 코드를 **그 계정의 최신 활성 코드 1개** 와만 대조하고 오답 시도도 계정 단위로 세어요(6자리 코드를 앱 전체 활성 코드와 대조하면 무작위 대입 표면이 사용자 수만큼 넓어져요). 짝 서버 DTO 는 `PasswordResetConfirmRequest(email @Email @NotBlank, token @NotBlank, newPassword @ValidPassword)` 예요.
+
+| ③ 의 실패 | 코드 | 화면 안내 (`resolveAuthErrorText` — 서버 문구보다 우선) |
+|---|---|---|
+| 코드 불일치 · 활성 코드 없음 · 존재하지 않는 email · **오답 5회 도달로 서버가 코드를 무효화** | 401 `ATH_003` | "인증 코드가 올바르지 않거나 더 이상 쓸 수 없어요. 코드를 다시 요청해 주세요." (`errorAuthCodeInvalid`) |
+| 코드 만료 | 401 `ATH_002` | "인증 코드가 만료됐어요. 코드를 다시 요청해 주세요." (`errorAuthCodeExpired`) |
+
+오답 한도(5회째)에 걸리면 같은 코드를 맞게 넣어도 ATH_003 이에요 — 코드 입력 단계의 "코드 다시 받기" 로 ① 부터 다시 받아요.
+
+---
+
 ## Refresh 실패 → signOut
 
 ```text
@@ -397,7 +416,7 @@ Apple 사용자가 "Hide My Email" 을 선택하면 첫 로그인 후 identity t
 | `verifyEmail` | `POST /api/apps/{slug}/auth/verify-email` | 이메일 인증 토큰 검증 (body 에 `email` + `token` 필수, 204) |
 | `resendEmailVerification` | `POST /api/apps/{slug}/auth/resend-verification` | 인증 메일 재발송 (인증 필요, 204) |
 | `requestPasswordReset` | `POST /api/apps/{slug}/auth/password-reset/request` | 재설정 메일 발송 (204) |
-| `confirmPasswordReset` | `POST /api/apps/{slug}/auth/password-reset/confirm` | 토큰으로 재설정 (204) |
+| `confirmPasswordReset` | `POST /api/apps/{slug}/auth/password-reset/confirm` | email + 코드로 재설정 (body `{email, token, newPassword}` 셋 다 필수, 204) |
 | `changePassword` | `PATCH /api/apps/{slug}/auth/password` | 로그인 상태 비번 변경 (인증 필요, 현재 비번 검증, 204) |
 | `signOut` | `POST /api/apps/{slug}/auth/logout` | 이 기기 세션의 refresh token 폐기 (body `{refreshToken}`, 204, best-effort) |
 | `withdraw` | `POST /api/apps/{slug}/auth/withdraw` | 회원 탈퇴 (인증 필요, 204) |

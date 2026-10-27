@@ -39,8 +39,8 @@
 | Code | HTTP | Dart 상수 | 설명 |
 |------|------|---------|------|
 | `ATH_001` | 401 | `ErrorCode.invalidCredentials` | 이메일/비밀번호 불일치 (열거 방지 — 어느 쪽 틀렸는지 구분 X) |
-| `ATH_002` | 401 | `ErrorCode.refreshTokenExpired` | **refresh / reset / verification 토큰 만료** → signOut + 재로그인 |
-| `ATH_003` | 401 | `ErrorCode.refreshTokenInvalid` | refresh / reset / verification 토큰 무효 (revoked, replay 감지 등) |
+| `ATH_002` | 401 | `ErrorCode.refreshTokenExpired` | **refresh / reset / verification 토큰 만료**. refresh 면 세션 정리 + 재로그인, 재설정·인증 코드면 화면이 `errorAuthCodeExpired` 로 재요청 안내 |
+| `ATH_003` | 401 | `ErrorCode.refreshTokenInvalid` | refresh / reset / verification 토큰 무효 (revoked, replay 감지, 재설정 코드 불일치 · **오답 5회 도달 무효화** 등). 재설정·인증 코드면 화면이 `errorAuthCodeInvalid` 로 재요청 안내 |
 | `ATH_004` | 401 | `ErrorCode.socialAuthFailed` | Apple/Google/Kakao/Naver 소셜 검증 실패. `details.provider` 권장 |
 | `ATH_005` | 401 | `ErrorCode.emailNotVerified` | 이메일 인증 미완료 유저 |
 | `ATH_007` | 401 | `ErrorCode.totpVerificationFailed` | 2FA TOTP 코드 불일치 또는 backup code 매칭 실패 |
@@ -70,7 +70,7 @@
 | Code | HTTP | Dart 상수 | 설명 |
 |------|------|---------|------|
 | `USR_001` | 404 | `ErrorCode.userNotFound` | 유저 미존재. `details.id` 권장 |
-| `USR_002` | 409 | `ErrorCode.emailAlreadyExists` | 이미 사용 중인 이메일로 가입 시도 — signup 화면 분기에 사용 |
+| `USR_002` | 409 | `ErrorCode.emailAlreadyExists` | 이미 사용 중인 이메일 — 이메일 가입 중복과 **소셜 최초 가입이 기존 이메일 계정과 겹칠 때**(서버는 자동 연결하지 않음) 공통. 기존 계정이 이메일인지 다른 소셜인지 서버가 구분해 주지 않으므로 화면은 `errorEmailAlreadyRegistered`("전에 쓰던 방법으로 로그인해 주세요") 로 안내 |
 
 ### 스토리지 도메인 — `STG_*` (StorageError)
 
