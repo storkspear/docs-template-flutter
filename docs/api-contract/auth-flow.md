@@ -117,7 +117,12 @@
 
 ### 동시 401 처리
 
-`QueuedInterceptor` 덕분에 **동시에 401 이 터져도 refresh 는 1번만 실행돼요**. 다른 요청은 큐에서 대기했다가 refresh 완료 후 순차 재시도해요. 상세는 [`ADR-010`](../philosophy/adr-010-queued-interceptor.md) 을 참고하세요.
+**동시에 401 이 터져도 refresh 는 1번만 실행돼요.** 두 장치가 함께 일해요.
+
+1. `QueuedInterceptor` 가 `onError` 를 한 줄로 세워요 — 첫 401 이 refresh 를 끝낼 때까지 나머지 401 은 큐에서 기다려요.
+2. 큐에서 나온 401 은 **회전 감지**를 해요 — "이 요청이 들고 나간 토큰" 과 "지금 저장된 토큰" 이 다르면 이미 다른 401 이 refresh 를 끝낸 거라, refresh 없이 새 토큰으로 재시도만 해요.
+
+큐만으로는 부족해요. 큐는 순서만 보장할 뿐이라, 기다리던 401 이 저마다 refresh 를 부르면 토큰이 요청 수만큼 회전해요. 상세는 [`ADR-010`](../philosophy/adr-010-queued-interceptor.md) 을 참고하세요.
 
 ### 응답 구조 비대칭 (signin vs refresh)
 
@@ -234,6 +239,19 @@ POST /auth/logout { refreshToken }  ← best-effort, 최대 5초
 
 > refresh 거절(아래)과 `withdraw()` 는 `/auth/logout` 을 부르지 않고 로컬 정리만 해요. 앞은 서버가 이미 그 토큰을 버린 경우고, 뒤는 탈퇴가 성공하면 서버가 유저의 토큰을 전부 무효화하기 때문이에요.
 
+### 회원 탈퇴 (withdraw)
+
+`POST /api/apps/{slug}/auth/withdraw` (인증 필요, 204). 로그아웃과 반대로 **서버가 먼저**예요 — 204 를 받은 뒤에만 로컬 세션을 정리해요.
+
+| 결과 | 로컬 세션 | 화면 |
+|---|---|---|
+| 204 | 정리 (`/auth/logout` 은 안 부름 — 서버가 전부 무효화) | 라우터가 `/login` 으로 |
+| 네트워크 · 타임아웃 · 5xx 등 실패 | **유지** + `ApiException` | 설정 화면이 "탈퇴 실패" 안내, 사용자가 다시 시도 |
+| 401 (access 만료 → refresh 거절) | `refreshToken()` 의 거절 정리 흐름이 비움 | 라우터가 `/login` 으로 (세션이 이미 비었으면 화면은 안내를 띄우지 않음) |
+| 401 → refresh 성공 → 재시도한 탈퇴가 다시 실패 | **유지** (새 토큰) + `ApiException` | "탈퇴 실패" 안내 |
+
+실패했는데 로컬을 지우면 계정은 살아 있는데 사용자는 "탈퇴됐다" 고 믿게 돼요. 그래서 서버 확정 전에는 세션을 건드리지 않아요.
+
 ---
 
 ## Refresh 실패 → signOut
@@ -264,6 +282,20 @@ false 면 원 401 을 그대로 전파할 뿐 세션을 직접 정리하지 않�
 > `ApiException` 의 `isRefreshTokenExpired`/`isRefreshTokenInvalid` 의미 getter 가 위
 > 거절 판정에 쓰여요. 파생 레포의 ViewModel 이 401 을 세분 처리(예: 저장 안 된 입력 보호
 > 후 수동 signOut)하고 싶을 때 쓸 수 있는 **공개 API** 이기도 해요.
+
+### 부팅 시 refresh 실패 (`checkAuthStatus`)
+
+부팅 중 access token 이 만료돼 있으면 `AuthCheckStep` 의 `checkAuthStatus()` 가 같은 `refreshToken()` 을 불러요. 결과 해석도 같은 기준이에요.
+
+| refresh 결과 | 토큰 | 부팅 후 상태 |
+|---|---|---|
+| 성공 | 새 토큰 저장 | authenticated → 홈 |
+| 서버 거절 (ATH_002 / ATH_003 / 401) | `refreshToken()` 이 삭제 | unauthenticated → `/login` |
+| 거절이 확인되지 않은 실패 (오프라인 · 타임아웃 · 5xx 등 — `refreshToken()` 이 토큰을 보존한 모든 경우) | 보존 | **authenticated 유지** (만료 토큰의 사용자로) → 홈 |
+
+거절이 아닌 실패에서 `/login` 으로 보내면 "온라인 복귀 후 다음 401 에서 재시도" 가 성립하지 않아요 — 로그인 화면에선 401 이 올 일이 없으니, 멀쩡한 refresh token 을 두고도 재로그인을 강요하게 돼요. 그래서 세션을 유지한 채 열고, 온라인이 되면 첫 401 이 평소의 자동 refresh 경로를 타요. 오프라인 동안의 API 호출은 401 이 아니라 네트워크 오류로 실패하므로 세션이 정리되지 않아요.
+
+"거절" 의 기준은 `refreshToken()` 과 같아요 — ATH_002 / ATH_003 / HTTP 401 만이에요. 그 밖의 응답(다른 4xx, 계약 밖 2xx+error 등)은 거절인지 판정할 수 없어 보존 쪽으로 분류돼요. 그런 상태로 부팅한 뒤 온라인에서도 refresh 가 계속 실패하면, 첫 401 을 받은 ViewModel 의 `signOut()` 경로(error-handling.md "401 자동 refresh")로 로그인 화면에 가요. 만료 토큰으로는 서버 자원에 접근할 수 없으니 보안 차이는 없고, 홈을 한 번 거친다는 UX 차이만 있어요.
 
 ---
 

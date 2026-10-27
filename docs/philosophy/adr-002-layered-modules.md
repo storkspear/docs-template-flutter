@@ -1,6 +1,6 @@
 # Layered_Modules
 
-**Status**: Accepted. 현재 유효 (2026-07-29 기준). `lib/` 하위 4개 최상위 폴더 (`core/` · `kits/` · `common/` · `features/`). `core/` 46 dart 파일, `kits/` 15개 Kit · 93 dart 파일 (kit_manifest·README 포함 123 파일).
+**Status**: Accepted. 현재 유효 (2026-07-29 기준). `lib/` 하위 4개 최상위 폴더 (`core/` · `kits/` · `common/` · `features/`). `core/` 47 dart 파일, `kits/` 15개 Kit · 95 dart 파일 (kit_manifest·README 포함 125 파일).
 
 > **적용 룰**: 본문의 "kit 간 직접 import 금지" 는 아래 세 줄로 읽어요.
 > - `kit_manifest.requires` 에 **선언한 kit** 의 **type import** 는 허용 (`ApiException` · `ErrorCode` 같은 타입은 provider 로 접근 불가)
@@ -18,7 +18,7 @@
 - **`common/`** — 리팩터 잔여 · 어댑터 (providers · router · splash). 점진 이관 중
 - **`features/`** — **파생 레포의 도메인 화면** — 템플릿에는 스텁만
 
-각 영역은 **의존 방향이 단방향**: `features → common → kits → core`. 역방향 의존은 원칙적으로 금지예요. 딱 하나 명시적 허용 예외가 있어요 — `kits/` 가 `common/providers.dart` 와 `common/splash/boot_step.dart` **두 파일** 은 import 해요 (아래 「의존 방향」 참조). 이 경계가 **템플릿 순수성** (ADR-001) 과 **Kit 선택 조립** (ADR-003) 을 동시에 가능하게 해요.
+각 영역은 **의존 방향이 단방향**: `features → common → kits → core`. 역방향 의존은 원칙적으로 금지예요. 딱 하나 명시적 허용 예외가 있어요 — `kits/` 가 전역 DI `common/providers.dart` **한 파일** 은 import 해요 (아래 「의존 방향」 참조). 이 경계가 **템플릿 순수성** (ADR-001) 과 **Kit 선택 조립** (ADR-003) 을 동시에 가능하게 해요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -77,22 +77,20 @@ DDD 스타일 정석 구조.
 기본 방향 (단방향)
   features  →  common  →  kits  →  core
 
-허용 예외 (역방향으로 열어둔 두 파일)
+허용 예외 (역방향으로 열어둔 한 파일)
   kits/       →  common/providers.dart
-  kits/       →  common/splash/boot_step.dart
-  core/kits/  →  common/splash/boot_step.dart
 
 (Kit 간 직접 import 금지 — provider 로만 접근)
 ```
 
-- `core/` 는 (한 곳 예외를 빼면) **어디에도 의존하지 않음** — Flutter SDK + 외부 패키지만. 예외: `core/kits/` 가 `common/splash/boot_step.dart` 를 import (BootStep 계약 파일 위치 정리 전까지의 잔재 — `core/kits/` 로 이관 검토 중). `core/` → `kits/` 역방향은 **실제로 0건** 이라 이 규칙은 지켜지고 있어요.
-- `kits/` 는 `core/` 에 의존하고, **`common/` 은 위 두 파일까지만** 예외로 의존해요 — `common/splash/boot_step.dart` (BootStep 계약) 와 `common/providers.dart` (전역 DI). 지금 `lib/kits/` 하위 **20개 파일 · 23건** 이 여기 해당해요 (boot_step 13건 · providers 10건). 그 밖의 `common/` 파일 (`router/` · `splash_controller.dart` 등) 이나 다른 kits 를 직접 import 하면 규약 위반이에요.
+- `core/` 는 **어디에도 의존하지 않음** — Flutter SDK + 외부 패키지만. `BootStep` 계약도 `core/kits/boot_step.dart` 에 있어요. `core/` → `common/` · `kits/` 역방향은 **0건** 이고 `test/core/layer_rule_test.dart` 가 이를 검사해요.
+- `kits/` 는 `core/` 에 의존하고, **`common/` 은 `providers.dart` 한 파일만** 예외로 의존해요 (전역 DI). 지금 `lib/kits/` 하위 **11개 파일 · 11건** 이 여기 해당해요. 그 밖의 `common/` 파일 (`router/` · `splash/` 등) 이나 다른 kits 를 직접 import 하면 규약 위반이에요 — 같은 테스트가 검사해요.
 - `common/` 은 `core/` + `kits/` 에 의존. DI · 라우팅 · 스플래시처럼 **여러 Kit 을 조립** 하는 지점.
 - `features/` 는 모든 레이어에 의존 가능. 하지만 **템플릿 원본은 스텁만** (ADR-001).
 
-> 예외가 두 파일에만 열려 있는 이유는 성격이 "조립물" 이 아니라 **계약과 DI 진입점** 이기 때문이에요. `BootStep` 은 Kit 이 구현해야 하는 인터페이스이고 (`core/kits/` 이관 대상), `providers.dart` 는 Kit 이 전역 Provider 를 읽는 통로예요. 둘 다 위치만 `common/` 일 뿐 역할은 기반 레이어예요. 규칙의 진실의 출처는 [`conventions/kits.md` §3](../conventions/kits.md#3-kit-의존-관계-규칙) 이에요.
+> 예외가 `providers.dart` 한 파일에만 열려 있는 이유는 성격이 "조립물" 이 아니라 **DI 진입점** 이기 때문이에요 — Kit 이 전역 Provider 를 읽는 통로라 위치만 `common/` 일 뿐 역할은 기반 레이어예요. 계약 성격인 `BootStep` 은 `core/kits/` 로 옮겨 예외에서 뺐어요. 규칙의 진실의 출처는 [`conventions/kits.md` §3](../conventions/kits.md#3-kit-의존-관계-규칙) 이에요.
 
-### core/ 구성 (모든 앱 필수 · 46 파일)
+### core/ 구성 (모든 앱 필수 · 47 파일)
 
 | 폴더 | 역할 |
 |------|------|
@@ -129,7 +127,7 @@ lib/kits/<kit_name>/
 | `providers.dart` | 전역 DI 정의 | 유지 |
 | `router/app_router.dart` | GoRouter 조립 + Kit redirect 합성 | 유지 |
 | `splash/splash_controller.dart` | BootStep 순차 실행 (ADR-008) | 유지 |
-| `splash/boot_step.dart` | `BootStep` 인터페이스 | → `core/kits/` 로 이관 고려 |
+| `splash/boot_step.dart` | `core/kits/boot_step.dart` 의 re-export | 파생 레포 호환용으로 유지 |
 
 `common/` 은 **점진 이관 중** 이에요. 일부는 `core/` 로 흡수, 일부는 별도 경계 유지.
 
@@ -180,7 +178,7 @@ lib/features/
 
 3계층 분할의 핵심은 이름이 아니라 **의존 화살표의 단방향** 이에요. `core → kits` 역방향이 단 한 번이라도 생기면 tree-shaking 이 깨지고, 파생 레포에 예상치 못한 import 가 딸려와요. **규칙은 `import '../kits/...'` 를 `core/` 폴더에서 금지하는 linter 룰** 로 강제해야 안전.
 
-다만 룰을 켤 땐 범위를 정직하게 잡아야 해요. `core → kits` 금지는 지금 위반이 0건이라 바로 켜도 되지만, `kits → common` 까지 한꺼번에 막으면 현행 **23건이 한 번에 위반으로 떠요**. 이건 규칙이 어겨진 게 아니라 위에서 명시한 허용 예외 (`common/providers.dart` · `common/splash/boot_step.dart`) 라서, 룰에 이 두 파일을 화이트리스트로 넣거나 `boot_step.dart` 를 `core/kits/` 로 옮겨 예외 자체를 없앤 뒤에 켜는 게 맞아요.
+다만 룰을 켤 땐 범위를 정직하게 잡아야 해요. `kits → common` 을 통째로 막으면 허용 예외인 `common/providers.dart` import **11건이 위반으로 떠요**. 그래서 `test/core/layer_rule_test.dart` 는 `core → 상위 레이어 0건` 과 `kits → common 은 providers.dart 만` 두 조건으로 검사해요. `boot_step.dart` 는 `core/kits/` 로 옮겨 예외에서 뺐어요.
 
 **교훈**: 레이어 설계의 가치는 "어디에 뭐를 두느냐" 가 아니라 "뭘 뭐에 의존시키지 않느냐" 에 있어요.
 
@@ -207,8 +205,8 @@ lib/features/
 ## Code References
 
 **디렉토리 구조**
-- [`lib/core/`](https://github.com/storkspear/template-flutter/tree/main/lib/core) — 46 dart 파일 기반 레이어
-- [`lib/kits/`](https://github.com/storkspear/template-flutter/tree/main/lib/kits) — 15개 Kit · 93 dart 파일 (kit_manifest·README 포함 123 파일)
+- [`lib/core/`](https://github.com/storkspear/template-flutter/tree/main/lib/core) — 47 dart 파일 기반 레이어
+- [`lib/kits/`](https://github.com/storkspear/template-flutter/tree/main/lib/kits) — 15개 Kit · 95 dart 파일 (kit_manifest·README 포함 125 파일)
 - [`lib/common/`](https://github.com/storkspear/template-flutter/tree/main/lib/common) — providers · router · splash
 - [`lib/features/`](https://github.com/storkspear/template-flutter/tree/main/lib/features) — 파생 레포 영역 (스텁 `home/` + `settings/`)
 

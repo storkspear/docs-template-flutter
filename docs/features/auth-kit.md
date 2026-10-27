@@ -99,7 +99,8 @@ await authService.resendEmailVerification();
 // 로그아웃 — 로컬 정리 후 서버에 refresh token 폐기 요청 (best-effort)
 await authService.signOut();
 
-// 회원 탈퇴 — 백엔드 호출 + 로컬 정리
+// 회원 탈퇴 — 서버가 204 로 성공해야 로컬 정리. 실패하면 세션을 유지한 채
+// ApiException (화면이 안내 후 재시도). 401 거절은 refresh 정리 흐름이 처리.
 await authService.withdraw();
 
 // 토큰 갱신 (AuthInterceptor 가 401 시 자동 호출하므로 직접 호출 거의 불필요)
@@ -121,6 +122,8 @@ state.whenData((auth) {
 final current = ref.read(authStateProvider).current;
 if (current.isAuthenticated) { /* ... */ }
 ```
+
+`authStreamProvider` 는 구독 즉시 **현재 상태**를 먼저 내려줘요. 세션 복원은 `runApp` 전(스플래시) 에 끝나기 때문에, 변경만 흘리는 stream 이었다면 앱이 켜진 뒤 구독한 화면은 다음 로그인/로그아웃까지 `loading` 에 머물러요.
 
 ---
 

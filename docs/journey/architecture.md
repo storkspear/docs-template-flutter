@@ -42,7 +42,7 @@
 
 ### `core/` (항상 사용)
 
-모든 앱이 **무조건** 쓰는 기반. 46개 파일, 10개 모듈.
+모든 앱이 **무조건** 쓰는 기반. 47개 파일, 10개 모듈.
 
 | 모듈 | 핵심 자산 |
 |------|----------|
@@ -72,7 +72,7 @@
 | `providers.dart` | 전역 Riverpod Provider 정의 (Kit 들 연결) |
 | `router/app_router.dart` | GoRouter + Kit redirect 합성 |
 | `splash/splash_controller.dart` | BootStep 순차 실행 |
-| `splash/boot_step.dart` | 부팅 단계 인터페이스 |
+| `splash/boot_step.dart` | `core/kits/boot_step.dart` 의 re-export (파생 레포 호환용) |
 
 ### `features/` (파생 레포 영역)
 
