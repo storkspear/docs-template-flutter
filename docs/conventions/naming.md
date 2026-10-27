@@ -70,7 +70,7 @@ Dart 관용은 `lowerCamelCase` 예요. Provider 는 접미사로 종류를 표�
 
 ```text
 lib/
-├── core/             # 모든 앱 필수 기반 (46 파일)
+├── core/             # 모든 앱 필수 기반 (47 파일)
 │   ├── analytics/    # AnalyticsService · CrashService 추상 + Debug
 │   ├── cache/        # CacheStore · CachedRepository
 │   ├── config/       # AppConfig

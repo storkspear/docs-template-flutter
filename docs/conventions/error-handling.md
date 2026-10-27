@@ -202,6 +202,7 @@ ApiClient.get('/users/me')
   ↓ 서버 응답 401
   ↓
 AuthInterceptor.onError 가 감지
+  ↓ (요청 때 토큰 ≠ 지금 저장된 토큰이면 → 이미 다른 401 이 refresh 함 → 재시도로 건너뜀)
   ↓
 onTokenRefresh() 호출 → authService.refreshToken() 실행
   ↓ 성공: 새 access token 저장 → 원 요청 재시도 → 200

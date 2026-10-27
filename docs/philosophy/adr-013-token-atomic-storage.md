@@ -192,19 +192,28 @@ Future<void> checkAuthStatus() async {
 
   // 3. 로컬 JWT 파싱으로 유효성 확인 (exp 만료 검사 — 서버 호출 없음)
   final accessToken = await _tokenStorage.getAccessToken();
-  if (accessToken != null) {
-    final user = _parseJwtUser(accessToken);
-    if (user != null) {
-      _authState.emit(AuthState.authenticated(user));
-      return;
-    }
+  final user = accessToken == null ? null : _parseJwtUser(accessToken);
+  if (user != null) {
+    _authState.emit(AuthState.authenticated(user));
+    return;
   }
 
-  // 4. 만료 · 파싱 실패 → refresh 시도, 그것도 실패하면 unauthenticated
-  final refreshed = await refreshToken();
-  if (!refreshed) {
-    _authState.emit(const AuthState.unauthenticated());
-  }
+  // 4. 만료 → refresh 시도
+  if (await refreshToken()) return;
+
+  // 5. 서버 거절이면 refreshToken() 이 이미 토큰을 지우고 unauthenticated 를 emit 했다.
+  if (!await _tokenStorage.hasTokens()) { /* ... */ return; }
+
+  // 6. 토큰이 남아 있으면 거절 외 실패(오프라인 등) — 만료 토큰의 사용자로 세션 유지.
+  //    온라인 복귀 후 첫 401 에서 ADR-010 경로가 refresh 를 다시 시도한다.
+  final staleUser = accessToken == null
+      ? null
+      : _parseJwtUser(accessToken, checkExpiry: false);
+  _authState.emit(
+    staleUser == null
+        ? const AuthState.unauthenticated()
+        : AuthState.authenticated(staleUser),
+  );
 }
 ```
 

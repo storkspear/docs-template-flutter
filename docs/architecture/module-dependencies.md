@@ -40,13 +40,13 @@
 
 **단방향**: `features → common → kits → core`
 
-> **예외**: `BootStep` 인터페이스 등 조립 계약이 `common/splash/` 에 있어서, `kits/`·`core/` 일부 파일이 `common/` 을 역방향 import 해요 (레거시 어댑터 이관 중 — CLAUDE.md §2 참조). 신규 코드에서는 이 역방향을 늘리지 않는 게 원칙이에요.
+> **예외 하나**: `kits/` 가 전역 DI `common/providers.dart` 를 import 해요 (11개 파일 · 11건). `core/` 는 상위 레이어를 전혀 import 하지 않아요 — `test/core/layer_rule_test.dart` 가 두 규칙을 검사해요. `BootStep` 계약은 `core/kits/boot_step.dart` 에 있고, `common/splash/boot_step.dart` 는 파생 레포 호환용 re-export 예요.
 
 ---
 
 ## 레이어별 역할
 
-### `core/` — 모든 앱 필수 기반 (46 파일)
+### `core/` — 모든 앱 필수 기반 (47 파일)
 
 | 모듈 | 역할 |
 |------|------|
@@ -54,7 +54,7 @@
 | `cache/` | CacheStore · CachedRepository ([`ADR-014`](../philosophy/adr-014-cached-repository.md)) |
 | `config/` | AppConfig 싱글톤 |
 | `i18n/` | gen_l10n 결과물 ([`ADR-016`](../philosophy/adr-016-i18n-from-start.md)) |
-| `kits/` | AppKit 계약 · AppKits 레지스트리 ([`ADR-003`](../philosophy/adr-003-featurekit-registry.md)) |
+| `kits/` | AppKit 계약 · AppKits 레지스트리 ([`ADR-003`](../philosophy/adr-003-featurekit-registry.md)) · BootStep 계약 ([`ADR-008`](../philosophy/adr-008-boot-step.md)) |
 | `review/` | 인앱 리뷰 트리거 |
 | `storage/` | SecureStorage · PrefsStorage · TokenStorage ([`ADR-013`](../philosophy/adr-013-token-atomic-storage.md)) |
 | `theme/` | AppPalette · 디자인 토큰 ([`ADR-015`](../philosophy/adr-015-palette-registry.md)) |
@@ -76,7 +76,7 @@ payment_kit
 |------|------|
 | `providers.dart` | 전역 DI — 여러 Kit 의 Provider 를 한 곳 ([`ADR-005`](../philosophy/adr-005-riverpod-mvvm.md), [`ADR-007`](../philosophy/adr-007-late-binding.md)) |
 | `router/app_router.dart` | GoRouter 조립 + Kit redirect 합성 ([`ADR-018`](../philosophy/adr-018-redirect-priority.md)) |
-| `splash/boot_step.dart` | BootStep 인터페이스 ([`ADR-008`](../philosophy/adr-008-boot-step.md)) |
+| `splash/boot_step.dart` | `core/kits/boot_step.dart` 의 re-export (파생 레포 호환용) |
 | `splash/splash_controller.dart` | 부팅 단계 순차 실행 |
 
 ### `features/` — 파생 레포 도메인 영역
@@ -89,7 +89,7 @@ payment_kit
 
 ### 금지
 
-- ❌ `core/` → `kits/` 또는 `features/` import
+- ❌ `core/` → `common/` · `kits/` · `features/` import/export
 - ❌ `kits/<A>` → **`requires` 에 미선언한** `kits/<B>` 의 cross-import — 그 recipe 에 B 가 빠지면 컴파일 실패 (상세 룰: [`kits.md §3`](../conventions/kits.md))
 - ❌ `features/<A>` → `features/<B>` 직접 import (라우터 경유 권장)
 

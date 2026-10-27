@@ -1,10 +1,10 @@
 # Queued_Interceptor
 
-**Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 line 수 갱신. `lib/kits/backend_api_kit/interceptors/auth_interceptor.dart` (89줄) 에서 `QueuedInterceptor` 사용. 동시 401 · 무한루프 · refresh 실패 시나리오를 모두 다뤄요.
+**Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 line 수 갱신 / 2026-10-27 회전 감지 반영. `lib/kits/backend_api_kit/interceptors/auth_interceptor.dart` (112줄) 에서 `QueuedInterceptor` 사용. 동시 401 · 무한루프 · refresh 실패 시나리오를 모두 다뤄요.
 
 ## 결론부터
 
-액세스 토큰이 만료돼 API 가 **401** 을 반환하면 **`AuthInterceptor` 가 자동으로 refresh → 원 요청 재시도**. Dio 의 `QueuedInterceptor` 를 써서 **동시 여러 요청이 동시 401 을 받아도 refresh 는 1회만 실행**, 나머지 요청은 큐에서 대기해요. refresh 엔드포인트 자체가 401 을 내면 무한루프 방지 로직이 작동하고, refresh 자체가 실패하면 원 401 을 그대로 ViewModel 로 전파해서 **signOut 결정을 호출자에게** 위임해요.
+액세스 토큰이 만료돼 API 가 **401** 을 반환하면 **`AuthInterceptor` 가 자동으로 refresh → 원 요청 재시도**. Dio 의 `QueuedInterceptor` 로 `onError` 를 한 줄로 세우고, 큐에서 나온 401 은 **회전 감지**(요청 때 토큰 ≠ 지금 저장된 토큰이면 refresh 생략, 새 토큰으로 재시도만)를 해서 **동시 여러 요청이 동시 401 을 받아도 refresh 는 1회만 실행**돼요. refresh 엔드포인트 자체가 401 을 내면 무한루프 방지 로직이 작동하고, refresh 자체가 실패하면 원 401 을 그대로 ViewModel 로 전파해서 **signOut 결정을 호출자에게** 위임해요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -70,8 +70,8 @@ API 호출 전에 토큰 만료 시간 (JWT exp 클레임) 을 파싱해서 **�
 Dio 의 `QueuedInterceptor` 를 확장. 동시성은 프레임워크가 해결, 로직은 깔끔히.
 
 - **압력 A 만족**: ViewModel 은 `ApiException(code: 'CMN_007')` (access token 만료) 를 받지 않음. 성공하거나 (새 토큰으로 재시도 성공) 진짜 인증 실패 (`ATH_002` refresh token 만료 등) 만 전파.
-- **압력 B 만족**: `QueuedInterceptor` 가 onRequest / onError 를 **큐 기반 순차 처리** → 동시 401 이 오면 첫 요청만 refresh, 나머지는 큐 대기.
-- **압력 C 만족**: `options.path.endsWith('/auth/refresh')` 체크로 refresh 엔드포인트 자체 401 이면 처리 건너뜀.
+- **압력 B 만족**: `QueuedInterceptor` 가 onRequest / onError 를 **큐 기반 순차 처리** → 동시 401 이 오면 첫 요청이 refresh 하는 동안 나머지는 큐 대기. 큐에서 나온 요청은 **회전 감지**(요청 때 토큰 ≠ 저장된 토큰)로 refresh 를 건너뛰고 새 토큰으로 재시도만 해요 — 큐만으로는 기다리던 401 이 저마다 refresh 를 불러 토큰이 N번 회전해요.
+- **압력 C 만족**: `options.path.endsWith(ApiEndpoints.authRefreshPath)` (`'/auth/refresh'`) 체크로 refresh 엔드포인트 자체 401 이면 처리 건너뜀.
 - **압력 D 만족**: refresh 실패 시 원 401 을 `handler.next(err)` 로 그대로 전파. signOut 결정은 ViewModel · AuthService 에서.
 
 ## 결정
@@ -82,68 +82,63 @@ Dio 의 `QueuedInterceptor` 를 확장. 동시성은 프레임워크가 해결, 
 // lib/kits/backend_api_kit/interceptors/auth_interceptor.dart 발췌
 class AuthInterceptor extends QueuedInterceptor {
   final TokenStorage _tokenStorage;
-  final Dio _dio;
+  final Dio _dio;                                   // 재시도 전용 (AuthInterceptor 없음)
   final Future<bool> Function() _onTokenRefresh;
 
   static const _skipAuthKey = 'skipAuth';
-
-  AuthInterceptor({
-    required TokenStorage tokenStorage,
-    required Dio dio,
-    required Future<bool> Function() onTokenRefresh,
-  }) : _tokenStorage = tokenStorage,
-       _dio = dio,
-       _onTokenRefresh = onTokenRefresh;
+  static const _bearerPrefix = 'Bearer ';
+  static String _bearer(String accessToken) => '$_bearerPrefix$accessToken';
 
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+  Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
     // 1. skipAuth 플래그: 로그인 · 가입 · 비번 찾기에 쓰임
-    if (options.extra[_skipAuthKey] == true) {
-      return handler.next(options);
-    }
+    if (options.extra[_skipAuthKey] == true) return handler.next(options);
     // 2. 토큰 자동 첨부
     final accessToken = await _tokenStorage.getAccessToken();
     if (accessToken != null) {
-      options.headers['Authorization'] = 'Bearer $accessToken';
+      options.headers[HttpHeaders.authorizationHeader] = _bearer(accessToken);
     }
     handler.next(options);
   }
 
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) async {
+  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
     // 3. skipAuth / 401 아님 → 그대로 전달
     if (err.requestOptions.extra[_skipAuthKey] == true ||
-        err.response?.statusCode != 401) {
+        err.response?.statusCode != HttpStatus.unauthorized) {
       return handler.next(err);
     }
-
     final options = err.requestOptions;
 
     // 4. 무한루프 방지: refresh 엔드포인트 자체 401
-    if (options.path.endsWith('/auth/refresh')) {
-      return handler.next(err);
-    }
+    if (options.path.endsWith(ApiEndpoints.authRefreshPath)) return handler.next(err);
 
-    final bool success;
-    try {
-      success = await _onTokenRefresh();
-      if (success) {
-        // 5. 새 토큰 준비
-        final accessToken = await _tokenStorage.getAccessToken();
-        options.headers['Authorization'] = 'Bearer $accessToken';
+    // 5. 회전 감지 — 이 요청이 나간 뒤 다른 401 이 이미 refresh 를 끝냈으면
+    //    저장된 토큰이 요청 때 토큰과 다르다. 그러면 refresh 를 또 부르지 않는다.
+    final sentAuthorization = options.headers[HttpHeaders.authorizationHeader];
+    var accessToken = await _tokenStorage.getAccessToken();
+    final alreadyRotated = accessToken != null &&
+        sentAuthorization is String &&
+        sentAuthorization != _bearer(accessToken);
+
+    if (!alreadyRotated) {
+      final bool success;
+      try {
+        success = await _onTokenRefresh();
+      } catch (_) {
+        // 6. refresh 자체가 예외 → 원 401 전파 (signOut 결정은 호출자)
+        return handler.next(err);
       }
-    } catch (_) {
-      // 6. refresh 자체가 예외 → 원 401 전파 (signOut 결정은 호출자)
-      return handler.next(err);
+      // 7. refresh 가 false, 또는 성공인데 토큰이 없음 → 원 401 전파
+      if (!success) return handler.next(err);
+      accessToken = await _tokenStorage.getAccessToken();
+      if (accessToken == null) return handler.next(err);
     }
 
-    if (!success) {
-      // 7. refresh 가 false 반환 → 원 401 전파
-      return handler.next(err);
-    }
+    options.headers[HttpHeaders.authorizationHeader] = _bearer(accessToken);
 
     // 8. 재시도 — AuthInterceptor 가 없는 refresh 전용 Dio(_dio)로 실행.
-    //    refresh 성공 후의 실패는 인증 만료가 아니므로, 원 401 이 아니라
+    //    refresh 뒤의 실패는 인증 만료가 아니므로, 원 401 이 아니라
     //    재시도에서 실제 발생한 에러를 그대로 전파 (stale 401 오판 방지).
     try {
       final response = await _dio.fetch(options);
@@ -155,9 +150,11 @@ class AuthInterceptor extends QueuedInterceptor {
 }
 ```
 
-### QueuedInterceptor 의 동시성 보장
+### QueuedInterceptor 의 동시성 보장 — 큐 + 회전 감지
 
-Dio 의 `QueuedInterceptor` 는 **`onRequest` · `onError` 콜백을 큐로 관리**. 첫 요청이 `await _onTokenRefresh()` 중이면 다른 요청의 `onError` 는 **큐에서 대기**. refresh 가 끝난 뒤 순차적으로 처리되므로, 각 요청은 **이미 refresh 된 최신 토큰** 으로 재시도.
+Dio 의 `QueuedInterceptor` 는 **`onRequest` · `onError` 콜백을 큐로 관리**. 첫 요청이 `await _onTokenRefresh()` 중이면 다른 요청의 `onError` 는 **큐에서 대기**해요.
+
+그런데 큐는 순서만 보장해요. 기다리던 401 이 차례가 왔을 때 그냥 refresh 를 부르면, 첫 요청이 방금 회전시킨 refresh token 으로 **또** 회전해요 — 동시 401 이 N 건이면 refresh 가 N 번 나가요 (회전은 매번 성공하니 눈에 안 띄고, 서버의 refresh token family 만 불필요하게 길어져요). 그래서 큐에서 나온 요청은 "내가 들고 나간 `Authorization`" 과 "지금 저장된 access token" 을 비교해요. 다르면 이미 누군가 refresh 를 끝낸 것이라 **refresh 없이 새 토큰으로 재시도만** 해요. 같으면 내가 첫 401 이니 refresh 를 해요. 새 토큰으로 **새로 나간** 요청이 다시 401 을 받으면 둘이 같으므로 정상적으로 refresh 를 다시 타요. 재시도 자체는 refresh 전용 Dio 로 나가므로 그 응답이 401 이어도 다시 refresh 하지 않아요 — 첫 요청의 refresh 뒤 재시도와 같은 성질이에요(재시도 실패는 그대로 전파, 포인트 3).
 
 ### skipAuth 플래그 사용
 
@@ -188,10 +185,10 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 ### 설계 선택 포인트
 
 **포인트 1 — `QueuedInterceptor` 는 void-async 문제 해결 + 동시성 해결**  
-Dio 의 일반 `Interceptor.onError` 는 `void` 반환이라 `await handler.next(...)` 같은 순차성이 안 돼요. `QueuedInterceptor` 는 내부적으로 `Completer` 큐를 써서 한 handler 가 완료될 때까지 다음을 대기시켜요. 이 덕분에 **refresh 중엔 모든 요청이 자동으로 대기**.
+Dio 의 일반 `Interceptor.onError` 는 `void` 반환이라 `await handler.next(...)` 같은 순차성이 안 돼요. `QueuedInterceptor` 는 내부적으로 `Completer` 큐를 써서 한 handler 가 완료될 때까지 다음을 대기시켜요. 이 덕분에 **refresh 중엔 모든 요청이 자동으로 대기**. 다만 대기만으로는 "1회" 가 보장되지 않아요 — 차례가 온 요청이 refresh 를 생략하는 건 위의 회전 감지가 맡아요.
 
 **포인트 2 — 무한루프 방지는 path 체크 + refresh 전용 Dio**  
-`/auth/refresh` 자체가 401 을 반환하면 refresh 시도 → 또 401 → 무한. 간단한 `options.path.endsWith('/auth/refresh')` 체크로 이 경로만 refresh 로직을 건너뜀. **JWT 디코딩 같은 복잡한 판단은 불필요**. 여기에 더해 현재 구현은 refresh 요청 자체를 **별도 `_refreshDio`** (AuthInterceptor 미설치, `ApiClient.postRefresh`) 로 보내요 — 같은 Dio 로 재진입하면 `QueuedInterceptor` 큐에서 self-deadlock 이 나기 때문. path 체크는 이중 방어로 유지.
+`/auth/refresh` 자체가 401 을 반환하면 refresh 시도 → 또 401 → 무한. 간단한 `options.path.endsWith(ApiEndpoints.authRefreshPath)` 체크로 이 경로만 refresh 로직을 건너뜀 (상수 값은 `'/auth/refresh'` — 슬러그 뒤 경로라 인터셉터가 `AppConfig` 를 읽지 않아도 돼요). **JWT 디코딩 같은 복잡한 판단은 불필요**. 여기에 더해 현재 구현은 refresh 요청 자체를 **별도 `_refreshDio`** (AuthInterceptor 미설치, `ApiClient.postRefresh`) 로 보내요 — 같은 Dio 로 재진입하면 `QueuedInterceptor` 큐에서 self-deadlock 이 나기 때문. path 체크는 이중 방어로 유지.
 
 **포인트 3 — refresh 실패는 "원 401 전파", signOut 은 위임**  
 `onError` 의 try/catch 블록은 refresh 시도 실패 시 **원래의 `DioException` 을 그대로 `handler.next(err)`**. ErrorInterceptor 가 이걸 서버가 준 401 코드 (`CMN_004` · `CMN_007` 등) 그대로의 `ApiException` 으로 변환 → ViewModel 이 받아서 signOut 결정. **인터셉터가 강제 signOut 하지 않는** 이유: 일시 네트워크 장애 vs 진짜 권한 취소를 인터셉터는 구분 못 함.
@@ -207,10 +204,10 @@ Dio 의 `extra` 는 요청에 붙이는 메타데이터 bag. 인터셉터가 메
 ### 긍정적 결과
 
 - **ViewModel 투명성**: ViewModel 은 `CMN_007` (access token 만료) 를 받을 일이 없음. 인터셉터가 투명하게 처리.
-- **동시 요청 효율**: 부팅 시 10개 병렬 요청 모두 401 → refresh 1회만 실행 → 10개 모두 새 토큰으로 재시도. QueuedInterceptor 덕분에 자동.
+- **동시 요청 효율**: 부팅 시 10개 병렬 요청 모두 401 → refresh 1회만 실행 → 10개 모두 새 토큰으로 재시도. 큐(순서) + 회전 감지(생략) 의 조합.
 - **무한루프 원천 차단**: refresh 엔드포인트 401 에도 재시도 안 함.
-- **signOut 위치 분리**: `AuthInterceptor` 자체는 signOut 하지 않고 원 401 을 전파. signOut 결정은 `refreshToken()` 콜백(AuthService)에서. (단, refresh 요청 자체가 `ApiException`(네트워크 포함)으로 실패하면 콜백이 signOut 하므로, refresh 도중 네트워크 끊김엔 로그아웃될 수 있어요.)
-- **테스트 용이**: `onTokenRefresh: () async => true` / `() async => false` / `() async => throw` 3가지 경우로 모든 시나리오 검증.
+- **signOut 위치 분리**: `AuthInterceptor` 자체는 signOut 하지 않고 원 401 을 전파. 세션 정리는 `refreshToken()` 콜백(AuthService)이 서버 **거절**(ATH_002 / ATH_003 / 401) 을 확인했을 때만 해요. 네트워크 단절·타임아웃·5xx 처럼 거절이 확인되지 않은 실패는 토큰을 보존하고 401 만 전파해요 (auth-flow.md "Refresh 실패 → signOut").
+- **테스트 용이**: `onTokenRefresh: () async => true` / `() async => false` / `() async => throw` 3가지 경우에 동시 요청(`Future.wait`) 케이스를 더해 시나리오를 검증.
 
 ### 부정적 결과
 
@@ -229,13 +226,13 @@ Dio 일반 `Interceptor.onError` 는 `void` 반환인데 안에서 `async` 가�
 
 ### 교훈 2 — "인터셉터가 signOut 하면 안 된다"
 
-초기엔 refresh 실패 시 `AuthInterceptor` 가 직접 `authService.signOut()` 을 호출했어요. 지금은 **인터셉터가 직접 signOut 하지 않고** 원 401 을 전파 → signOut 결정은 `refreshToken()` 콜백으로 이동했어요. (다만 refresh 호출 자체가 `ApiException`(네트워크 포함)으로 실패하면 콜백이 signOut 하므로, refresh 도중 네트워크 끊김 케이스는 여전히 로그아웃될 수 있어요 — 완전 해결은 아니에요.)
+초기엔 refresh 실패 시 `AuthInterceptor` 가 직접 `authService.signOut()` 을 호출했어요. 지금은 **인터셉터가 직접 signOut 하지 않고** 원 401 을 전파 → 세션 정리 결정은 `refreshToken()` 콜백으로 이동했고, 콜백도 서버 거절이 확인된 경우에만 정리해요. refresh 도중 네트워크가 끊겨도 토큰은 남고, 온라인 복귀 후 다음 401 에서 다시 시도돼요.
 
 **교훈**: 인프라 레이어 (인터셉터) 는 **정보를 전달만** 해야 해요. 비즈니스 결정 (signOut) 은 도메인 레이어의 몫.
 
 ### 교훈 3 — "무한루프" 는 단순한 조건으로 막자
 
-초기엔 JWT exp 디코딩 + 서버 응답의 특정 error code 까지 파싱해서 "진짜 refresh 불가능한가?" 를 판단했어요. 복잡. 지금은 **`/auth/refresh` path 체크** 라는 가장 단순한 조건. 대부분의 케이스 커버.
+초기엔 JWT exp 디코딩 + 서버 응답의 특정 error code 까지 파싱해서 "진짜 refresh 불가능한가?" 를 판단했어요. 복잡. 지금은 **`ApiEndpoints.authRefreshPath` path 체크** 라는 가장 단순한 조건. 대부분의 케이스 커버.
 
 **교훈**: 방어 로직은 **가장 단순한 조건** 으로 시작. 실제 버그가 나면 그때 정교화. 조건을 복잡하게 만들수록 **조건 자체의 버그** 가 늘어요.
 
@@ -250,7 +247,7 @@ Dio 일반 `Interceptor.onError` 는 `void` 반환인데 안에서 `async` 가�
 ## Code References
 
 **인터셉터 구현**
-- [`lib/kits/backend_api_kit/interceptors/auth_interceptor.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/interceptors/auth_interceptor.dart) — 89줄, `QueuedInterceptor` 확장
+- [`lib/kits/backend_api_kit/interceptors/auth_interceptor.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/interceptors/auth_interceptor.dart) — 112줄, `QueuedInterceptor` 확장 + 회전 감지
 
 **콜백 주입**
 - [`lib/common/providers.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/common/providers.dart) — `onTokenRefresh: () => ref.read(authServiceProvider).refreshToken()`
@@ -261,7 +258,7 @@ Dio 일반 `Interceptor.onError` 는 `void` 반환인데 안에서 `async` 가�
 - [`lib/kits/backend_api_kit/backend_api_kit.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/backend_api_kit/backend_api_kit.dart)
 
 **테스트**
-- [`test/kits/backend_api_kit/interceptors/auth_interceptor_test.dart`](https://github.com/storkspear/template-flutter/blob/main/test/kits/backend_api_kit/interceptors/auth_interceptor_test.dart) — 동시성 · 무한루프 · refresh 실패 시나리오
+- [`test/kits/backend_api_kit/interceptors/auth_interceptor_test.dart`](https://github.com/storkspear/template-flutter/blob/main/test/kits/backend_api_kit/interceptors/auth_interceptor_test.dart) — 동시 401 → refresh 1회 · 새 토큰의 401 은 재 refresh · 무한루프 · refresh 실패 시나리오
 
 **관련 ADR**:
 - [`ADR-007 · Late Binding 으로 순환 의존 해결`](./adr-007-late-binding.md) — `onTokenRefresh` 콜백 주입의 이유

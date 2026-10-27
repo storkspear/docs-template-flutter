@@ -101,7 +101,12 @@
    │    ├─ tokenStorage.hasTokens()
    │    │   ├─ true  → access token 로컬 JWT 파싱 (서버 호출 없음)
    │    │   │          ├─ 파싱 성공 → authState.emit(authenticated)
-   │    │   │          └─ 파싱 실패 → refreshToken() 시도, 실패 시 unauthenticated
+   │    │   │          └─ 만료·파싱 실패 → refreshToken() 시도
+   │    │   │               ├─ 성공 → authenticated
+   │    │   │               ├─ 서버 거절(ATH_002/ATH_003/401) → 토큰 삭제 → unauthenticated
+   │    │   │               └─ 거절 외 실패(오프라인·5xx 등) → 토큰 보존
+   │    │   │                    ├─ 만료 토큰에서 사용자 파싱 가능 → authenticated 유지
+   │    │   │                    └─ 파싱 불가 → unauthenticated (토큰은 보존)
    │    │   └─ false → authState.emit(unauthenticated)
    │    
    ├─ ObservabilityKit 의 _PostHogInitStep

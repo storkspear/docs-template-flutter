@@ -178,8 +178,8 @@ class AppKits {
 
 ```dart
 // lib/kits/my_kit/my_kit.dart
-import 'package:app_template/common/splash/boot_step.dart';
 import 'package:app_template/core/kits/app_kit.dart';
+import 'package:app_template/core/kits/boot_step.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
