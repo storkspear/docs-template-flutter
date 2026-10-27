@@ -90,7 +90,11 @@ await authService.signInWithNaver(accessToken: naverAccessToken);
 
 // 비번 재설정 요청 / 확정
 await authService.requestPasswordReset(email: 'x@y.com');
-await authService.confirmPasswordReset(token: 'token-from-email', newPassword: 'new');
+await authService.confirmPasswordReset(
+  email: 'x@y.com', // 요청 때 입력한 이메일 — 서버가 코드를 그 계정과만 대조
+  token: 'code-from-email',
+  newPassword: 'new',
+);
 
 // 이메일 인증 / 재발송 — email 은 인증 대상 계정 이메일 (세션 프로필 값)
 await authService.verifyEmail(email: 'x@y.com', token: 'token-from-email');
