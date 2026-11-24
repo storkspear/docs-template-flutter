@@ -5,6 +5,7 @@ on:
     branches: [main]
 
 permissions:
+  actions: read
   contents: read
   pages: write
   id-token: write
@@ -28,6 +29,22 @@ jobs:
         with:
           name: github-pages-${{ github.run_attempt }}
           path: .
+
+      - name: Wait for artifact metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_NAME: github-pages-${{ github.run_attempt }}
+        run: |
+          for attempt in {1..12}; do
+            count=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" \
+              --jq ".artifacts | map(select(.name == \"$ARTIFACT_NAME\")) | length")
+            if [[ "$count" == "1" ]]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Uploaded Pages artifact is not uniquely visible in the API"
+          exit 1
 
       - id: deployment
         uses: actions/deploy-pages@v4
