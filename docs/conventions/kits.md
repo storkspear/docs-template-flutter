@@ -46,14 +46,14 @@ abstract class AppKit {
 
 ## 2. 동기화 3종 (가장 자주 실수하는 곳)
 
-Kit 활성화는 **3곳**에서 일치시켜야 해요:
+Kit 활성화 선언과 실제 조립을 **수동으로** 일치시키고, 선언의 의존성을 도구로 검증해요:
 
 ```text
-app_kits.yaml          ←→     lib/main.dart                    →    tool/configure_app.dart
-(선언적 의도)                  (실제 코드)                          (CI 검증)
+app_kits.yaml          ←→     lib/main.dart                         tool/configure_app.dart
+(선언적 의도)                  (실제 코드)                          (YAML 선언 검증)
    │                              │                                   │
    │  kits:                       │  AppKits.install([                │  Status: OK 확인
-   │    auth_kit:                 │    AuthKit(                       │  --audit 시 불일치 → exit 1
+   │    auth_kit:                 │    AuthKit(                       │  --audit 시 의존성 오류 → exit 1
    │      providers:              │      providers: const {           │
    │        - email               │        AuthProvider.email,        │
    │        - google              │        AuthProvider.google,       │
@@ -65,7 +65,7 @@ app_kits.yaml          ←→     lib/main.dart                    →    tool/c
 
 1. `app_kits.yaml` 에서 kit 추가/제거
 2. `lib/main.dart` 의 `AppKits.install([...])` 동일 변경
-3. `dart run tool/configure_app.dart` 로 검증 → `Status: OK` 확인
+3. `dart run tool/configure_app.dart` 로 YAML 선언·의존성을 검증 → `Status: OK` 확인. 이 도구는 `main.dart`를 읽지 않으므로 1과 2의 대조는 별도로 해요.
 
 **불일치 시 출력 예** (의존성 문제):
 
@@ -77,7 +77,7 @@ Status: ISSUES FOUND
 
 → `app_kits.yaml` 에 빠진 의존을 추가하거나, 의존하는 kit 을 함께 제거해요.
 
-> CI 자동화: `dart run tool/configure_app.dart --audit` (불일치 시 `exit 1` — pre-commit / CI 에서 호출 권장).
+> CI 자동화: `dart run tool/configure_app.dart --audit` (선언·의존성 오류 시 `exit 1` — pre-commit / CI 에서 호출 권장).
 
 ---
 
