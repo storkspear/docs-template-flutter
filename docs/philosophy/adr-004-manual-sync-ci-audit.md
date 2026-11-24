@@ -1,10 +1,12 @@
+<a id="manual_sync"></a>
+
 # Manual_Sync
 
 **Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 line 수 갱신. `tool/configure_app.dart` 가 `app_kits.yaml` 의 kit 선언 + 의존성(requires)을 `kit_manifest.yaml` 과 대조 검증. `--audit` 플래그로 CI 에서 차단. (단, `app_kits.yaml` ↔ `main.dart` 줄 단위 일치 자체는 아직 자동 검증 안 함 — main.dart 마커 치환은 향후 확장 예정.)
 
 ## 결론부터
 
-**Kit 활성화는 두 곳에 선언해야 해요** — `app_kits.yaml` (선언적 진실) 과 `lib/main.dart` 의 `AppKits.install([...])` (실제 코드). 자동화로 두 곳을 동기화하는 대신, **양쪽을 수동으로 맞추고 CI 는 `app_kits.yaml` 의 의존성 정합성을 검증** 하는 방식을 택했어요. 코드 생성의 복잡성을 피하는 대신, `app_kits.yaml` ↔ `main.dart` 일치는 수동 책임으로 남아요 (자동 검증은 향후 확장 예정).
+Kit 조합은 `app_kits.yaml`과 `main.dart`에서 수동으로 맞춰요. `configure_app.dart --audit`는 YAML의 Kit 이름·의존 선언·로그인 provider를 검사해요. `main.dart`는 읽지 않으므로 두 파일의 일치를 자동 보장하지는 않아요. 이 결정은 Kit 조립 코드 생성에 관한 것이며, l10n이나 Drift의 코드 생성을 금지하는 규칙은 아니에요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -35,6 +37,8 @@ Dart 코드에서 `AuthKit()` 같은 **생성자 호출** 을 해야 Kit 의 설
 
 ## 고민했던 대안들
 
+<a id="option-1--yaml-만--코드-생성기"></a>
+
 ### Option 1 — YAML 만 + 코드 생성기
 
 `app_kits.yaml` 편집 → `dart run build_runner build` → `main.g.dart` 에 `AppKits.install([...])` 자동 생성.
@@ -45,6 +49,8 @@ Dart 코드에서 `AuthKit()` 같은 **생성자 호출** 을 해야 Kit 의 설
 - **단점 3**: 생성 파일은 git 에 커밋하지 않는 게 관행 → CI 에서 매번 재생성 → 빌드 시간 증가.
 - **탈락 이유**: 힘 B (타입 안전) 만족 위해 파라미터 DSL 을 YAML 에 확장해야 함 → 복잡도 폭발.
 
+<a id="option-2--dart-만--linter-경고"></a>
+
 ### Option 2 — Dart 만 + linter 경고
 
 YAML 포기. `main.dart` 에서 `AppKits.install([...])` 만 보고 의존성 검증.
@@ -54,6 +60,8 @@ YAML 포기. `main.dart` 에서 `AppKits.install([...])` 만 보고 의존성 �
 - **단점 2**: Recipe 샘플 (`recipes/*.yaml`) 의 포맷을 Dart 로 어떻게? 주석 단순 Dart 스니펫?
 - **단점 3**: 신규 팀원 온보딩 시 "뭘 켜고 뭘 껐지?" 를 빨리 파악 불가.
 - **탈락 이유**: 힘 A (선언적 가독성) 위반. Recipe 시스템 (ADR-021) 과 맞지 않음.
+
+<a id="option-3--둘-다-수동--ci-검증--채택"></a>
 
 ### Option 3 — 둘 다 수동 + CI 검증 ★ (채택)
 
@@ -109,6 +117,8 @@ await AppKits.install([
 
 `NoUpdateAppUpdateService` 는 `appUpdateServiceProvider` 의 **기본값** 이지 `main.dart` 가 설치하는 구현체가 아니에요. 템플릿 기본 조립은 `BackendAppUpdateService` 를 쓰고, `backend_api_kit` 을 안 켜는 recipe 만 `NoUpdateAppUpdateService` 로 되돌려요.
 
+<a id="2-각-kit-의-kit_manifestyaml"></a>
+
 ### 2. 각 Kit 의 `kit_manifest.yaml`
 
 Kit 의 의존성 · 필요 플러그인을 선언:
@@ -126,6 +136,8 @@ dependencies:
 requires:
   - backend_api_kit
 ```
+
+<a id="3-검증-도구-configure_appdart"></a>
 
 ### 3. 검증 도구: `configure_app.dart`
 
@@ -164,6 +176,8 @@ Status: ISSUES FOUND
 $ echo $?
 1
 ```
+
+<a id="4-검증-로직-configure_appdart-내부"></a>
 
 ### 4. 검증 로직 (configure_app.dart 내부)
 
@@ -237,39 +251,31 @@ jobs:
 
 ### 긍정적 결과
 
-- **선언적 가독성 + 타입 안전 동시 달성**: YAML 로 한눈 파악, Dart 로 타입 체크.
-- **코드 생성 파이프라인 0**: `build_runner` 불필요. `flutter pub get` 후 즉시 빌드 가능.
-- **의존성 정합성 CI 차단**: `app_kits.yaml` 의 kit 선언 + `requires` 누락이 `--audit` exit 1 로 잡힘. (단, `app_kits.yaml` ↔ `main.dart` 줄 단위 일치 여부는 아직 자동 검증 대상이 아니에요 — 부정적 결과의 "수동 동기화" 참조.)
-- **의존성 자동 검증**: `auth_kit` 넣고 `backend_api_kit` 빼먹으면 CI 에서 차단.
-- **Recipe 시스템 자연 통합** (ADR-021): `recipes/*.yaml` 가 `app_kits.yaml` 와 동일 포맷이라 복사만으로 적용.
-- **단일 Dart 스크립트**: `tool/configure_app.dart` 288줄. 이해 · 수정 쉬움.
+YAML 은 선택한 구성을 읽는 선언으로, Dart 는 실제 객체와 타입을 조립하는 코드로 사용해요. configure audit 는 YAML 의 Kit 이름·의존성·지원 provider 를 검사해요. 이 조립 방식에 코드 생성이 필요하지 않다는 뜻이지, Drift 등 다른 기능의 코드 생성까지 없다는 뜻은 아니에요. recipe 를 복사한 뒤에도 Dart 조립을 맞춰야 해요.
 
 ### 부정적 결과
 
-- **두 곳 수동 동기화 피로**: Kit 추가 시 YAML + Dart + import 3곳 편집. 작은 피로 누적.
-- **YAML 파서가 단순 subset 만**: `configure_app.dart` 가 자체 파서라 YAML 고급 기능 (anchor · alias · multi-line) 지원 안 함. 일부러 제약.
-- **YAML 의 Kit 파라미터 제약**: `{}` 빈 Map 이나 `key: value` 스칼라만. 중첩 설정 (예: `auth_kit: { oauth: { google: {...} } }`) 은 Dart 에만 기술.
-- **로컬에서 `--audit` 잊기 쉬움**: CI 가 안 도는 상태에서 push → 원격 CI 실패 → 재push 라는 cycle 가끔 발생.
+Kit 를 바꿀 때 YAML, Dart 설치 목록, import 를 함께 확인해야 해요. 도구는 프로젝트가 정한 선언 형식만 해석하므로 YAML 전체 문법이나 임의의 Dart 객체 구성을 지원하지 않아요. 로컬 훅과 CI 에서 audit 를 실행하되, Dart 설치 목록과의 차이는 별도로 검토해요.
 
 ## 교훈
 
+<a id="교훈-1--자동화-와-수동--검증-은-다른-전략"></a>
+
 ### 교훈 1 — "자동화" 와 "수동 + 검증" 은 다른 전략
 
-처음엔 "코드 생성으로 두 곳 동기화 자동화" 를 생각했어요. 하지만 Kit 파라미터의 타입 복잡성 (`service: SomeServiceInstance()`) 을 YAML 로 표현하려면 스키마 · 파서 · DSL 을 추가해야 해요. 비용 대비 이득이 마이너스.
+Kit 의 생성자에 객체와 콜백을 전달할 수 있도록 실제 조립은 Dart 에 남겼어요. YAML 로 모두 표현하려면 추가 스키마와 해석기가 필요해요. 현재 선택은 수동 조립과 선언 검사이며, 어느 자동화 방식보다 항상 낫다는 일반 규칙은 아니에요.
 
-**교훈**: 자동화가 항상 답은 아니에요. **"수동이되 기계가 검증" 하는 구조** 가 복잡성을 훨씬 낮추는 경우가 많아요. Build-time 검증보다 **CI-time 검증** 이 구현 · 유지 모두 쉬움.
+<a id="교훈-2--build_runner-는-비용"></a>
 
 ### 교훈 2 — `build_runner` 는 비용
 
-`json_serializable` · `freezed` 같은 도구는 팀 규모에선 가치 있지만, **솔로 환경에선 "코드 생성 cycle 자체가 비용"** 이에요. 3초씩 걸리는 `build_runner watch` 가 하루에 수십 번 돌면 시간 낭비 누적.
+코드 생성은 생성 결과와 실행 도구를 함께 관리해야 해요. 이 템플릿은 Kit 조립에는 사용하지 않고 Drift 처럼 필요한 곳에는 사용해요. 개발자 수나 임의의 시간 계산만으로 도입 여부를 정하지 않고 반복 작업과 유지 비용을 비교해요.
 
-**교훈**: 코드 생성 도구는 **팀 규모 × 생성 파일 수 × 변경 빈도** 를 곱한 값이 임계점 넘을 때만 도입. 솔로 앱 공장에선 임계점을 거의 못 넘어요.
+<a id="교훈-3--ci-검증은-경고-가-아니라-차단-이어야"></a>
 
 ### 교훈 3 — CI 검증은 "경고" 가 아니라 "차단" 이어야
 
-초기엔 `configure_app.dart` 가 단순 리포트만 했어요. 그러면 **개발자가 경고를 무시** 하고 merge. 결국 앱이 다음 빌드에서 터져요. `--audit` 모드로 **exit 1 을 내게** 바꾸자 한 번에 해결됐어요.
-
-**교훈**: CI 검증은 **반드시 빌드 실패로 이어져야** 의미 있어요. "경고 문구만 출력" 은 결국 무시돼요. 부드러운 강제는 강제가 아니에요.
+`--audit` 는 문제가 있으면 실패 종료 코드로 알려 CI 검사를 실패시켜요. PR 머지 차단에는 해당 검사를 필수 상태 검사로 지정하는 저장소 설정도 필요해요.
 
 ## 관련 사례 (Prior Art)
 

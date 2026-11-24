@@ -109,11 +109,15 @@
    │    │   │                    └─ 파싱 불가 → unauthenticated (토큰은 보존)
    │    │   └─ false → authState.emit(unauthenticated)
    │    
-   ├─ ObservabilityKit 의 _PostHogInitStep
-   │    └─ PostHog SDK 초기화 (POSTHOG_KEY 주입 시)
+   ├─ AuthKit의 ActivityPingStep
+   │    └─ 활동 ping 초기화와 포그라운드 복귀 관찰
    │
-   ├─ UpdateKit 의 _ForceUpdateStep
-   │    └─ service.init() → check() → null 아니면 forceUpdateInfoNotifier 갱신(isForce 로 강제/경고 분기는 UI 몫)
+   ├─ UpdateKit의 _ForceUpdateStep
+   │    └─ service.init() → check() → 업데이트 정보가 있으면 notifier 갱신
+   │         (강제·경고 UI는 _ForceUpdateGate가 구분)
+   │
+   ├─ ObservabilityKit의 _PostHogInitStep
+   │    └─ POSTHOG_KEY가 있으면 PostHog 초기화
    │
    └─ (기타 활성 Kit 의 BootStep)
                  │
@@ -143,7 +147,7 @@
         │         │
         │         ├─ 우선순위 정렬된 redirectRules 순회
         │         ├─ 첫 non-null 반환값 = 리다이렉트
-        │         │   (UpdateKit → AuthKit → OnboardingKit → ...)
+        │         │   (실제 규칙을 반환하는 AuthKit → OnboardingKit 등)
         │         └─ 모두 null → 기본 로직 (splash → home)
         │
         └─ 첫 화면 렌더링
@@ -152,6 +156,8 @@
 ---
 
 ## 단계별 설명
+
+<a id="1-flutter-바인딩--팔레트--설정-main-본문"></a>
 
 ### 1. Flutter 바인딩 · 팔레트 · 설정 (main 본문)
 
@@ -162,13 +168,15 @@
 
 ### 2. Sentry 래핑
 
-`ObservabilityEnv.isSentryEnabled` 를 확인해요. DSN 이 주입되어 있으면 `SentryFlutter.init(..., appRunner: _bootstrap)` 이 내부적으로 `runZonedGuarded` 를 세팅해서 **비동기 에러까지 자동 포착돼요**. 미주입 시 `_bootstrap()` 을 직접 호출해요. 이후 단계(PrefsStorage·Kit 설치·container·splash)는 모두 `_bootstrap()` 안에서 실행돼요. (PrefsStorage 는 Provider override 로 주입되므로 container 생성 전이에요.)
+DSN이 설정돼 있으면 `SentryFlutter.init(..., appRunner: _bootstrap)`으로 부팅을 실행하고, 없으면 `_bootstrap()`을 직접 호출해요. PrefsStorage 초기화 이후 단계는 이 함수 안에서 실행돼요. 바인딩·팔레트·패키지 버전 조회·AppConfig 초기화는 Sentry를 시작하기 전이므로, 앱 시작 중 발생하는 모든 오류가 Sentry에 보고된다고 보지는 않아요.
 
 ### 3. Kit 설치
 
-여기서 각 Kit 의 `onInit` 이 실행돼요. 예를 들어 `BackendApiKit.onInit` 은 Dio 인스턴스를 생성해요.
+각 Kit의 `onInit`을 설치 순서대로 실행해요. `BackendApiKit`은 이름만 선언하며, `ApiClient`는 `common/providers.dart`의 provider를 처음 읽을 때 생성돼요.
 
 `ApiClient.onUpgradeRequired` 글루(5-b)는 install 보다 **먼저** 실행돼요 — `backend_api_kit` 은 `update_kit` 을 모르고(kit 간 디커플링), 두 kit 을 엮는 유일한 지점이 `main.dart` 라서 조립 이전에 정적 훅부터 걸어 둬요.
+
+<a id="4-providercontainer--attachcontainer"></a>
 
 ### 4. ProviderContainer + attachContainer
 
@@ -177,11 +185,11 @@ ADR-003 의 3단계 패턴:
 - `ProviderContainer` 생성 (모든 override 수집)
 - `attachContainer` (bootSteps 에게 container 노출)
 
-순서가 깨지면 런타임 StateError 가 나요.
+container를 연결하기 전에 `AppKits.container`를 읽으면 `StateError`가 나요. `maybeContainer`를 사용하는 Kit은 단계나 listener를 생략할 수도 있으므로 예외 발생 여부만으로 순서를 확인하지 않아요.
 
 ### 5. BootStep 실행
 
-`SplashController.run()` 이 각 step 을 순차로 `await` 해요. 한 step 이 실패해도 앱은 계속 진행돼요 — graceful degradation 이에요.
+`SplashController.run()`은 각 단계를 순서대로 기다려요. 한 단계가 예외를 던지면 남은 단계는 실행하지 않고 오류 결과를 반환해요. `main.dart`는 그 오류를 보고한 뒤 앱 실행을 이어가요. `AuthCheckStep`처럼 내부에서 실패를 처리하는 단계는 이 중단 경로와 구분해요.
 
 ### 6. runApp
 
@@ -189,7 +197,7 @@ ADR-003 의 3단계 패턴:
 
 ### 7. 첫 리다이렉트
 
-initialLocation `/splash` → refreshListenable 이 곧 초기 notify → `_composedRedirect` 실행 → AuthKit rule 이 상태에 따라 `/` (homePath 기본값) 또는 `/login` 을 반환해 이동해요.
+라우터는 `/splash`에서 시작하면서 redirect를 평가해요. AuthKit은 현재 인증 상태를 직접 읽어 미인증이면 `/login`, 인증 상태이면 기본 homePath `/`로 안내해요. 이후 인증 상태가 바뀌면 `_AuthRefreshBridge`가 redirect 재평가를 요청해요. 이 bridge가 생성 직후 초기 알림을 보내는 것은 아니에요. 모든 규칙이 개입하지 않고 `/splash`에 남으면 라우터의 기본 규칙이 홈으로 보내요.
 
 ---
 
@@ -201,8 +209,8 @@ initialLocation `/splash` → refreshListenable 이 곧 초기 notify → `_comp
 |------|--------|
 | Sentry 분기 | DSN 미주입 시 plain `_bootstrap()` 으로 계속 (Sentry 없이). DSN 있을 때 `SentryFlutter.init` 자체엔 try/catch 없음 — 실패 시 전파 |
 | AppKits.install | rollback 후 throw — 앱 시작 불가 (치명) |
-| BootStep 실행 | Result.error 반환 + crashService 리포트, 앱 계속 |
-| runApp | Flutter 프레임워크가 자체 처리 |
+| BootStep 실행 | 오류 결과를 반환하고 남은 단계를 생략해요. main.dart는 오류 보고가 끝나면 앱 실행을 이어가요. 보고 호출의 예외를 따로 처리하지는 않아요. |
+| Flutter 화면 실행 | 프레임워크 오류 처리와 설치된 관측성 설정을 따라요. 모든 오류를 복구하거나 앱 실행을 보장하는 단계는 아니에요 |
 
 ---
 

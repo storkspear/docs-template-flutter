@@ -810,3 +810,18 @@ body.sidebar-collapsed .sidebar-open-btn { display: flex; }
 .arch-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .arch-link { color: #64748b; font-weight: 700; }
 @media (max-width: 640px) { .stack-row { flex-direction: column; } .stack-label { flex-basis: auto; } .stack-arrow { margin-left: 0; } }
+
+/* Wide diagrams can be expanded without overflowing the page. */
+.diagram-zoom {
+  display: block;
+  margin: 20px 0 -12px auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  background: white;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.diagram-zoom:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }

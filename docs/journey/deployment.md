@@ -1,6 +1,8 @@
+<a id="deployment--첫-운영-배포"></a>
+
 # Deployment — 첫 운영 배포
 
-앱이 로컬에서 잘 돌아가면 스토어에 올릴 차례. Android **Play Internal** (GHA 자동 — `release-android.yml`) + iOS **TestFlight** (현재는 fastlane 수동 또는 Xcode Archive — iOS GHA 워크플로우는 미구현). 약 2~3시간 (최초 1회 · 이후엔 Android 만 태그 push 만).
+첫 Android 내부 테스트 배포와 iOS TestFlight 업로드를 준비해요. Android 는 `release-android.yml` 로 자동 배포하고, iOS 는 파생 레포에서 Fastlane lane 을 작성하거나 Xcode Archive 를 사용해요. 최초 설정과 외부 심사에 걸리는 시간은 앱 상태에 따라 달라요.
 
 ---
 
@@ -28,23 +30,31 @@ iOS TestFlight 수동 배포            (fastlane beta 또는 Xcode Archive)
 
 ## §1 외부 서비스 자격증명 (1시간)
 
-자세한 건 [`Journey §4`](./README.md#4-발급은-어디서--외부-서비스-자격-증명-1--2시간). 체크만:
+사용하는 서비스의 자격증명만 준비해요. Sentry·PostHog 는 해당 연동을 선택한 경우에, Firebase 원격 푸시 설정은 FCM 을 선택한 경우에 필요해요. 자세한 발급 절차는 [외부 서비스 설정](./README.md#4-발급은-어디서--외부-서비스-자격-증명-1--2시간) 에서 확인해요.
+
+<a id="sentry-observability_kit"></a>
 
 ### Sentry (observability_kit)
 
 - [ ] [Sentry](https://sentry.io) Flutter 프로젝트 생성
 - [ ] DSN · Auth Token · Org · Project slug 확보
 
+<a id="posthog-observability_kit"></a>
+
 ### PostHog (observability_kit)
 
 - [ ] [PostHog](https://posthog.com) 프로젝트 생성
 - [ ] Project API Key · Host 확보
 
+<a id="firebase-notifications_kit-쓰면"></a>
+
 ### Firebase (notifications_kit 쓰면)
 
 - [ ] [Firebase Console](https://console.firebase.google.com) 프로젝트 생성
-- [ ] Android: `google-services.json` → `android/app/`
-- [ ] iOS: `GoogleService-Info.plist` → `ios/Runner/`, APNs key 업로드
+- [ ] Android 는 `android/app/src/dev/` 와 `android/app/src/prod/` 에 각 환경의 `google-services.json` 을 배치해요.
+- [ ] iOS 는 환경별 `GoogleService-Info-<env>.plist` 를 준비하고, 원격 푸시를 쓸 때 APNs 설정을 확인해요.
+
+<a id="google-sign-in--apple-sign-in-auth_kit-쓰면"></a>
 
 ### Google Sign In / Apple Sign In (auth_kit 쓰면)
 
@@ -62,7 +72,7 @@ iOS TestFlight 수동 배포            (fastlane beta 또는 Xcode Archive)
 
 생성: `android/app/upload-keystore.jks` + `android/key.properties` (둘 다 gitignore). 비밀번호는 자동 생성돼 `~/Documents/keystores-pending/<app-slug>/passwords.txt` 에 임시 백업돼요.
 
-**중요**: `.gitignore` 확인. 절대 커밋 금지. [Bitwarden](https://bitwarden.com/) 같은 매니저에 백업.
+키스토어와 비밀번호 파일이 `.gitignore` 에 포함되는지 확인하고 커밋하지 않아요. [Bitwarden](https://bitwarden.com/) 같은 비밀번호 관리 도구에 백업해요.
 
 ### 2. Play Console 앱 등록
 
@@ -70,6 +80,8 @@ iOS TestFlight 수동 배포            (fastlane beta 또는 Xcode Archive)
 - 앱 이름 · 기본 언어 · 앱/게임 구분 · 무료/유료
 - **Play App Signing 활성화** (필수)
 - 내부 테스트 track 활성화
+
+<a id="3-서비스-계정--json-키"></a>
 
 ### 3. 서비스 계정 + JSON 키
 
@@ -79,18 +91,18 @@ iOS TestFlight 수동 배포            (fastlane beta 또는 Xcode Archive)
 
 ### 4. 최초 AAB 수동 업로드
 
-Play Console 의 API 업로드는 **해당 앱이 이미 존재** 해야 가능. 최초 1회는 수동:
+먼저 Play Console 에 앱을 등록하고 최초 AAB 를 수동으로 업로드해요. 이후 자동 배포 절차를 연결해요.
 
 ```bash
 flutter build appbundle --release --flavor prod \
-  --dart-define=SENTRY_DSN=$(grep SENTRY_DSN .env.prod | cut -d= -f2) \
-  --dart-define=POSTHOG_KEY=$(grep POSTHOG_KEY .env.prod | cut -d= -f2)
+  --dart-define-from-file=.env.prod \
+  --dart-define=APP_ENV=prod
 # → build/app/outputs/bundle/prodRelease/app-prod-release.aab
 ```
 
-`--flavor prod` 가 필수예요 — Android productFlavors { dev, prod } 가 도입돼서 default flavor 가 없으면 빌드 실패. `--flavor dev` 는 `.dev` suffix Bundle ID 라 Play Console 의 prod 앱과 별도. dev 빌드는 Internal app sharing 용으로만 사용 권장.
+이 앱에는 dev/prod flavor 가 있으므로 빌드할 flavor 를 지정해요. `prod` 는 출시용 앱 식별자를, `dev` 는 `.dev` 가 붙은 별도 식별자를 사용해요. Dart 설정인 `APP_ENV` 도 맞춰야 하며, 서버 주소와 서비스 키는 `.env.prod` 의 실제 값을 확인해요.
 
-Play Console 에서 이 AAB 수동 업로드 → 내부 테스트 track 릴리스.
+생성된 AAB 를 Play Console 에 올리고 내부 테스트 릴리스를 만들어요.
 
 ### 5. 내부 테스터 등록
 
@@ -99,6 +111,8 @@ Play Console → 내부 테스트 → 테스터 → 이메일 추가 (본인 포
 ---
 
 ## §3 iOS 배포 준비 (40분)
+
+<a id="1-apple-developer-계정--bundle-id"></a>
 
 ### 1. Apple Developer 계정 · Bundle ID
 
@@ -134,14 +148,14 @@ App Store Connect → Users and Access → Keys → `+`
 
 ### 5. 최초 TestFlight 업로드
 
-§3.2 의 Fastlane 셋업을 마쳤다면:
+§3.2 는 인증서 관리 설정이에요. 배포하려면 [iOS 배포 가이드](../infra/ios-deployment.md) 를 참고해 `beta` lane 도 작성해야 해요. 두 설정을 마친 뒤 실행해요.
 
 ```bash
 cd ios
 bundle exec fastlane beta
 ```
 
-또는 Xcode 에서 Product → Archive → Distribute.
+Xcode 로 배포한다면 prod scheme 을 선택하고 Product → Archive → Distribute 순서로 진행해요.
 
 ### 6. TestFlight 내부 테스터 등록
 
@@ -150,6 +164,8 @@ App Store Connect → TestFlight → Internal Testing → 본인 Apple ID 추가
 ---
 
 ## §4 GitHub Secrets 등록 (20분)
+
+<a id="1-android-서명-secrets--스크립트-자동-업로드"></a>
 
 ### 1. Android 서명 Secrets — 스크립트 자동 업로드
 
@@ -164,6 +180,8 @@ App Store Connect → TestFlight → Internal Testing → 본인 Apple ID 추가
 ```
 
 전제: gh CLI 설치 + `gh auth login` + 파생 레포 git 루트에서 실행.
+
+<a id="2-나머지-secrets--gh-secret-set-수동-등록"></a>
 
 ### 2. 나머지 Secrets — `gh secret set` 수동 등록
 
@@ -209,7 +227,7 @@ git push origin main --tags
 
 - Repository → Actions
 - `release-android.yml` 워크플로우 실행 확인
-- 10~15분 후 완료
+- 실행 결과와 실패한 단계가 없는지 확인해요.
 - Play Console → 내부 테스트 → 새 버전 업로드 확인
 
 ### 내부 테스터에게 링크 공유
@@ -225,6 +243,8 @@ Play Console 에서 "사전 가입 URL" 복사 → 이메일 등록된 테스터
 - 월 1회 내외
 - `v1.0.0 → v2.0.0` — 파괴적 변경 · 큰 기능 추가
 
+<a id="마이너--패치"></a>
+
 ### 마이너 · 패치
 
 - 필요 시
@@ -236,15 +256,17 @@ Play Console 에서 "사전 가입 URL" 복사 → 이메일 등록된 테스터
 
 ---
 
+<a id="7-internal--production-승격"></a>
+
 ## §7 Internal → Production 승격
 
-GHA 는 **Internal 에만** 자동 배포. 이후 단계:
+현재 GitHub Actions 는 Play Internal 에 업로드해요. 이후 공개 범위는 Play Console 에서 결정해요.
 
 ### 테스트 통과 후
 
 1. Play Console → Internal → "Release to closed testing" (선택)
 2. Closed → Open → **Production** 승격
-3. 최종 Production 은 Play Console 수동 (리뷰 1~7일)
+3. Production 출시는 Play Console 에서 검토 상태와 출시 조건을 확인한 뒤 진행해요.
 
 ### 전략
 
@@ -260,6 +282,8 @@ GHA 는 **Internal 에만** 자동 배포. 이후 단계:
 배포 관련 자주 막히는 증상은 [`Android Deployment · 트러블슈팅`](../infra/android-deployment.md#트러블슈팅) 에 정리돼 있어요. 그 외 일반 셋업 함정은 [`Pitfalls`](./dogfood-pitfalls.md) 참고.
 
 ---
+
+<a id="-책-목차--journey-6--7단계"></a>
 
 ## 📖 책 목차 — Journey 6 · 7단계
 

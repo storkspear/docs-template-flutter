@@ -1,10 +1,12 @@
+<a id="i18n_fromstart"></a>
+
 # I18n_FromStart
 
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `l10n.yaml` 설정 + `lib/core/i18n/app_ko.arb` (템플릿) + `app_en.arb` + `flutter gen-l10n` 자동 생성 `app_localizations.dart`. 모든 사용자 가시 문자열은 ARB 에 선언.
 
 ## 결론부터
 
-템플릿은 **첫 커밋부터 i18n 활성화** 상태예요. 한국어만 쓸 계획이어도 `S.of(context).loginButton` 같이 i18n 키로 접근. ARB 파일에 **ko / en 두 언어** 를 유지하고 `flutter gen-l10n` 으로 자동 생성. 나중에 영어 시장 진출 시 **기존 코드 수정 0**, 새 언어 추가 시 ARB 한 파일만. "나중에 i18n 도입" 의 비용이 1만배 차이 난다는 교훈에서 출발한 결정이에요.
+템플릿부터 한국어·영어 ARB와 `flutter gen-l10n`을 사용해요. 앱 문구를 번역 키로 관리하면 새 언어를 추가할 때 화면에 흩어진 문자열을 먼저 옮길 필요가 줄어요. 새 언어 지원에는 번역 외에도 키 검사, 날짜·숫자 형식, 화면 배치 확인이 필요해요. 현재 키 일치 테스트는 한국어와 영어를 비교해요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -36,6 +38,8 @@
 
 ## 고민했던 대안들
 
+<a id="option-1--나중에-도입-mvp-는-하드코딩"></a>
+
 ### Option 1 — 나중에 도입 (MVP 는 하드코딩)
 
 `Text('로그인')` 으로 빠르게 진행. 필요할 때 i18n 전환.
@@ -46,6 +50,8 @@
 - **단점 3**: 에러 메시지 하드코딩 → i18n 전환 어려움 (throw 위치가 비-UI 라 `BuildContext` 없음).
 - **탈락 이유**: 단기 이득 vs 장기 비용 비대칭. 압력 B 위반.
 
+<a id="option-2--직접-map-관리"></a>
+
 ### Option 2 — 직접 Map 관리
 
 `Map<String, Map<String, String>>` 으로 언어별 문자열 관리. `getTranslation('login', 'ko')`.
@@ -55,6 +61,8 @@
 - **단점 2**: 파라미터 치환 (`"안녕하세요, {name}!"`) 을 수동으로 구현 → 재발명.
 - **단점 3**: ICU format (복수형 · 성별 등) 지원 0.
 - **탈락 이유**: Flutter 공식 도구를 피할 이유 없음.
+
+<a id="option-3--arb--gen_l10n-flutter-공식--채택"></a>
 
 ### Option 3 — ARB + gen_l10n (Flutter 공식) ★ (채택)
 
@@ -206,7 +214,7 @@ String _localizedError(BuildContext context, String code) {
 gen_l10n 의 기본은 `S.maybeOf(context)` (nullable) + `S.of(context)` (non-null). `nullable: false` 로 **non-null 만 생성** → 호출처가 `?.` 없이 바로 접근. delegate 가 항상 등록되어 있으니 안전.
 
 **포인트 3 — ARB 의 `@키` 메타데이터 활용**  
-`"@loginFailed": {"description": "..."}` 는 **번역가 지침**. 파라미터 있는 키는 `placeholders` 로 타입 명시 → 자동 생성 코드가 `String Function(String)` 이 아닌 `String Function({required String name})` 같이 named param 을 만들어 줌.
+`"@loginFailed": {"description": "..."}` 는 **번역가 지침**. 파라미터가 있는 키는 `placeholders`에 타입을 적어요. 생성된 메서드의 인자 형식은 생성 코드를 확인해요. 현재 `signupDevCode(String code)`처럼 위치 인자를 사용해요.
 
 **포인트 4 — 에러 메시지는 "코드 + 번역" 분리**  
 ViewModel 은 `errorCode`, Screen 에서 `S.of(context)` 변환. 이 관용은 **ADR-009 (백엔드 계약)** 의 `ErrorCode` enum 과 자연 연결 — 서버 에러 코드가 UI i18n 키로 직결.
@@ -225,40 +233,33 @@ ViewModel 은 `errorCode`, Screen 에서 `S.of(context)` 변환. 이 관용은 *
 
 ### 긍정적 결과
 
-- **새 언어 추가 비용 최소**: 일본어 출시 결정 시 `app_ja.arb` 파일 하나 추가 + `flutter gen-l10n`. 코드 0 수정.
-- **타입 안전**: `S.of(context).login` 의 `login` 오타 시 컴파일 에러. 런타임 실수 방지.
-- **번역 외주 가능**: `app_en.arb` 파일을 번역가에게 전달 → 번역 → 되돌려받기. 코드 모름.
-- **에러 메시지 구조화**: `errorCode` + i18n 변환 패턴이 서버 에러 코드와 자연 매핑.
-- **파라미터 치환 안전**: `S.of(context).welcomeMessage('Alice')` 로 ICU format 지원.
-- **복수형 · 성별 지원**: ICU format 으로 `"items": "{count, plural, =0{no items} =1{1 item} other{{count} items}}"` 같이 선언.
+문자열을 ARB 에 모으고 생성된 S API 로 사용해요. 키 이름과 placeholder 호출을 정적으로 확인할 수 있고, 번역 파일을 별도로 전달하기 쉬워요. ICU 형식의 파라미터·복수형도 사용할 수 있어요. 새 언어를 추가할 때는 번역뿐 아니라 키 일치 테스트, 날짜·숫자 형식, 화면 길이를 확인해야 해요.
 
 ### 부정적 결과
 
-- **초기 오버헤드**: `Text('로그인')` 한 줄 vs `ARB 키 정의 + gen-l10n + S.of(context).login` 3단계. 첫 앱 만들 때 2시간 추가.
-- **gen-l10n 호출 잊기 쉬움**: ARB 수정 후 `flutter gen-l10n` 안 돌리면 IDE 자동완성이 옛 버전. "왜 새 키가 안 보이지?" 디버깅.
-- **에러 메시지 변환 보일러플레이트**: 위의 `_localizedError` 함수가 각 Screen 에 필요. 중앙화 가능 (e.g., `extension ErrorCodeL10n on String`) 하지만 추가 설계.
-- **ARB 파일이 커지면 관리 복잡**: 문자열 500개 넘으면 ARB 파일 수백 줄. 기능별 파일 분리 고려 필요 (gen-l10n 이 지원).
-- **ViewModel 이 i18n 모름 원칙 지키기 어려움**: 일부 ViewModel 은 스낵바 띄우려고 `BuildContext` 받고 싶어짐 — 규율로 막아야.
+문자열 추가 시 ARB 작성과 생성 단계가 필요해요. 생성 결과가 오래됐거나 번역 키가 빠졌는지 확인해야 하며, 현재 parity 테스트는 ko/en 을 비교해요. 오류 코드 번역과 큰 ARB 파일 관리도 필요해요. 기능별 파일을 나누면 gen-l10n 이 자동 병합한다는 가정은 하지 않아요.
 
 ## 교훈
 
-### 교훈 1 — i18n 은 "나중에" 가 진짜 비싸다
+<a id="교훈-1-i18n-은-나중에-가-진짜-비싸다"></a>
+<a id="교훈-1--i18n-은-나중에-가-진짜-비싸다"></a>
 
-초기 MVP 때 한국어 하드코딩. 3개월 뒤 영어 출시 결정. 화면 30개 × 평균 10개 문자열 = 300개 전환 작업. **3일 걸렸고 버그 5개**. 처음부터 넣었다면 하루 만에 ARB 파일 하나 추가로 끝. **전환 비용이 10배**.
+### 교훈 1 — 문자열을 처음부터 ARB로 분리해요
 
-**교훈**: 특정 관행 (i18n · 테스트 · 타입 체크) 은 **"나중에 도입" 의 비용이 기하급수적** 이에요. 처음부터 / 시작할 때 / 첫 커밋에서 도입이 정답.
+화면에 문자열을 직접 쓰기 시작하면 나중에 언어를 추가할 때 해당 문자열을 찾아 분리해야 해요. 템플릿은 이 반복 작업을 줄이기 위해 처음부터 ARB 를 사용해요.
 
-### 교훈 2 — 템플릿 언어는 "원문" 이 맞다
+<a id="교훈-2-템플릿-언어는-원문-이-맞다"></a>
+<a id="교훈-2--템플릿-언어는-원문-이-맞다"></a>
 
-영어 템플릿 + 한국어 번역본을 시도해봤어요. 개발자 (한국어 모국어) 가 영어로 원문을 쓰면 **어색한 영어 + 번역 단계마다 퇴화**. 한국어 템플릿 → 영어 번역은 자연스러움.
+### 교훈 2 — 원문과 번역의 키를 함께 관리해요
 
-**교훈**: 템플릿 언어는 **원문 작성자의 모국어**. "영어가 기본이어야" 라는 편견 경계.
+현재 템플릿 원문은 한국어 ARB 예요. 원문과 번역의 품질을 함께 검토하고 같은 메시지 키를 유지해요.
+
+<a id="교훈-3--errorcode--i18n-분리가-viewmodel-순수성의-열쇠"></a>
 
 ### 교훈 3 — `errorCode + i18n` 분리가 ViewModel 순수성의 열쇠
 
-초기엔 ViewModel 이 한국어 메시지 직접 저장: `state = state.copyWith(errorMessage: '로그인 실패')`. 영어 전환 시 ViewModel 이 i18n 의존 → BuildContext 필요 → 구조 뒤틀림. `errorCode` 만 저장하고 Screen 에서 번역하자 **ViewModel 이 UI 와 완전 독립**.
-
-**교훈**: 도메인 레이어 (ViewModel · Service) 는 **표현 관심사 (언어 · 포맷) 에 의존하면 안 됨**. 코드 · 원시 데이터만 다루고 UI 가 최종 변환.
+ViewModel 에는 오류 코드와 화면 상태를 두고, Screen 에서 언어에 맞는 표현으로 바꿔요. 언어 변경 때문에 비즈니스 동작과 BuildContext 가 얽히는 일을 줄이기 위한 규약이에요. 필요한 메시지의 의미와 변수는 상태에 명확히 전달해요.
 
 ## 관련 사례 (Prior Art)
 

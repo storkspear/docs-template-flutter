@@ -1,12 +1,12 @@
+<a id="featurekit_registry"></a>
+
 # FeatureKit_Registry
 
 **Status**: Accepted. 현재 유효 (2026-07-29 기준). `lib/core/kits/app_kit.dart` (54줄 계약) + `lib/core/kits/app_kits.dart` (185줄 레지스트리) + 15개 Kit 구현.
 
 ## 결론부터
 
-FeatureKit 은 **앱 하나의 기능 단위 (인증 · 네트워크 · 알림 · 관측성 등) 를 독립적으로 착탈할 수 있게 만든 플러그인 패턴** 이에요. 각 Kit 은 `AppKit` 추상 클래스의 계약 (Provider override · 라우트 · 부팅 단계 · 리다이렉트 규칙) 을 구현하고, `AppKits.install([...])` 로 런타임에 조립돼요. 앱마다 필요한 Kit 조합이 다르다는 현실을 **"코드는 한 벌, 조합은 앱마다 다르게"** 로 해결한 결정이에요.
-
-> 참고로 이 패턴은 Android 의 Jetpack Startup `Initializer` 나 Spring Boot 의 `AutoConfiguration` 과 같은 아이디어예요. Flutter 에는 표준이 없어서 직접 만든 셈이에요.
+`AppKit`은 provider override, 라우트, 부팅 단계와 라우팅 규칙을 기여할 수 있어요. `AppKits`는 실제 설치된 Kit를 모으고 의존성 존재 여부를 검증해요. 모든 Kit가 같은 항목을 기여하는 것은 아니에요. 실제 조합은 Dart 코드에서 정하고 YAML에는 그 의도를 기록해요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -32,6 +32,8 @@ FeatureKit 은 **앱 하나의 기능 단위 (인증 · 네트워크 · 알림 �
 
 아래 3가지 선택지를 검토했고, 그중 3번을 채택했어요.
 
+<a id="option-1--모든-kit-을-항상-포함--런타임-플래그"></a>
+
 ### Option 1 — 모든 Kit 을 항상 포함 + 런타임 플래그
 
 `AppConfig` 의 `useAuth: false` 같은 bool 플래그로 기능을 끄는 방식.
@@ -40,6 +42,8 @@ FeatureKit 은 **앱 하나의 기능 단위 (인증 · 네트워크 · 알림 �
 - **단점 1**: 바이너리에는 여전히 모든 코드가 포함돼요. 앱 A 에 `sign_in_with_apple` · `google_sign_in` 플러그인이 깔려 있는 상태 — 앱 크기 증가 + 스토어 리뷰 시 "왜 로그인 SDK 가 있나요?" 같은 지적.
 - **단점 2**: Provider override · 라우트 · BootStep 같은 **조립 시점 구조물** 을 런타임 플래그로 다루려면 코드가 if 범벅이 돼요. 결국 모듈 경계가 녹아요.
 - **탈락 이유**: 힘 B (바이너리 크기 · 정체성) 를 정면 위반.
+
+<a id="option-2--앱별-독립-flutter-프로젝트"></a>
 
 ### Option 2 — 앱별 독립 Flutter 프로젝트
 
@@ -50,6 +54,8 @@ FeatureKit 은 **앱 하나의 기능 단위 (인증 · 네트워크 · 알림 �
 - **단점 2**: 공통 패키지를 `pub.dev` 에 퍼블리시하는 방법은 개인 org 라면 사설 레지스트리 필요 + 릴리스 주기 복잡.
 - **단점 3**: 파생 레포 간 **API 표류** 가 빠르게 발생 — "어? 앱 B 는 ApiClient 가 옛날 버전이네?" 같은 상황이 잦음.
 - **탈락 이유**: 제약 2 (시간) 를 반복 지출하게 만들어요.
+
+<a id="option-3--appkit-계약--런타임-레지스트리--채택"></a>
 
 ### Option 3 — `AppKit` 계약 + 런타임 레지스트리 ★ (채택)
 
@@ -157,45 +163,47 @@ AppKits.attachContainer(container);                   // ← BootStep/Listenable
 
 ### 긍정적 결과
 
-- **앱별 맞춤 조립**: `app_kits.yaml` 의 주석 처리만으로 Kit on/off. 파생 레포에서 3줄 편집으로 "완전 로컬 앱" ↔ "백엔드 연동 앱" 전환.
-- **의존성 검증 자동**: `AuthKit` 을 넣고 `BackendApiKit` 을 빼먹으면 `install` 시점에 `StateError: AuthKit requires BackendApiKit...` 로 바로 멈춤.
-- **tree-shaking 효과**: 미등록 Kit 의 SDK (`sign_in_with_apple`, `google_mobile_ads` 등) 가 최종 바이너리에서 제거됨. 로컬 전용 앱 크기가 10~15MB 작아져요.
-- **테스트 격리**: `AppKits.resetForTest()` 로 각 테스트가 독립 상태에서 시작. install 순서 버그도 테스트에서 재현 가능.
-- **4개 recipe 샘플**: `recipes/local-only-tracker.yaml` / `local-notifier-app.yaml` / `backend-auth-app.yaml` / `social-auth-app.yaml` 로 첫 시작 시 복사 → 수정만 하면 돼요.
+- 앱에 필요한 Kit 를 Dart 에서 조립하고 YAML 선언도 함께 맞춰요. 제공된 네 recipe 를 출발점으로 사용할 수 있어요.
+- 설치 시 Kit 의 필수 의존성이 없으면 오류를 반환해요. 설정 검사와 실제 조립 검증은 각각의 역할이 있어요.
+- `resetForTest()` 로 레지스트리를 초기화하고 설치·해제 순서를 테스트할 수 있어요.
+- Kit 활성화 범위를 줄일 수 있지만 native SDK 제거와 바이너리 크기 감소는 의존성·빌드 설정을 별도로 확인해야 해요.
 
 ### 부정적 결과
 
-- **두 곳 수동 동기화**: `app_kits.yaml` (선언) 과 `lib/main.dart` (실제 install) 을 사람이 맞춰야 해요. 한쪽만 수정하면 빌드는 되는데 동작은 달라지는 함정. → ADR-004 에서 CI 검증 (`configure_app.dart --audit`) 으로 보완.
-- **러닝 커브**: "왜 Kit 하나 추가하는데 AppKit extends + Provider override + Routes + BootStep 다 구현해야 하지?" 라는 초기 혼란. 각 Kit README 의 "새 Kit 만들기" 섹션으로 완화.
-- **Flutter 에 표준 아님**: Android `Initializer` 처럼 플랫폼이 제공하는 개념이 아니라 이 템플릿 고유 패턴. 이 레포 밖으로 나가면 다시 설명해야 해요.
-- **컨테이너 부착 순서 실수 가능**: `install → container → attach` 순서를 어기면 `StateError`. 새 개발자가 한 번은 겪어요.
+- YAML 과 Dart 조립은 사람이 맞춰야 해요. configure audit 는 YAML 선언을 검사하며 Dart 설치 목록과의 완전한 동등성을 보장하지 않아요.
+- AppKit 계약과 Provider override, 라우트, BootStep 의 역할을 익혀야 해요. 모든 Kit 가 모든 기능을 구현할 필요는 없어요.
+- Flutter 자체의 표준 모듈 체계가 아니라 이 템플릿의 규약이므로 파생 앱에서도 설명과 검증이 필요해요.
+- `install → container 생성 → attach` 순서를 지켜야 컨테이너를 사용하는 기여가 동작해요.
 
 ## 교훈
 
-### 교훈 1 — "선언만 바꿔도 안전해야" 가 엄청 비싸다
+<a id="교훈-1-선언만-바꿔도-안전해야-가-엄청-비싸다"></a>
+<a id="교훈-1--선언만-바꿔도-안전해야-가-엄청-비싸다"></a>
 
-`app_kits.yaml` 한 줄 주석만으로 Kit 이 꺼지려면, **그 Kit 에 의존하는 다른 Kit 이 같이 꺼져야** 하고 **runtime 에러 없이 깔끔해야** 해요. 이걸 위해 `requires` 검증 · 롤백 · tree-shaking 친화적 설계 모두 필요했어요. "단순히 `if` 문 추가하면 될 걸" 하고 시작했다가 레지스트리 178줄 + 테스트 다수가 붙었어요.
+### 교훈 1 — 선언과 실제 조립을 함께 검증해요
 
-**교훈**: 선언적 조립의 단순함은 비선언적 복잡함을 내부에 숨긴 결과예요. "선언 안전성" 을 목표로 잡으면 꽤 깊게 파게 됩니다 (현재 185줄 + 의존성 검증 + 롤백 + 테스트).
+선택 조립이 가능하려면 설치된 Kit 의 의존성과 초기화 실패를 확인해야 해요. YAML 한 줄만 바꾸면 나머지가 자동으로 맞춰지는 구조는 아니에요. 레지스트리의 검증·롤백과 앱의 수동 조립 책임을 구분해서 설명해요.
 
-### 교훈 2 — 컨테이너 부착 시점이 혼란의 주범
+<a id="교훈-2-컨테이너-부착-시점이-혼란의-주범"></a>
+<a id="교훈-2--컨테이너-부착-시점이-혼란의-주범"></a>
 
-처음엔 `AppKits.install` 이 내부에서 `ProviderContainer` 까지 만들게 했어요. 그랬더니 `main.dart` 에서 `prefsStorageProvider.overrideWithValue(prefsStorage)` 같은 **Kit 외부 override** 를 끼워 넣을 자리가 없었어요. 결국 "install → container 는 바깥에서 생성 → attachContainer 호출" 3단계로 풀었는데, 이 순서를 어기면 BootStep 안의 `container.read` 가 StateError 를 냅니다.
+### 교훈 2 — 컨테이너를 만드는 시점과 연결하는 시점을 구분해요
 
-**교훈**: "Kit 내부 기여" 와 "앱 전체 override" 는 성격이 다르니 조립 책임을 분리해야 해요. 단 분리하면 순서 강제가 필요해지고, 순서 강제는 사용자가 지켜야 해요. 문서로 풀 수밖에 없어요.
+Kit 가 제공하는 override 와 앱이 추가하는 override 를 합치기 위해 ProviderContainer 는 앱에서 만들어요. 이후 `attachContainer` 로 레지스트리에 연결해요. 이 순서는 부팅 코드와 테스트에서 함께 확인해요.
 
-### 교훈 3 — redirectPriority 숫자는 배수로 띄워라
+<a id="교훈-3-redirectpriority-숫자는-배수로-띄워라"></a>
+<a id="교훈-3--redirectpriority-숫자는-배수로-띄워라"></a>
 
-UpdateKit(1) · AuthKit(10) · OnboardingKit(50) 처럼 숫자를 띄워두니, 나중에 "업데이트 강제 다음 · 인증 이전" 에 들어갈 새 게이트가 필요할 때 `5` 를 쓰면 돼요. 연속된 숫자 (1, 2, 3) 였으면 전체를 재할당해야 했어요.
+### 교훈 3 — 라우팅 우선순위 사이에 간격을 둬요
 
-**교훈**: 우선순위 숫자에는 **미래를 위한 간격** 을 남겨두세요. `1 → 10 → 50 → 100` 처럼.
+우선순위 사이에 간격을 두면 중간 순서의 규칙을 추가하기 편해요. 현재 AuthKit 은 10, OnboardingKit 은 50 을 사용해요. UpdateKit 의 값은 1 이지만 redirect 규칙은 없고 별도 화면 게이트를 사용해요. 숫자 순서만으로 여러 규칙의 재평가 루프가 방지되지는 않아요.
 
 ## 관련 사례 (Prior Art)
 
 - [Jetpack Startup (Android)](https://developer.android.com/jetpack/androidx/releases/startup) — `Initializer` 로 app startup 의존성을 선언적으로 조립
 - [Spring Boot AutoConfiguration](https://docs.spring.io/spring-boot/reference/using/auto-configuration.html) — classpath 에 있는 starter 만 조건부 활성화
 - [NestJS Module](https://docs.nestjs.com/modules) — `imports: [...]` 로 모듈 조립, `providers` / `controllers` 기여
-- [Flutter Riverpod `overrides`](https://riverpod.dev/docs/concepts/scopes) — Provider 트리를 ScopedOverride 로 변형. 본 ADR 은 이를 Kit 단위로 묶은 것
+- [Flutter Riverpod `overrides`](https://riverpod.dev/docs/concepts2/scoping) — Provider 트리를 ScopedOverride 로 변형. 본 ADR 은 이를 Kit 단위로 묶은 것
 - [BLoC · get_it Module 패턴](https://pub.dev/packages/get_it) — DI 컨테이너에 모듈 단위 등록. 본 ADR 은 Riverpod 로 치환한 변형
 
 ## Code References

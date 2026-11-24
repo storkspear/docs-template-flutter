@@ -1,6 +1,8 @@
+<a id="google--apple-소셜-로그인-통합"></a>
+
 # Google / Apple 소셜 로그인 통합
 
-> **목표**: Google Sign-In 과 Sign in with Apple 활성화. 콘솔 키 발급 → 플랫폼 설정 → 검증까지.
+Google 과 Apple 로그인을 사용할 때 필요한 콘솔 등록, 플랫폼 설정, 실제 기기 검증을 안내해요.
 
 **관련 Kit**: [`auth_kit`](../features/auth-kit.md)
 **관련 패키지**: `google_sign_in`, `sign_in_with_apple` (pubspec.yaml 에 이미 선언됨)
@@ -9,12 +11,14 @@
 
 ## 0. 필수 여부
 
-- **Sign in with Apple**: iOS 앱에 다른 소셜 로그인 (Google/Kakao/Naver) 이 있으면 **Apple 도 의무**입니다. App Store 가이드라인 4.8.
-- **Google Sign-In**: 선택. 글로벌 시장이면 강력 추천.
+- **Sign in with Apple**: iOS 에 다른 소셜 로그인을 제공한다면 App Store 가이드라인 4.8 의 적용 조건과 예외를 확인해요.
+- **Google Sign-In**: 앱의 대상 사용자와 로그인 요구에 맞게 선택해요.
 
 ---
 
 ## 1. Google Sign-In
+
+<a id="1-1-google-cloud-console--oauth-20-client-id-발급"></a>
 
 ### 1-1. Google Cloud Console — OAuth 2.0 Client ID 발급
 
@@ -51,6 +55,8 @@ FCM 도 함께 쓸 거라면 Firebase 프로젝트 안에서 OAuth client ID 가
 
 **상세 FCM 셋업**: [`fcm.md`](./fcm.md)
 
+<a id="1-3-android--androidappbuildgradlekts"></a>
+
 ### 1-3. Android — `android/app/build.gradle.kts`
 
 google-services plugin 적용 (FCM 셋업과 동일):
@@ -64,7 +70,9 @@ plugins {
 }
 ```
 
-`google-services.json` 을 `android/app/` 에 배치 (gitignore 됨).
+dev/prod 를 분리한다면 각 파일을 `android/app/src/dev/google-services.json`, `android/app/src/prod/google-services.json` 에 배치해요. `<repo> dev init` 과 `<repo> prod init` 은 이 flavor 구조에 맞춰 설정해요.
+
+<a id="1-4-ios--iosrunnerinfoplist"></a>
 
 ### 1-4. iOS — `ios/Runner/Info.plist`
 
@@ -76,7 +84,7 @@ reversed Client ID 를 URL Scheme 으로 등록:
     <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-            <!-- Google iOS Client ID 의 점(.) 을 콜론(:) 으로 바꾼 reversed 형태 -->
+            <!-- 발급받은 REVERSED_CLIENT_ID 값을 사용해요. 점을 콜론으로 바꾸지 않아요. -->
             <!-- 예: "1234567890-def.apps.googleusercontent.com" → "com.googleusercontent.apps.1234567890-def" -->
             <string>com.googleusercontent.apps.1234567890-def</string>
         </array>
@@ -84,7 +92,7 @@ reversed Client ID 를 URL Scheme 으로 등록:
 </array>
 ```
 
-`GoogleService-Info.plist` 를 Xcode 에서 Runner 에 추가 (드래그 앤 드롭 + "Copy items if needed" 체크).
+현재 템플릿은 `GoogleService-Info-dev.plist` 와 `GoogleService-Info-prod.plist` 를 나눠 두고 빌드 시 해당 파일을 선택해요. `<repo> <env> link-oauth` 는 plist 의 Client ID 를 `AppEnv-secrets-<env>.xcconfig` 에 기록해요. `Info.plist` 의 기존 변수 참조를 유지하고 위 XML 을 중복으로 추가하지 않아요.
 
 ### 1-5. 키 주입
 
@@ -96,12 +104,16 @@ reversed Client ID 를 URL Scheme 으로 등록:
 
 ## 2. Sign in with Apple
 
+<a id="2-1-apple-developer-console--service-설정"></a>
+
 ### 2-1. Apple Developer Console — Service 설정
 
 1. https://developer.apple.com/account 로그인 (유료 멤버십 $99/year 필요 — App Store 출시도 함께)
 2. **Certificates, Identifiers & Profiles → Identifiers**
 3. 본인의 **App ID 선택** (없으면 새로 생성, Bundle ID = `com.<org>.<slug>`)
 4. **Capabilities** 에서 **Sign In with Apple** 활성화 → Save
+
+<a id="2-2-service-id--key-발급--현-백엔드-미사용-건너뛰어도-돼요"></a>
 
 ### 2-2. Service ID + Key 발급 — 현 백엔드 미사용 (건너뛰어도 돼요)
 
@@ -112,9 +124,11 @@ Service ID + `.p8` Key 는 서버가 authorization code 를 Apple 토큰 엔드�
 3. **Keys** → 새 Key 생성 → **Sign In with Apple** 활성화 → Primary App ID 선택 → Download `.p8` 파일
 4. Key ID + Team ID 메모
 
+<a id="2-3-xcode--capability-추가"></a>
+
 ### 2-3. Xcode — Capability 추가
 
-1. Xcode 에서 `ios/Runner.xcodeproj` 열기
+1. CocoaPods 설치 후 Xcode 에서 `ios/Runner.xcworkspace` 를 열어요.
 2. Runner target → **Signing & Capabilities** → **+ Capability** → **Sign in with Apple**
 3. 자동으로 entitlements 파일 추가됨 (`Runner.entitlements`)
 
@@ -131,12 +145,14 @@ APP_CREDENTIALS_<SLUG>_APPLE_BUNDLE_ID=com.<org>.<slug>
 
 ### 2-5. iOS-only 제약
 
-- **Android 에서는 Apple 로그인이 작동하지 않아요** (Apple 이 iOS native API 만 제공). UI 에서도 자동으로 숨겨져야 해요.
-- 우리 템플릿: `social_login_bar.dart` 가 `Platform.isIOS` 체크 → iOS 에서만 Apple 버튼 노출.
+- 이 템플릿은 Apple 로그인을 iOS 에만 노출해요. `social_login_bar.dart` 에서 `Platform.isIOS` 를 확인해요.
+- 다른 플랫폼의 Apple 웹 로그인 흐름은 현재 템플릿에 구현되어 있지 않아요.
 
 ---
 
 ## 3. Flutter 측 활성화
+
+<a id="3-1-app_kitsyaml"></a>
 
 ### 3-1. `app_kits.yaml`
 
@@ -222,8 +238,8 @@ authService.signInWithApple(identityToken: '...')
 | Android: "DEVELOPER_ERROR" 또는 sign-in 즉시 닫힘 | OAuth client ID 와 Android 패키지명/SHA-1 불일치 | Console 에서 fingerprint 재발급 + 등록 |
 | iOS: Google 버튼 누르면 빈 화면 | URL Scheme (reversed Client ID) 미등록 | Info.plist 의 CFBundleURLSchemes 확인 |
 | Apple: "Sign in with Apple is not configured" | Xcode Capability 미추가 또는 App ID 의 Capability 비활성 | Xcode + Apple Developer 양쪽 다 확인 |
-| Apple: "Hide My Email" 사용자 → 첫 로그인 후 email claim 빠짐 | Apple 정책 | `signInWithApple` 호출 시 첫 응답의 email 을 백엔드에 fallback 으로 전달 (auth_kit 자동 처리) |
-| Apple: 두 번째 로그인부터 firstName/lastName 안 옴 | Apple 정책 (첫 로그인에만 제공) | 백엔드에서 첫 로그인 시 저장 → 이후 DB 에서 조회 |
+| Apple: 신규 사용자 가입 시 이메일이 없음 | identity token 에 이메일이 없고 요청 fallback 도 없는 경우 | 현재 Flutter 는 identity token 만 보내요. 백엔드는 기존 소셜 계정은 식별자로 조회하지만 신규 계정에는 이메일이 필요해요. SDK 이메일 fallback 을 자동 전달하지 않는다는 점을 확인해요 |
+| Apple: 이름이 사용자 정보에 반영되지 않음 | Flutter Gate 가 SDK 응답에서 identity token 만 반환해요 | SDK 의 이름 정보를 사용할 앱은 요청 계약과 저장 흐름을 별도로 연결해야 해요 |
 
 ---
 
@@ -246,11 +262,13 @@ authService.signInWithApple(identityToken: '...')
 
 ---
 
+<a id="6-개인정보--동의-정책"></a>
+
 ## 6. 개인정보 / 동의 정책
 
-- **Google**: 수집 항목은 사용자가 동의 화면에서 직접 확인. 개인정보처리방침에 "Google (이메일, 이름, 프로필 이미지)" 명시
-- **Apple**: "Hide My Email" 사용자의 경우 가짜 email (`xxx@privaterelay.appleid.com`) 받을 수 있음 — DB 저장 OK, 다만 실제 메일 발송은 작동
-- **위탁사**: Google LLC (미국), Apple Inc. (미국)
+- Google 과 Apple 에서 요청하는 정보, 실제로 서버에 전달·저장하는 정보, 보관 기간을 구분해 개인정보 안내를 작성해요.
+- Apple 의 이메일 가리기 주소는 가짜 주소가 아니라 중계 주소예요. 실제 메일 발송을 사용할 때는 발신 도메인과 중계 서비스 설정을 확인해요.
+- 공급자와 처리 지역은 해당 앱의 서비스 설정을 기준으로 확인해요.
 
 ---
 

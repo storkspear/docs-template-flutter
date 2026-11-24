@@ -1,12 +1,14 @@
+<a id="device_info_kit"></a>
+
 # device_info_kit
 
-앱 버전과 기기 정보를 한 번에 조회하는 kit 이에요. `device_info_plus` 와 `package_info_plus` 를 래핑해서 두 패키지를 따로 다룰 필요가 없어요.
+`DeviceInfoService`로 앱 버전, 운영체제와 기기 식별 정보를 조회해요. 내부에서 `device_info_plus`와 `package_info_plus`를 사용해요. 반환값은 플랫폼이 제공하는 값이므로 기기 모델을 제품 판매명으로 단정하지 않아요.
 
 ---
 
 ## 개요
 
-앱 쪽에선 버전 · 빌드 넘버 · 패키지 이름을, 기기 쪽에선 OS · 모델을 제공해요. 고유 식별자는 의도적으로 수집하지 않아요. 주 용도는 diagnostic 이에요 — 크래시 리포트에 첨부하거나 푸시 토큰을 등록할 때 써요.
+앱 버전·빌드 번호·패키지 이름과 운영체제·기기 모델을 조회해요. 주로 진단 정보나 기기 등록에 사용할 수 있지만 자동으로 외부에 전송하지는 않아요. 고유 광고 식별자는 이 DTO 에 포함하지 않아요.
 
 ---
 
@@ -48,7 +50,7 @@ print('패키지: ${info.packageName}');     // "com.example.app"
 print('앱 이름: ${info.appName}');         // "MyApp"
 print('플랫폼: ${info.platform}');         // "ios" / "android"
 print('OS 버전: ${info.osVersion}');       // "17.4" / "14 API 34"
-print('디바이스 모델: ${info.deviceModel}'); // "iPhone 15 Pro" / "Pixel 8"
+print('디바이스 모델: ${info.deviceModel}'); // iOS: utsname.machine 식별자 / Android: 제조사 + 모델
 ```
 
 > `AppAndDeviceInfo` 는 고유 식별자(IDFA/Android ID) 를 의도적으로 노출하지 않아요. 광고 식별자는 `ads_kit` 의 ATT 동의 흐름과 함께 처리해요.
@@ -74,7 +76,7 @@ await ref.read(crashServiceProvider).addBreadcrumb(
 
 - [ ] iOS: `Info.plist` 의 `CFBundleShortVersionString` · `CFBundleVersion`
 - [ ] Android: `android/app/build.gradle.kts` 의 `versionName` · `versionCode`
-- [ ] (파생 레포에서 광고 식별자 등 고유 ID 를 **추가 수집하는 경우에만**) 개인정보 정책에 수집 항목 명시 — 이 kit 자체는 고유 식별자를 수집하지 않아요
+- [ ] 조회한 기기 정보를 서버나 분석 도구로 보낸다면 실제 수집·이용 항목을 개인정보 안내와 대조해요. 고유 ID 를 추가하는 경우에만 검토가 필요한 것은 아니에요.
 
 ---
 

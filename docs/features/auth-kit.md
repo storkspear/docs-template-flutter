@@ -1,12 +1,14 @@
+<a id="auth_kit"></a>
+
 # auth_kit
 
-JWT 인증과 소셜 로그인 4종 (Google · Apple · Kakao · Naver) 을 제공하고, 로그인 · 비번찾기 · 이메일 인증 · 2FA 화면까지 표준 UI 로 갖춘 kit 이에요. HTTP 통신은 `backend_api_kit` 에 의존해요.
+이메일·비밀번호와 Google·Apple·Kakao·Naver 로그인을 제공해요. 로그인, 비밀번호 재설정·변경, 이메일 인증, 2FA 화면을 포함하며 HTTP 통신에는 `BackendApiKit`이 필요해요. 활성화할 로그인 방식과 2FA 관리 화면은 파생 앱의 조립에서 선택해요.
 
 ---
 
 ## 개요
 
-인증 방식은 이메일/비번에 Google Sign-In · Sign in with Apple · Kakao · Naver 를 더한 구성이에요 (kakao/naver 는 한국 시장 앱에서 활성화해요). 토큰은 `SecureStorage` 에 원자적으로 저장하고 ([`ADR-013`](../philosophy/adr-013-token-atomic-storage.md)), 401 이 떨어지면 `AuthInterceptor` 가 투명하게 refresh 해요 ([`ADR-010`](../philosophy/adr-010-queued-interceptor.md)). 부팅 시엔 `AuthCheckStep` BootStep 이 토큰을 검증하고, `redirectPriority: 10` 라우팅 게이트가 미인증 접근을 막아요 ([`ADR-018`](../philosophy/adr-018-redirect-priority.md)). 화면은 `/login`, `/forgot-password`, `/verify-email`, `/login/2fa` 를 기본 제공하고, `twoFactorEnabled` 시 `/settings/2fa` 관리 3종이 더해져요.
+토큰은 `TokenStorage`가 순서대로 저장하고 실패 시 정리를 시도해요. 401 갱신은 인터셉터가 인증 서비스에 위임하며, 부팅 시 `AuthCheckStep`이 로컬 토큰 상태를 확인하고 필요하면 갱신해요. 기본 라우트는 로그인·비밀번호 찾기·이메일 인증·비밀번호 변경·로그인 2FA의 다섯 개예요. `twoFactorEnabled`를 켜면 설정 2FA 허브와 setup·disable·backup-codes 네 경로를 추가해요.
 
 ---
 
@@ -35,7 +37,7 @@ await AppKits.install([
 ]);
 ```
 
-> `providers` 는 `app_kits.yaml` 의 `auth_kit.providers` 와 1:1 로 동기화해야 해요. `tool/configure_app.dart` 가 불일치를 검증해요.
+> `providers` 는 YAML 선언과 Dart 의 AuthKit 구성에서 함께 맞춰요. configure_app 은 YAML 의 지원 provider 이름을 검사하지만 `main.dart` 의 실제 값과 일치하는지까지 비교하지는 않아요.
 
 의존성 순서에 주의하세요 — `backend_api_kit` 이 먼저예요.
 
@@ -185,7 +187,7 @@ AuthKit(
 
 ## 시연 모드 (Dev Mock)
 
-백엔드 · OAuth SDK 키 없이 로그인 → home 흐름까지 keyless 로 시연하는 모드예요. 솔로 dev 가 새 파생 레포 첫 `flutter run` 에서 가장 자주 쓸 옵션이에요.
+백엔드와 OAuth 키 없이 인증 화면 흐름을 확인하는 개발용 모드예요. 실제 인증·권한·토큰 검증을 대신하는 테스트는 아니에요.
 
 ```bash
 flutter run --dart-define=AUTH_DEV_MOCK=true
@@ -193,7 +195,7 @@ flutter run --dart-define=AUTH_DEV_MOCK=true
 
 활성 조건: dart-define 주입 + 백엔드 unreachable. 자동으로 `BackendReachability.probe()` 가 baseUrl 의 `/actuator/health` 핑 → 실패 시 `DevOfflineAuthInterceptor` 가 `/auth/*` 응답을 fake JWT 로 가로채요.
 
-> ⚠️ **운영 빌드에선 절대 금지예요** — release 에 `AUTH_DEV_MOCK=true` 를 박으면 모든 인증이 fake JWT 가 돼요.
+> release 에서는 개발용 mock 을 사용하지 않아요. `AUTH_DEV_MOCK=true` 를 명시하면 소셜 인증 coordinator 생성 시 release 가드가 오류를 던져요. 래퍼도 release 실행에서는 mock 자동 폴백을 켜지 않아요.
 
 자세한 메커니즘 · 핵심 코드 위치 · 운영 빌드 안전장치는 [`auth_kit/README.md` Dev Mock 섹션](../../lib/kits/auth_kit/README.md#dev-mock-백엔드-없이-시연) 을 참고하세요.
 
@@ -240,21 +242,20 @@ class ProfileScreen extends ConsumerWidget {
 
 ### 401 처리
 
-ViewModel 에서 `e.isUnauthorized` 감지:
+ViewModel 은 요청 실패를 화면 상태로 전달해요. 갱신 토큰의 거절에 따른 세션 정리는 AuthService 가 처리하므로, 원 요청의 401 만 보고 무조건 로그아웃하지 않아요.
 
 ```dart
 try {
   final data = await repo.fetchData();
-  // ...
+  if (!ref.mounted) return;
+  // data 로 화면 상태를 갱신해요.
 } catch (e) {
-  if (e is ApiException && e.isUnauthorized) {
-    // refresh 도 실패 → 강제 로그아웃
-    await ref.read(authServiceProvider).signOut();
-  } else {
-    state = state.copyWith(errorCode: safeErrorCode(e));
-  }
+  if (!ref.mounted) return;
+  state = state.copyWith(errorCode: safeErrorCode(e));
 }
 ```
+
+이 코드는 기존 ViewModel 메서드 안에 넣는 일부 예제예요. 네트워크·서버 장애로 갱신이 실패한 경우에는 기존 토큰을 보존해요.
 
 ---
 
@@ -262,18 +263,16 @@ try {
 
 ### Google Sign-In
 
-- [ ] [Google Cloud Console](https://console.cloud.google.com) 프로젝트 생성
-- [ ] OAuth 2.0 Client ID 발급 (Android / iOS / Web 각각)
-- [ ] `android/app/google-services.json` · `ios/Runner/GoogleService-Info.plist` 배치 (Firebase 안 쓰면 생략 가능)
-- [ ] Android: `build.gradle` 에 Client ID · 지문 (SHA-1 / SHA-256) 등록
-- [ ] iOS: `Info.plist` 의 `CFBundleURLTypes` 에 reversed Client ID 추가
+- [ ] 사용할 플랫폼의 OAuth Client ID 와 앱 식별자를 발급·등록해요.
+- [ ] Android SHA 지문은 Google/Firebase 콘솔에 등록하고, dev/prod 의 package name 과 설정 파일을 맞춰요.
+- [ ] iOS 는 환경별 plist 와 reversed Client ID 설정을 확인해요.
+- [ ] 세부 절차는 [Google/Apple 통합 가이드](../integrations/google-apple-auth.md) 를 따라요.
 
 ### Sign in with Apple
 
-- [ ] Apple Developer 에서 Bundle ID 설정 (Capabilities → Sign in with Apple)
-- [ ] Service ID 생성 (웹 혹은 백엔드용)
-- [ ] Xcode 의 Signing & Capabilities 에서 Sign in with Apple 추가
-- [ ] 백엔드 `auth_kit` 에 Bundle ID · Service ID · Team ID · Key File 등록
+- [ ] App ID 와 Xcode 에서 Sign in with Apple capability 를 켜요.
+- [ ] 백엔드에 identity token 의 audience 를 검증할 Bundle ID 를 설정해요.
+- [ ] 현재 iOS 흐름에는 Service ID·Team ID·서버 교환용 p8 키가 필요하지 않아요. 다른 로그인 흐름을 추가한다면 별도로 검토해요.
 
 ### 백엔드
 
@@ -305,7 +304,7 @@ try {
 - [`lib/kits/auth_kit/auth_service.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/auth_service.dart)
 - [`lib/kits/auth_kit/auth_state.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/auth_state.dart)
 - [`lib/kits/auth_kit/auth_check_step.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/auth_check_step.dart)
-- [`lib/kits/auth_kit/ui/`](https://github.com/storkspear/template-flutter/tree/main/lib/kits/auth_kit/ui) — 기능별 4개 디렉터리 + 공용 위젯
+- [`lib/kits/auth_kit/ui/`](https://github.com/storkspear/template-flutter/tree/main/lib/kits/auth_kit/ui) — 기능별 화면 · ViewModel · 공용 위젯
   - `login/` — 로그인 화면 · ViewModel · 소셜 로그인 바/버튼
   - `password_reset/` — 비밀번호 재설정 화면 · ViewModel
   - `verify_email/` — 이메일 인증 화면 · ViewModel

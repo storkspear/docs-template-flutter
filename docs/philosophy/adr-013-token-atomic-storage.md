@@ -1,10 +1,12 @@
+<a id="token_atomic_storage"></a>
+
 # Token_Atomic_Storage
 
 **Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 line 수 갱신. `lib/core/storage/token_storage.dart` (72줄) 가 `saveTokens` 원자 저장 + `repairIfPartial` 복구 담당. iOS Keychain: `first_unlock_this_device`, Android: flutter_secure_storage 기본 KeyStore 기반 cipher.
 
 ## 결론부터
 
-토큰 (access + refresh) 은 **SecureStorage** (iOS Keychain, Android KeyStore) 에, 일반 설정은 **SharedPreferences** 에 저장해요. 토큰 저장은 **두 개를 원자적으로** 처리 — 둘 다 성공하거나 둘 다 롤백. 반쪽 상태 (access 만 있고 refresh 없음) 는 signOut 루프의 주범이라, 부팅 시 `repairIfPartial()` 로 일관성 복구해요.
+access token과 refresh token은 `SecureStorage`, 일반 설정은 `PrefsStorage`에 저장해요. `saveTokens`는 순서대로 쓰고 하나라도 실패하면 두 키의 삭제를 시도해요. 부팅할 때 `repairIfPartial`로 한쪽만 남은 상태를 정리해요. 이 방식은 이전 값을 복원하는 트랜잭션이 아니며, 프로세스 중단·정리 실패·동시 접근까지 원자적으로 보장하지는 않아요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -30,6 +32,8 @@ FCM 푸시 수신 → 백엔드 device 등록 갱신 등 **앱이 포그라운�
 
 ## 고민했던 대안들
 
+<a id="option-1--모든-데이터를-sharedpreferences"></a>
+
 ### Option 1 — 모든 데이터를 SharedPreferences
 
 토큰 · 설정 · 테마 선호 모두 `SharedPreferences`.
@@ -38,6 +42,8 @@ FCM 푸시 수신 → 백엔드 device 등록 갱신 등 **앱이 포그라운�
 - **단점 1**: **토큰 평문 저장**. 탈옥/루팅 기기 공격 시 노출.
 - **단점 2**: iOS 에선 SharedPreferences = plist. **NSUserDefaults** 에 해당. 기기 연결 / backup 시 추출 쉬움.
 - **탈락 이유**: 상황 A 정면 위반. 보안 표준 미달.
+
+<a id="option-2--토큰을-서버-쿠키--samesite-전략"></a>
 
 ### Option 2 — 토큰을 서버 쿠키 + SameSite 전략
 
@@ -49,6 +55,8 @@ HTTP only cookie 로 서버가 토큰 관리. 클라 코드에서 접근 안 함
 - **단점 3**: 백그라운드 작업 (FCM · workmanager) 에서 쿠키 jar 접근 경계 모호.
 - **탈락 이유**: 모바일 네이티브 환경에 부적합.
 
+<a id="option-3--securestorage--sharedpreferences-이원화--원자-저장--채택"></a>
+
 ### Option 3 — SecureStorage + SharedPreferences 이원화 + 원자 저장 ★ (채택)
 
 **민감도별 매체 분리**:
@@ -56,7 +64,7 @@ HTTP only cookie 로 서버가 토큰 관리. 클라 코드에서 접근 안 함
 - 일반 설정 → `SharedPreferences` (shared_preferences)
 
 **원자 저장 로직**:
-- `TokenStorage.saveTokens(access, refresh)` — 둘 다 성공 or 둘 다 롤백
+- `TokenStorage.saveTokens(access, refresh)` — 순차 저장하고 실패하면 두 키 삭제를 시도해요.
 - `TokenStorage.repairIfPartial()` — 부팅 시 반쪽 상태 복구
 
 - **상황 A 만족**: iOS Keychain · Android KeyStore 로 하드웨어 지원 암호화.
@@ -65,6 +73,8 @@ HTTP only cookie 로 서버가 토큰 관리. 클라 코드에서 접근 안 함
 - **상황 D 만족**: `this_device` suffix → iCloud 백업에서 제외.
 
 ## 결정
+
+<a id="securestorage-설정-ios--android"></a>
 
 ### SecureStorage 설정 (iOS / Android)
 
@@ -121,7 +131,7 @@ class TokenStorage {
   Future<String?> getAccessToken() => _storage.read(_accessTokenKey);
   Future<String?> getRefreshToken() => _storage.read(_refreshTokenKey);
 
-  /// 두 토큰을 **원자적**으로 저장. 중간 실패 시 둘 다 롤백.
+  /// 순차 저장 후 중간 실패 시 두 키 삭제를 시도해요.
   Future<void> saveTokens({
     required String accessToken,
     required String refreshToken,
@@ -217,7 +227,7 @@ Future<void> checkAuthStatus() async {
 }
 ```
 
-부팅 검증은 **로컬에서만** 끝나요 — 서버 왕복이 없어 스플래시가 빨라요. 서버가 토큰을 취소 (revoke) 한 경우는 부팅에선 못 잡지만, 이후 첫 API 호출이 401 을 받으면 ADR-010 의 자동 refresh 경로가 처리해요. `AuthCheckStep` 은 `checkAuthStatus()` 가 예외를 던지면 non-fatal 리포트 후 `unauthenticated` 로 복귀시켜 부팅이 멈추지 않게 해요.
+유효한 access token이면 로컬 파싱으로 상태를 복원해요. 만료됐거나 파싱할 수 없으면 서버에 refresh를 요청할 수 있어요. 서버가 토큰을 취소 (revoke) 한 경우는 부팅에선 못 잡지만, 이후 첫 API 호출이 401 을 받으면 ADR-010 의 자동 refresh 경로가 처리해요. `AuthCheckStep` 은 `checkAuthStatus()` 가 예외를 던지면 non-fatal 리포트 후 `unauthenticated` 로 복귀시켜 부팅이 멈추지 않게 해요.
 
 ### PrefsStorage (일반 설정)
 
@@ -231,7 +241,7 @@ class PrefsStorage {
   }
 
   String? getString(String key) => _prefs.getString(key);
-  Future<void> setString(String key, String value) => _prefs.setString(key, value);
+  Future<bool> setString(String key, String value) => _prefs.setString(key, value);
   // ... 기타 타입
 }
 ```
@@ -244,26 +254,25 @@ class PrefsStorage {
 - `first_unlock`: 기기가 **최초 unlock 된 이후** 토큰 접근 가능. 재부팅 직후엔 아직 unlock 안 돼서 접근 불가. 하지만 사용자가 unlock 한 뒤엔 백그라운드에서도 접근 OK. FCM · workmanager 용 필수.
 - `this_device`: iCloud Keychain 백업 대상에서 **제외**. 기기 A 의 토큰이 기기 B 로 복제되지 않음.
 
-두 속성 결합이 "운영 편의 + 보안" 의 균형점.
+이 설정은 재부팅 후 첫 잠금 해제 여부와 기기 이전 제한을 함께 고려한 선택이에요. 앱의 백그라운드 실행과 기기 교체 정책에 맞는지는 별도로 확인해요.
 
 **포인트 2 — `clearTokens` 의 try/finally 패턴**  
-access 삭제가 실패해도 refresh 삭제는 **반드시** 시도. 두 토큰 중 하나라도 남으면 반쪽 상태 → 추후 복구. `try/finally` 로 보장.
+access token 삭제가 실패해도 refresh token 삭제는 시도해요. 둘 중 하나라도 남을 수 있으므로 저장소 오류를 성공으로 간주하지 않아요.
 
 **포인트 3 — `saveTokens` 롤백 중 에러는 삼킴**  
-`saveTokens` 가 실패해 `clearTokens()` 호출. clearTokens 자체가 또 실패하면? **원 에러** (saveTokens 실패) 가 호출자에게 중요, **정리 실패** 는 부차적. `developer.log` 로 기록만 하고 `rethrow` 로 원 에러 전파.
+저장이 실패하면 `clearTokens()` 로 정리를 시도해요. 정리도 실패하면 그 오류는 로그에 남기고, 호출자에게는 원래 저장 오류를 다시 던져요.
 
-**포인트 4 — `repairIfPartial` 는 부팅 시만 호출**  
-매 API 호출 전에 체크하면 성능 비용. 반쪽 상태는 **전 부팅 종료 시점의 중단** 에서만 생기므로, 부팅 시 한 번만 복구로 충분.
+현재 구현은 부팅 시 반쪽 토큰 상태를 점검해요. 쓰기나 정리 작업의 실패, 프로세스 중단으로도 반쪽 상태가 생길 수 있어요. 두 키가 모두 존재하는지만 확인하므로 토큰 쌍의 세대 일치까지 검증하는 복구는 아니에요.
 
 **포인트 5 — `hasTokens` 는 부작용 없음**  
-순수 조회. 반쪽 상태여도 `false` 반환만 할 뿐 복구 안 함. 복구는 `repairIfPartial` 로 명시적 분리. **이벤트 (상태 변경) 와 쿼리 (조회) 를 섞지 않음**.
+`hasTokens` 는 두 키의 존재 여부를 조회해요. 한쪽 키만 있으면 false 를 반환하고, 정리는 별도 `repairIfPartial` 호출에서 수행해요.
 
 ## 이 선택이 가져온 것
 
 ### 긍정적 결과
 
-- **토큰 하드웨어 암호화**: iOS Keychain / Android KeyStore 로 탈옥/루팅 방어.
-- **반쪽 상태 → signOut 루프 제거**: `repairIfPartial` 덕분에 "access 만 남아 401 → refresh 실패 → 또 401" 루프 없음.
+- **OS 저장소 사용**: flutter_secure_storage 를 통해 토큰을 보관해요. 이 설정만으로 루팅·탈옥 환경에서 토큰 접근을 막는다고 보장하지 않아요.
+- **반쪽 상태 정리**: 부팅할 때 한쪽 토큰만 남아 있으면 두 키를 정리해요. 저장소 정리 자체가 실패할 수 있으므로 모든 인증 실패를 없애는 보장으로 해석하지 않아요.
 - **iCloud 복제 방지**: 기기 이전 시 토큰 따라가지 않음. 새 기기 = 새 로그인.
 - **백그라운드 작업 가능**: `first_unlock` 으로 FCM · workmanager 에서 토큰 접근 가능.
 - **민감도별 매체 분리**: SharedPreferences 에 테마 설정 저장 · SecureStorage 에 토큰 저장 — 용도 명확.
@@ -274,25 +283,31 @@ access 삭제가 실패해도 refresh 삭제는 **반드시** 시도. 두 토큰
 - **두 매체 관리 복잡**: 어떤 데이터를 어디에 넣을지 선택 피로. "유저 설정 중 민감한 건 뭐?" 판단.
 - **Android 암호화가 라이브러리 손에 있음**: Android 쪽은 `flutter_secure_storage` 가 KeyStore 기반 cipher 로 알아서 처리해서 우리가 조정할 옵션이 없어요. 설정 부담은 0 이지만, 라이브러리 구현이 바뀌면 그대로 따라가고 우리 문서 · 감사 답변도 같이 갱신해야 해요.
 - **iOS Keychain 동기화 이슈**: 앱 삭제 후 재설치 시 Keychain 이 남아있는 경우 (OS 버전별 동작 차이). "첫 실행 체크" 로 clearAll 필요 시 있음.
-- **원자성 구현이 완벽하지 않음**: 2개 쓰기 사이에 **OS 가 프로세스 kill** 하면 둘 다 쓰임 없이 멈춤. 그래도 반쪽은 안 됨. 극단적 시나리오 (첫 쓰기 성공 후 kill) 에선 반쪽 → 다음 부팅 `repairIfPartial` 로 복구.
+- **중단과 동시성의 한계**: 두 쓰기 사이에 프로세스가 끝나면 반쪽 상태가 남을 수 있어요. 정리 실패나 동시 호출도 원자적으로 격리하지 않아요. 부팅 복구는 한쪽 키만 남은 경우를 대상으로 해요.
 
 ## 교훈
 
+<a id="교훈-1--원자성-은-db-의-acid-뿐-아니라-storage-에도"></a>
+
 ### 교훈 1 — "원자성" 은 DB 의 ACID 뿐 아니라 Storage 에도
 
-초기엔 `saveTokens` 에 두 줄 `await write(A); await write(B);` 만. 드물게 B 실패 → 반쪽. **signOut 루프 버그** 가 프로덕션에 나와서 원인 파악에 일주일. `try/catch/clearTokens/rethrow` 패턴 추가 후 해결.
+두 토큰을 따로 쓰는 과정에서는 두 번째 쓰기가 실패할 수 있어요. 현재 구현은 실패하면 두 키의 삭제를 시도하고 원래 쓰기 오류를 호출자에게 전달해요. 정리도 실패하면 로그를 남겨요. 확인되지 않은 프로덕션 장애 기간을 구현 근거로 삼지는 않아요.
 
-**교훈**: 다중 쓰기는 **항상 원자성 전략** 을 생각. "둘 다 성공 or 둘 다 롤백" 을 코드로 명시. OS 가 우리를 중단할 가능성 + 쓰기 실패 가능성을 전제.
+다중 쓰기를 다룰 때는 실패 시 어떤 키를 정리하고 어떤 오류를 전달할지 정해요. 프로세스 중단과 정리 실패가 가능하므로, 두 키 저장을 데이터베이스 트랜잭션과 같은 보장으로 설명하지 않아요.
+
+<a id="교훈-2--first_unlock_this_device-가-정답"></a>
 
 ### 교훈 2 — `first_unlock_this_device` 가 정답
 
-`whenUnlocked` (잠금 해제된 상태에서만 접근) 는 너무 엄격 — 백그라운드 FCM 수신 실패. `afterFirstUnlock` (재부팅 후 첫 unlock 이후 항상) 은 iCloud 백업 포함 → 기기 복제 위험. `first_unlock_this_device` 가 **"첫 unlock 이후 + 이 기기 전용"** 으로 두 마리 토끼.
+이 템플릿은 `first_unlock_this_device` 를 사용해 첫 잠금 해제 이후의 접근과 현재 기기 범위를 선택해요. 특정 FCM 수신이나 백그라운드 작업의 성공을 이 옵션 하나로 보장하지는 않아요. 저장소 접근 조건과 작업 실행 조건을 함께 확인해요.
 
-**교훈**: iOS Keychain accessibility 는 세밀하게 구분됨. 기본값 선택 전에 **모든 옵션 비교표** 읽기.
+iOS Keychain 의 접근 시점과 기기 이전 조건은 별개로 확인해요. 앱이 실제로 토큰을 읽는 시점에 맞춰 설정을 선택해요.
+
+<a id="교훈-3--repairifpartial-같은-복구-함수-는-부팅에-한-번만"></a>
 
 ### 교훈 3 — `repairIfPartial` 같은 "복구 함수" 는 부팅에 한 번만
 
-초기엔 매 토큰 조회 전에 `repairIfPartial` 호출. 성능 영향 미미했지만 **로직 복잡도 증가** — "왜 매번 복구?" 를 매번 설명. 부팅 시 한 번으로 충분.
+현재 `checkAuthStatus()` 는 인증 상태를 복구할 때 `repairIfPartial` 을 호출해요. 일반 조회와 정리를 분리하면 토큰을 읽는 코드에서 상태가 바뀌는 일을 줄일 수 있어요. 부팅 때 한 번 호출한다고 이후 모든 부분 상태가 해결되는 것은 아니에요.
 
 **교훈**: "일관성 복구" 는 **상태가 변할 수 있는 경계** (부팅 · 로그인 · 로그아웃) 에서만. 조회마다 하면 책임이 흐려져요.
 
@@ -307,8 +322,8 @@ access 삭제가 실패해도 refresh 삭제는 **반드시** 시도. 두 토큰
 ## Code References
 
 **토큰 저장**
-- [`lib/core/storage/secure_storage.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/storage/secure_storage.dart) — 32줄, iOS Keychain accessibility 지정 (Android 는 기본 KeyStore cipher 라 옵션 없음)
-- [`lib/core/storage/token_storage.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/storage/token_storage.dart) — 72줄, 원자 저장 + 복구
+- [`lib/core/storage/secure_storage.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/storage/secure_storage.dart) — iOS Keychain 접근 조건과 저장소 옵션 설정
+- [`lib/core/storage/token_storage.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/storage/token_storage.dart) — 두 토큰 저장 · 실패 정리 · 부분 상태 복구
 
 **일반 설정**
 - [`lib/core/storage/prefs_storage.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/storage/prefs_storage.dart) — SharedPreferences 래퍼

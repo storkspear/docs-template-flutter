@@ -1,332 +1,127 @@
-# Documentation Style Guide
+<div id="documentation-style-guide"></div>
 
-이 문서는 **template-flutter `docs/` 를 어떻게 쓸 것인가** 의 규칙을 모아요. 추상 원칙이 아니라 **`philosophy/` 의 파일럿 ADR (003 · 005 · 009) 에서 귀납적으로 추출된 규칙** 이에요. 각 규칙마다 구체 샘플 링크가 있어야 하며, 샘플 없는 규칙은 근거가 약해요.
+# Flutter 문서 작성 지침
 
-> **이 문서의 위상**: `docs/` 안의 모든 문서가 참조하는 메타 문서. 새 문서 쓸 때 이 가이드를 따르고, 예외가 필요하면 "왜 이 경우에 예외인가" 를 본 문서에 추가.
+문체, 문서 구성, 코드 대조, 중복 통합의 공통 기준은 [문서 작성 가이드](https://storkspear.github.io/docs-template-spring/#reference/STYLE_GUIDE.md)에 모았어요. 이 문서는 Flutter에만 필요한 규칙과 적용 위치를 설명해요. 공통 규칙을 별도로 복사해 관리하지 않아요.
 
-> **template-spring 과의 관계**: 짝이 되는 백엔드 템플릿의 [`STYLE_GUIDE`](https://github.com/storkspear/template-spring/blob/main/docs/reference/STYLE_GUIDE.md) 와 정합성을 유지해요. 독자 레벨 분류 (Level 0~3), ADR 8섹션, 해요체, 상대경로 링크 규칙이 공통. Flutter 고유 사항 (Dart 코드 블록, AppKit 용어) 만 차이.
+<div id="1-독자-페르소나-level-03"></div>
+<div id="1-독자-페르소나--level-03"></div>
+<div id="레벨별-톤-규칙"></div>
+<div id="샘플"></div>
 
----
+## 1. 독자와 읽기 순서
 
-## 1. 독자 페르소나 — Level 0~3
+주요 독자는 템플릿으로 파생 앱을 만드는 개발자예요. 문서에서 사용하는 Level은 다음 읽기 순서를 안내해요.
 
-모든 문서는 **어느 레벨의 독자를 대상으로 쓰는지** 를 명시적으로 결정해야 해요.
-
-| Level | 누구 | 배경 지식 | 예시 문서 타겟 |
-|---|---|---|---|
-| **Level 0** | 처음 모바일 앱을 만드는 사람 | Dart 입문, Flutter 미경험 | "프로젝트 소개", "첫 앱 실행" (아직 미작성) |
-| **Level 1** | 주니어 Flutter 개발자 | Widget · setState 튜토리얼 수준 | `journey/onboarding.md`, `journey/build-first-app.md` |
-| **Level 2** | Flutter 실무 중급 | 2+년 현업, 앱 출시 경험 | `journey/architecture.md`, 대부분의 `conventions/*.md` |
-| **Level 3** | 시스템 설계 관심자 | 여러 플랫폼/스택 경험, 트레이드오프 사고 | `philosophy/*.md` 전체 (ADR) |
-
-### 레벨별 톤 규칙
-
-**Level 0~1** — 비유 · 예시 · 단계별 안내 위주:
-- 긴 개념 설명 전에 "이게 뭐에 쓰이는가" 먼저
-- 코드 스니펫은 **전체 맥락** 을 담아서 (import 포함)
-- 실행 명령은 그대로 복붙 가능한 형태
-
-**Level 2** — 의사결정 맥락 + 구체 구현:
-- "왜" 와 "어떻게" 를 같이 다룸
-- 코드 스니펫은 **핵심만 발췌** 가능 (import 생략 허용)
-- 업계 표준 (Android Jetpack, iOS Swift 등) 과의 비교 자연스럽게
-
-**Level 3** — 트레이드오프 · 대안 검토 · 장기 결과:
-- "왜" 중심, "어떻게" 는 Code References 링크로 위임
-- 여러 대안을 병렬 비교 (Option 1/2/3 구조)
-- 미래 부작용 · 이행 경로까지 기록
-
-### 샘플
-
-- Level 3 예시: [`adr-003-featurekit-registry`](./philosophy/adr-003-featurekit-registry.md) — Option 1/2/3 + 롤백 설계 + 미래 마이그레이션 경로
-- Level 3 예시 (결합도 트레이드오프): [`adr-009-backend-contract`](./philosophy/adr-009-backend-contract.md) — "팀 분리 시 재고 필요" 명시
-
----
-
-## 2. ADR 카드 표준 구조
-
-`philosophy/` 의 ADR 은 아래 **8개 필수 섹션** + 선택 섹션으로 구성돼요. 새 설계 결정을 ADR 로 기록할 때 그대로 따라요.
-
-### 필수 섹션 순서 (h2)
-
-1. **결론부터** — 30초 안에 핵심 잡기. 4~7줄.
-2. **왜 이런 고민이 시작됐나?** — 문제 맥락. 마지막에 `> 이 결정이 답해야 했던 물음은 이거예요` 블록으로 물음 명확화.
-3. **고민했던 대안들** — 최소 2~3개. 각 대안은 `### Option N — 제목` 서브섹션. 채택안은 `★ (채택)` 표시.
-4. **결정** — 실제 채택된 구현. 구조도, 코드 스니펫, 하위 결정을 포함해요.
-5. **이 선택이 가져온 것** — `### 긍정적 결과`, `### 부정적 결과` 서브섹션 필수. 정직하게.
-6. **교훈** — 2~3개 정도. 각 교훈은 `### 교훈 N — 제목` 서브섹션 + 구체 일화 + `**교훈**:` 한 줄 요약.
-7. **관련 사례 (Prior Art)** — 업계 레퍼런스 4~5개 외부 링크.
-8. **Code References** — 실제 파일 · 라인 링크. GitHub URL 사용. 마지막에 `**관련 ADR**:` 블록.
-
-### 파일 헤더 (h1 + Status 줄)
-
-```markdown
-# Short_Title
-
-**Status**: Accepted/Deprecated/Superseded. 현재 유효. YYYY-MM-DD 기준 현황 한 줄.
-```
-
-- **h1**: 짧은 식별자 — `Title_Case_Underscore` (예: `Template_Cherry`, `Late_Binding`). 사이드바 / 탭 제목이 길어지지 않도록 한 두 단어로.
-- **Status 줄**: h1 다음 한 줄 띄고. 날짜 · 현재 유효성 · 주요 구현 위치 한 줄 언급.
-- **ADR 번호 + 풀 제목**: 본문에 박지 않고 docs viewer manifest 의 desc 필드에 `ADR-NNN: 풀 제목` 형태로 사이드바 소제목으로 노출돼요.
-
-### 선택 섹션
-
-- `### 설계 선택 포인트` — 결정 안에 하위 결정이 여러 개일 때 (`결정` 섹션 내부 서브섹션)
-- `## 비목표` — 명시적 거절이 중요할 때 (template-spring 의 adr-007 스타일)
-
-### 샘플
-
-- 8섹션 구조 모범: [`adr-003-featurekit-registry.md`](./philosophy/adr-003-featurekit-registry.md) — 8섹션 + 설계 포인트 4개
-- Option 병렬 비교 모범: [`adr-009-backend-contract.md`](./philosophy/adr-009-backend-contract.md) — Option 1 OpenAPI / Option 2 GraphQL / Option 3 자체 DTO / Option 4 ★
-
----
-
-## 3. 톤 · 문체 · 말투
-
-### 기본 말투: 해요체
-
-- `~예요`, `~이에요`, `~해요` 기본.
-- 명령조 (`~하라`) 금지. 규칙을 서술할 때도 `~해요`, `~따라요`.
-- 학술 톤 (`~하여야 한다`, `~이며`) 회피.
-
-> ⚠️ **CLAUDE.md 와의 관계**: 레포 루트 `CLAUDE.md` §10 도 `docs/` 하위 문서에 해요체를 지시해요 — 두 문서의 톤 규칙이 같아요. 불가피하게 자연스럽지 않을 때만 `~합니다` 혼용 허용.
-
-### 섹션명 자연 한국어
-
-학술적 섹션명 대신 물음 · 감탄 형태 허용:
-
-| ❌ 학술체 | ✅ 자연체 |
-|---|---|
-| Summary | 결론부터 |
-| Context | 왜 이런 고민이 시작됐나? |
-| Options Considered | 고민했던 대안들 |
-| Consequences | 이 선택이 가져온 것 |
-| Lessons Learned | 교훈 |
-
-**예외**: 고유명사는 영문 유지 — `Status`, `Prior Art`, `Code References`, `AppKit`, `ADR`, `Riverpod`, `Provider`.
-
-### 독자에게 직접 말 걸기 허용
-
-- "~해요" 보다 직접적인 톤 OK: "처음 보면 낯설어요", "3줄이면 완성이에요"
-- 감탄사 절제 — `ㅋㅋ`, 이모지 금지 (사용자 요청 시만 예외. 책 진입점 — 최상위 `README.md` 와 `journey/README.md` — 의 📚 정도만 관용).
-
-### 표현 강도
-
-- 단정적 표현 허용: "**절대** 금지", "**반드시** 따릅니다"
-- 단 근거가 없으면 쓰지 말아주세요. 모든 단정은 뒤에 "왜" 를 수반해야 해요.
-- 완곡 표현 (`~인 것 같습니다`, `~할 수도 있습니다`) 은 정말 불확실할 때만.
-
-### 샘플
-
-- 해요체 일관: [`adr-005-riverpod-mvvm.md`](./philosophy/adr-005-riverpod-mvvm.md) 전체
-- 단정적 근거 있는 표현: [`adr-009-backend-contract.md`](./philosophy/adr-009-backend-contract.md) 의 "**두 곳만** 수정" · "**반드시** `safeErrorCode` 를 거친다"
-
----
-
-## 4. 용어집 (Glossary)
-
-프로젝트 특유 용어는 **표기를 고정** 해요. 흔들리면 검색 · 치환이 안 돼요.
-
-용어 목록의 단일 출처는 [`reference/glossary.md`](./reference/glossary.md) 예요 — 새 용어는 거기에만 추가해요. 이 절은 표기를 어떻게 쓰는지(아래 규칙)만 정해요.
-
-### 용어 사용 규칙
-
-- 한 번 정의하면 본문에서 계속 같은 표기 유지
-- 약어는 **첫 등장 시 풀어쓰기** + 괄호로 약어: `ADR (Architecture Decision Record)`, `MVVM (Model-View-ViewModel)`
-- 같은 개념을 한국어 / 영어 혼용 지양 — "Kit" vs "키트" 중 하나로 고정 (본 프로젝트는 **Kit** 영문 유지)
-- 파일 · 클래스명은 백틱: `AppKits.install([...])`, `auth_kit/auth_service.dart`
-
----
-
-## 5. 코드 블록 규칙
-
-### 언어 태깅 필수
-
-    ```dart     ← ✅
-    ```         ← ❌ (언어 미지정)
-
-모든 코드 블록에 언어 태그 (`dart`, `bash`, `yaml`, `json`, `groovy`, `kotlin`, `markdown` 등).
-
-### 경로 주석
-
-긴 코드 스니펫에는 **파일 경로 주석** 을 첫 줄에 달아요. Truncation 여부도 명시.
-
-```dart
-// lib/core/kits/app_kit.dart 발췌
-abstract class AppKit {
-  String get name;
-  // ...
-}
-```
-
-`발췌` 표기로 "전체가 아님" 을 명확히. 전체 인용이면 `전체`.
-
-### 공백 · 들여쓰기
-
-- 2 스페이스 (Dart / YAML / JSON 기본)
-- 4 스페이스 (shell 의 중첩 경우 정도)
-- 탭 금지
-
-### 주석 최소
-
-- 코드 스니펫 안의 주석은 **문서 맥락을 위한 것만**. 실제 코드의 주석이 아닌 것은 `// ← 이 부분이 핵심` 같은 지시 주석 허용.
-- 단 이런 지시 주석은 스니펫 1~2개 이하로만. 많으면 본문에서 설명.
-
-### 샘플
-
-- 경로 주석 + 발췌 표기: [`adr-003`](./philosophy/adr-003-featurekit-registry.md) 의 `AppKit` / `AppKits` 스니펫
-- 지시 주석 활용: [`adr-005`](./philosophy/adr-005-riverpod-mvvm.md) 의 "← 사용자 메시지는 ErrorInterceptor 가 i18n 변환"
-- JSON 스키마 블록: [`adr-009`](./philosophy/adr-009-backend-contract.md) 의 `{data, error}` 응답 예시
-
----
-
-## 6. 링크 / Cross-reference 규칙
-
-### 내부 링크는 **상대 경로**
-
-- 같은 디렉토리: `` [`ADR-005`](./adr-005-riverpod-mvvm.md) `` ← ADR 파일에서 다른 ADR 참조
-- 상위 경로: `` [`testing`](../testing/testing-strategy.md) `` ← `philosophy/` 에서 `docs/testing/` 참조
-- 절대 경로 · 전체 docs-viewer URL 금지 (레포 이름 바뀌면 깨짐)
-
-### 링크 텍스트는 백틱
-
-내부 문서 / ADR / 파일 / 클래스 / 게터 참조의 링크 텍스트는 **백틱으로 감싸요**. 외부 권위 링크 (공식 문서, 블로그) 는 일반 텍스트 그대로.
-
-```markdown
-✅ [`ADR-005`](./adr-005-riverpod-mvvm.md)
-✅ [`lib/core/kits/app_kit.dart`](https://github.com/.../app_kit.dart)
-✅ [`AppKits.install`](#)
-✅ [Material Design 3](https://m3.material.io/)            ← 외부 권위 = 평범
-
-❌ [ADR-005](./adr-005-riverpod-mvvm.md)                   ← 내부인데 평범
-❌ [`Material Design 3`](https://m3.material.io/)          ← 외부인데 백틱
-```
-
-근거: 링크 텍스트가 monospace 로 시각적 강조되어 본문에서 두드러져요. docs viewer 의 사이드바 / 검색 결과에서도 식별성이 좋아요. 외부 권위 (디자인 시스템 · 표준 문서) 는 자연어로 표기해 코드 식별자와 시각적으로 구분.
-
-### Code References 섹션의 외부 링크
-
-Code References 는 파일 위치를 **GitHub 절대 URL** 로 적어요 (뷰어에서 소스를 바로 열 수 있도록).
-
-```markdown
-- [`lib/core/kits/app_kit.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/kits/app_kit.dart)
-```
-
-내부 문서 참조에는 상대경로 유지. Code References 만 절대 URL 예외.
-
-### 앵커 링크
-
-```markdown
-[`제약 2`](./philosophy/README.md#제약-2--시간이-가장-희소한-자원)
-```
-
-- 한글 제목의 앵커는 **한글 그대로** + 특수문자는 `-` 로 치환 + 공백도 `-`
-- 확인 방법: 실제로 클릭해서 점프 검증
-
-### ADR 간 참조 포맷
-
-**첫 언급 시** — 번호 + 제목 + 링크:
-```markdown
-[`ADR-005 · Riverpod + MVVM`](./adr-005-riverpod-mvvm.md)
-```
-
-**재언급 시** — 번호만 + 링크:
-```markdown
-[`ADR-005`](./adr-005-riverpod-mvvm.md)
-```
-
-### "관련 ADR" 섹션 위치
-
-Code References 마지막에 `**관련 ADR**:` 블록으로 수렴:
-
-```markdown
-**관련 ADR**:
-- [`ADR-003 · FeatureKit 동적 레지스트리`](./adr-003-featurekit-registry.md) — Kit 의 providerOverrides 가 맞물림
-- [`ADR-007 · Late Binding`](./adr-007-late-binding.md) — 순환 의존 해결
-```
-
-각 링크 뒤에 `—` + 한 줄 설명 필수.
-
-### 외부 링크 (Prior Art)
-
-- `[이름](URL)` 기본 형태
-- 도메인 권위 (공식 문서 > 블로그 > 포럼) 우선
-- URL 이 장기 안정인지 확인 (Medium 개인 블로그 등 링크 rot 위험 높은 것 회피)
-
-### 샘플
-
-- ADR 간 재참조: [`adr-005`](./philosophy/adr-005-riverpod-mvvm.md) 의 "관련 ADR" 블록
-- Code References 포맷: [`adr-003`](./philosophy/adr-003-featurekit-registry.md) / [`adr-009`](./philosophy/adr-009-backend-contract.md) 의 GitHub URL 형태
-
----
-
-## 7. 문서 규모별 1 세션 작업량
-
-경험 기반 기준. 무리하면 밀도가 떨어져요.
-
-| 규모 | 예시 | 1 세션 분량 |
+| 독자 | 안내할 내용 | 시작 문서 |
 |---|---|---|
-| **대형 플래그십** | `philosophy/README.md`, `journey/architecture.md`, `architecture/featurekit-contract.md` | **1 문서 엄격** |
-| **중형 여정** | `onboarding.md`, `build-first-app.md`, `deployment.md`, `infra/android-deployment.md` | 1 문서 기본 |
-| **소형 컨벤션** | `naming.md`, `i18n.md` 등 (100~300줄) | 관련 주제 **2개 쌍** |
-| **ADR 카드 1 개** | philosophy 테마별 쪼갠 단위 | 3~4 개까지 몰아 가능 (테마 단위) |
+| Level 0~1: Flutter와 템플릿을 처음 쓰는 개발자 | 필요한 도구, 첫 실행, 앱 구성과 확인 방법 | [시작 안내](./journey/onboarding.md), [첫 앱 만들기](./journey/build-first-app.md) |
+| Level 2: 기능을 조립하거나 수정하는 개발자 | Kit 계약, Provider, 상태와 화면의 수명, 오류 처리 | [아키텍처](./journey/architecture.md), [개발 규약](./conventions/README.md) |
+| Level 3: 설계 근거를 검토하는 개발자 | 선택한 이유, 대안과 제약, 현재 구현 | [설계 결정](./philosophy/README.md) |
 
-### 1 세션 기준의 근거
+독자를 구분하는 자세한 기준은 [공통 가이드 §1](https://storkspear.github.io/docs-template-spring/#reference/STYLE_GUIDE.md#1-독자와-목적)을 따라요.
 
-- 대형: 코드 감사 10~20 파일 + 독자 시뮬레이션 반복. 분산하면 맥락 유지 비용이 큼.
-- 중형: 코드 감사 5~10 파일. 한 흐름을 끝까지.
-- 소형 쌍: 짝을 지으면 오히려 일관성 강화 효과.
+<div id="2-adr-카드-표준-구조"></div>
+<div id="필수-섹션-순서-h2"></div>
+<div id="파일-헤더-h1-status-줄"></div>
+<div id="파일-헤더-h1--status-줄"></div>
+<div id="선택-섹션"></div>
+<div id="샘플-1"></div>
 
-### 세션 밀도 유지 원칙
+## 2. ADR과 기능 안내
 
-- 1 세션 내 **감사 → 작성 → 검증 → 커밋** 한 사이클로 완결
-- 컨텍스트 소모가 심하면 중단하고 다음 세션으로
-- 4~5 시간 초과 시 밀도 하락 — 강제 종료 권장
+ADR에는 당시의 문제, 결정과 근거, 제약을 남겨요. 기존 번호와 상태는 유지하고, 이후 구현이 달라졌다면 현재 동작을 구분해 적어요. 정해진 절이나 교훈·외부 링크의 개수를 채우려고 내용을 만들지 않아요. 구성 기준은 [공통 가이드 §2](https://storkspear.github.io/docs-template-spring/#reference/STYLE_GUIDE.md#2-목적에-맞는-구성)에 있어요.
 
----
+기능 안내에는 Kit을 켜는 데 필요한 설정, 의존 Kit, 사용 예, 플랫폼별 제약, 제거할 때 정리할 항목을 담아요. 실제 조립은 `lib/main.dart`에서 하고 `app_kits.yaml`과 수동으로 맞춰요. 구성 검사 성공을 두 파일의 자동 비교나 실제 기기 검증의 성공으로 설명하지 않아요.
 
-## 8. 검증 체크리스트 (문서 완료 전)
+ADR 제목은 독자가 내용을 알 수 있게 짧게 써요. 제목이나 절 이름을 바꾸면 기존 앵커를 보존하고, 미러의 목차 설명도 함께 맞춰요.
 
-새 문서 / ADR 작성 후 커밋 전:
+<div id="3-톤-문체-말투"></div>
+<div id="3-톤--문체--말투"></div>
+<div id="기본-말투-해요체"></div>
+<div id="섹션명-자연-한국어"></div>
+<div id="독자에게-직접-말-걸기-허용"></div>
+<div id="표현-강도"></div>
+<div id="샘플-2"></div>
 
-- [ ] 섹션 헤더가 STYLE_GUIDE 기준을 따르는가
-- [ ] 해요체 일관 유지 (학술체 · 명령조 혼입 없음)
-- [ ] 옛 섹션명 본문 참조 없음 (`grep -E 'Context|Consequences|Lessons Learned' docs/`)
-- [ ] 링크가 실제 파일에 도달 (내부 · 외부 모두)
-- [ ] Code References 의 파일 경로가 실존 (`ls` 확인)
-- [ ] 두 레포 (`template-flutter` + `docs-template-flutter`) 동기화 (`scripts/docs/sync-docs.sh` 실행 — `rsync` 기반. `.github/workflows/sync-docs.yml` 가 미러 PR 자동 생성)
-- [ ] `docs-template-flutter/docs/manifest.json` 의 사이드바 엔트리 추가 (새 문서인 경우)
-- [ ] 특정 앱 / 회사 / Bundle ID 노출 없음 (`grep -r 'gymlog\|sumtally\|com\.twosun' docs/`) — 단, **실존 테스트 파일명 인용** (예: `testing-strategy.md` 의 회귀 테스트 파일명) 은 예외
-- [ ] 커밋 메시지 Conventional Commits 포맷 + subject 72자 이하
+## 3. 담백한 해요체
 
----
+[공통 문체 기준](https://storkspear.github.io/docs-template-spring/#reference/STYLE_GUIDE.md#3-담백한-해요체)을 따라요. 과한 친근함이나 수사적인 질문 대신 실제 동작을 설명해요.
 
-## 9. 이 가이드의 진화 원칙
+예를 들어 ‘3줄이면 완성이에요’라고 줄 수를 강조하기보다 어떤 파일을 바꾸고 무엇을 확인해야 하는지 적어요. `ref.mounted`처럼 동작에 필요한 조건은 문장을 줄이더라도 남겨요.
 
-### 귀납이 우선, 연역은 금지
+<div id="4-용어집-glossary"></div>
+<div id="용어-사용-규칙"></div>
 
-이 가이드의 모든 규칙은 **구체 샘플에서 추출** 해요. 추상 원칙을 먼저 쓰고 "이렇게 쓰자" 선언하지 않아요.
+## 4. 용어와 표기
 
-- 새 규칙 추가 시 `philosophy/*.md` 또는 다른 완성 문서에서 근거 샘플 제시 필수
-- 샘플 없는 규칙은 "아이디어" 로만 보존 — 실제 문서 작성 시 검증되면 본문 이동
+Flutter 용어의 정본은 [용어집](./reference/glossary.md)이에요. `Kit`, `AppKit`, `Provider`, `파생 레포`처럼 프로젝트에서 정한 표기를 유지해요. 실제 식별자와 경로는 백틱으로 표시하고 조사는 붙여 써요. 일반 설명에 불필요한 영어를 섞지 않아요.
 
-### 예외 발생 시 기록 → 패턴 식별 → 규칙 업데이트
+용어를 정의하고 연결하는 원칙은 [공통 가이드 §4](https://storkspear.github.io/docs-template-spring/#reference/STYLE_GUIDE.md#4-용어와-표기)를 따라요.
 
-한 문서에서 이 가이드를 따르기 어려운 상황 발생 시:
+<div id="5-코드-블록-규칙"></div>
+<div id="언어-태깅-필수"></div>
+<div id="경로-주석"></div>
+<div id="공백-들여쓰기"></div>
+<div id="공백--들여쓰기"></div>
+<div id="주석-최소"></div>
+<div id="샘플-3"></div>
 
-1. **예외를 일단 적용** + 해당 문서 상단에 "본 문서는 STYLE_GUIDE §N 예외" 주석
-2. 같은 예외가 3개 이상 문서에서 발생하면 **패턴 인식**
-3. 본 가이드에 예외 조항 추가 또는 기존 규칙 수정
+## 5. Dart와 플랫폼 예제
 
-### 로드맵에서 이 가이드의 활용
+Dart 예제는 실제 타입과 메서드, 사용 중인 Riverpod API를 확인해요. 발췌한 예제에는 생략한 부분을 표시하고, 실행 가능한 예제에는 필요한 import와 조립 위치를 포함해요. 들여쓰기는 Dart·YAML·JSON의 기존 두 칸 규칙을 따라요.
 
-- **새 ADR 작성** 시 이 가이드가 주 레퍼런스
-- **conventions / features / infra** 작성 시 가이드 위반 발견되면 즉시 업데이트
-- **Level 0 신규 문서** 작성 시 Level 0 톤 규칙 확장 필요 — 작성 결과에서 추출 → 본 가이드 §1 업데이트
+비동기 작업은 화면 상태와 서비스 작업의 수명을 구분해 설명해요. Android·iOS의 권한, 설정 파일, 서명, 외부 SDK 조건도 구분해요. Mock 동작이나 순수 Dart 테스트를 실기기·스토어·외부 서비스 검증으로 표현하지 않아요.
 
----
+예제와 명령을 검증하는 공통 기준은 [공통 가이드 §5](https://storkspear.github.io/docs-template-spring/#reference/STYLE_GUIDE.md#5-코드와-명령-예제)에 있어요.
+
+<div id="6-링크-cross-reference-규칙"></div>
+<div id="6-링크--cross-reference-규칙"></div>
+<div id="내부-링크는-상대-경로"></div>
+<div id="링크-텍스트는-백틱"></div>
+<div id="code-references-섹션의-외부-링크"></div>
+<div id="앵커-링크"></div>
+<div id="adr-간-참조-포맷"></div>
+<div id="관련-adr-섹션-위치"></div>
+<div id="외부-링크-prior-art"></div>
+<div id="샘플-4"></div>
+
+## 6. 링크와 통합한 문서
+
+같은 `docs/` 안의 문서는 상대 경로로 연결해요. `lib/`·`test/`·스크립트처럼 공개 미러에 없는 소스 파일은 `storkspear/template-flutter`의 GitHub 링크를 사용해요. 이 원본 저장소는 비공개이므로 코드를 보려면 접근 권한이 필요해요.
+
+기존 문서를 통합하면 내부 링크와 목차를 정본으로 바꾸고, 옛 주소에는 새 위치로 연결되는 짧은 안내를 남겨요. 제목을 바꿀 때도 기존 절별 링크를 보존해요. 자세한 기준은 [공통 가이드 §6](https://storkspear.github.io/docs-template-spring/#reference/STYLE_GUIDE.md#6-링크와-문서-통합)을 따라요.
+
+<div id="7-문서-규모별-1-세션-작업량"></div>
+<div id="1-세션-기준의-근거"></div>
+<div id="세션-밀도-유지-원칙"></div>
+
+## 7. 검토 순서
+
+문서를 끝까지 읽은 뒤 설명한 기능의 진입점과 호출 흐름을 따라가요. Kit 선언, 실제 조립, Provider 생성, 화면 상태, 플랫폼 설정을 같은 동작으로 뭉뚱그리지 않아요. 긴 문서는 읽은 구간을 기록해 이어서 검토해요.
+
+검토 기록과 재검토 기준은 [공통 가이드 §7](https://storkspear.github.io/docs-template-spring/#reference/STYLE_GUIDE.md#7-검토-순서와-기록)에 있어요.
+
+<div id="8-검증-체크리스트-문서-완료-전"></div>
+
+## 8. 검증과 공개 미러 반영
+
+본문은 `template-flutter/docs/`에서 수정해요. `scripts/docs/sync-docs.sh`가 `docs-template-flutter/docs/`로 복사하며, main의 자동 동기화가 같은 스크립트를 사용해요. `superpowers/`와 `planned/`는 공개 대상에서 제외하고, 미러 고유 `manifest.json`은 별도로 관리해요.
+
+문서를 추가하거나 통합하면 미러 목차도 수정해요. 본문의 링크와 기존 주소, 코드·표·그림의 PC·모바일 표시를 확인하고, 원본과 게시본을 대조해요. API 계약을 설명한 부분은 `tools/docs-check/docs-contract-test.sh`로도 검사해요. 자동 검사가 모든 문장의 정확성을 확인해 주지는 않아요.
+
+전체 완료 기준은 [공통 가이드 §8](https://storkspear.github.io/docs-template-spring/#reference/STYLE_GUIDE.md#8-완료-전-확인)을 따라요.
+
+<div id="9-이-가이드의-진화-원칙"></div>
+<div id="귀납이-우선-연역은-금지"></div>
+<div id="예외-발생-시-기록-패턴-식별-규칙-업데이트"></div>
+<div id="예외-발생-시-기록--패턴-식별--규칙-업데이트"></div>
+<div id="로드맵에서-이-가이드의-활용"></div>
+
+## 9. 작성 기준을 고칠 때
+
+여러 템플릿에 공통으로 적용할 문체·검토 규칙은 [공통 가이드](https://storkspear.github.io/docs-template-spring/#reference/STYLE_GUIDE.md)에 반영해요. Flutter의 조립 방식이나 플랫폼 제약처럼 이 템플릿에만 해당하는 내용은 이 문서에서 관리해요. 관련 `CLAUDE.md`와 안내 문서도 함께 맞춰요.
 
 ## 10. 변경 이력
 
-이 문서의 변경 이력은 `git log docs/STYLE_GUIDE.md` 로 확인해요. 문서 안에 이력 표를 따로 두면 갱신이 빠지는 순간 실제 규칙과 어긋나요.
+이력은 `git log -- docs/STYLE_GUIDE.md`에서 확인해요. 이전 버전의 자세한 공통 규칙은 위 가이드로 통합했어요.

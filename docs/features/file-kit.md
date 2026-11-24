@@ -1,14 +1,18 @@
+<a id="file_kit"></a>
+
 # file_kit
 
-앱 파일 업로드 (presigned POST policy) 와 presigned GET 조회를 맡는 도메인 서비스 kit 이에요. 라우트/화면 없는 순수 서비스라 `fileServiceProvider` 하나만 노출해요. 백엔드 연동 파일 첨부 기능이 필요할 때 활성화해요.
+`FileService`는 업로드 티켓을 받은 뒤 파일을 스토리지에 직접 올리고, 다운로드 URL을 조회해요. 화면과 라우트는 제공하지 않으며 `fileServiceProvider`로 사용해요. 파일 선택 UI, 업로드 취소·진행률 표시, 게시물에 첨부하는 흐름은 파생 앱에서 구성해요.
 
 ---
 
 ## 개요
 
-흐름은 3단계예요 — 티켓 발급(`POST /files/uploads`) → presigned POST 업로드(`uploadUrl` raw multipart) → 조회(`GET /files/{key}`). presigned POST policy 를 쓰는 이유는 강제력이에요. 서버가 content-length-range·Content-Type 을 서명(policy)에 바인딩해서, 티켓 선언값을 넘는 업로드는 스토리지가 거부해요 (presigned PUT 과 달리 실제 크기·타입이 강제돼요). 업로드는 별도 Dio 로 스토리지에 직송해요 — presigned 업로드는 `ApiClient` 계약(`/api/apps/{slug}` prefix + `ApiResponse{data,error}` 엔벨로프 + Auth 인터셉터) **밖의 외부 호스트** 라, 인터셉터 없는 별도 Dio 로 전송하고 Authorization 헤더도 붙이지 않아요 (서명 불일치·자격 누출 방지). 식별자는 `storageKey`(UUID) 하나로 통일돼요 — 업로드 응답 `attachmentKey` = GET `{key}` = 게시물 `attachmentKeys[]`.
+먼저 `POST /files/uploads` 로 티켓을 받고, 티켓의 URL 에 presigned POST multipart 업로드를 수행한 뒤 `GET /files/{key}` 로 다운로드 정보를 조회해요. 스토리지는 서명된 policy 의 크기·Content-Type 조건을 검사해요. 이 검사는 선언된 Content-Type 조건이며 파일 내용 자체의 형식이나 안전성을 검사한다는 뜻은 아니에요.
 
-> **왜 backend_api_kit 확장이 아니라 신규 kit?** backend_api_kit 은 순수 transport(Dio+인터셉터 3종, 도메인 무지)이고, 도메인 플로우는 전용 kit(auth·payment)로 분리하는 구조예요. presigned 업로드는 절대 URL 로 스토리지에 직접 쏘는 raw HTTP — `ApiClient` 계약 밖이라 별도 kit 분리가 자연스러워요.
+스토리지 업로드는 앱 API prefix 와 응답 봉투를 사용하지 않는 외부 호스트 요청이에요. 따라서 AuthInterceptor 가 없는 별도 Dio 로 보내며 앱의 Authorization 헤더를 붙이지 않아요. 첨부 식별자는 티켓의 `attachmentKey`, 조회 경로의 `{key}`, 게시물의 `attachmentKeys` 에 같은 값을 사용해요.
+
+> BackendApiKit 은 공통 API 전송을 맡고 FileKit 은 티켓 발급과 스토리지 업로드 흐름을 맡아요. 파일 선택 화면과 게시물 첨부 UI 는 파생 앱의 features 에서 구성해요.
 
 ---
 
@@ -74,6 +78,8 @@ Future<FileDownloadResponse> getDownloadUrl(String key);
 ---
 
 ## 일반 사용 예
+
+<a id="업로드--게시물-첨부"></a>
 
 ### 업로드 → 게시물 첨부
 

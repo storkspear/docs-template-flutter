@@ -1,10 +1,12 @@
+<a id="cached_repository"></a>
+
 # Cached_Repository
 
 **Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 line 수 갱신. `lib/core/cache/cached_repository.dart` (149줄) 가 5가지 정책 지원. 기본 저장소는 `MemoryCacheStore` — 파생 레포에서 `DriftCacheStore` 등으로 교체 가능.
 
 ## 결론부터
 
-Repository 가 API 호출 시 **5가지 캐싱 정책 중 하나** 를 선택해요 — `cacheFirst`, `networkFirst`, `networkOnly`, `cacheOnly`, `staleWhileRevalidate`. 각 정책은 **화면 맥락에 맞는 UX 트레이드오프** 예요 — 목록은 최신성 우선 (networkFirst), 상세는 즉시성 우선 (cacheFirst), 대시보드는 빠른 진입 + 백그라운드 갱신 (SWR). CUD 연산 후엔 `invalidate` / `invalidateByPrefix` 로 관련 캐시 무효화.
+`CachedRepository`가 다섯 가지 조회 정책을 제공하고 호출자가 상황에 맞게 선택해요. 기본 `MemoryCacheStore`는 TTL이 지난 항목을 읽을 때 제거하며 최대 100개를 보관해요. SWR의 갱신 결과는 저장소에 반영되지만 이미 반환한 화면 상태를 자동으로 바꾸지는 않아요. 쓰기 작업 뒤에는 호출자가 관련 키를 무효화하고 필요한 화면을 다시 조회해요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -35,6 +37,8 @@ ViewModel 코드가 "캐시 있으면 이거 쓰고, 없으면 네트워크, 실
 
 ## 고민했던 대안들
 
+<a id="option-1--http-수준-캐싱-dio-interceptor"></a>
+
 ### Option 1 — HTTP 수준 캐싱 (Dio interceptor)
 
 요청 URL · 헤더 기반으로 인터셉터가 자동 캐시. 서버 `Cache-Control` 헤더 준수.
@@ -45,6 +49,8 @@ ViewModel 코드가 "캐시 있으면 이거 쓰고, 없으면 네트워크, 실
 - **단점 3**: 무효화 제어 어려움 — "거래 삭제 후 목록 갱신" 같은 **도메인 이벤트 기반** 무효화가 HTTP 스펙 밖.
 - **탈락 이유**: 웹 관용. 모바일 앱의 도메인 중심 캐싱에 안 맞음.
 
+<a id="option-2--drift-sqlite-에-모든-데이터-영속화"></a>
+
 ### Option 2 — Drift (SQLite) 에 모든 데이터 영속화
 
 Repository 가 모든 응답을 Drift 에 저장. 조회 시 Drift 에서.
@@ -54,6 +60,8 @@ Repository 가 모든 응답을 Drift 에 저장. 조회 시 Drift 에서.
 - **단점 2**: 모든 데이터를 영속화할 가치가 있는 건 아님. 일회성 조회 (권한 체크) 까지 DB 에 넣으면 과함.
 - **단점 3**: 마이그레이션 실패 시 앱이 먹통. 스키마 회귀 테스트 같은 방어가 매번 필요.
 - **탈락 이유**: 모든 데이터가 영속 가치 있는 건 아님. 정책 기반 선택이 맞음.
+
+<a id="option-3--추상-cachestore--정책-기반-cachedrepository--채택"></a>
 
 ### Option 3 — 추상 CacheStore + 정책 기반 CachedRepository ★ (채택)
 
@@ -77,7 +85,7 @@ enum CachePolicy {
   /// 네트워크 우선: 항상 네트워크, 실패 시 캐시 폴백
   networkFirst,
 
-  /// 네트워크만: 캐시 사용 안 함
+  /// 캐시를 읽지 않고 네트워크에서 조회한 뒤 응답을 캐시에 저장해요.
   networkOnly,
 
   /// 캐시만: 네트워크 호출 안 함 (오프라인 전용)
@@ -239,22 +247,22 @@ class ExpenseRepository {
 ### 설계 선택 포인트
 
 **포인트 1 — 키는 문자열, 직렬화는 JSON**  
-`CacheStore` 가 `Map<String, String>` 수준으로 단순. 값은 JSON 직렬화로 저장. 장점: **DB / 메모리 / 파일 어디든 저장 가능**. 단점: 매번 encode/decode 비용 (실측 ~1ms 수준, 무시 가능).
+CacheStore 는 문자열 키와 값을 다뤄요. 모델을 JSON 으로 바꾸는 책임은 호출자에게 있어 저장소 구현을 바꿀 수 있지만, 직렬화 비용과 오류 처리도 고려해야 해요.
 
 **포인트 2 — TTL 은 Duration**  
-`ttl: Duration(minutes: 5)` — 만료 시간을 선언적으로. 내부 구현은 저장 시각 + ttl 비교.
+호출자가 `Duration(minutes: 5)` 처럼 유효 기간을 전달해요. 기본 메모리 저장소는 저장 시점에 만료 시각을 계산하고 조회할 때 확인해요.
 
 **포인트 3 — SWR 의 `unawaited`**  
-백그라운드 갱신은 **호출자가 기다리지 않음** (`unawaited`). 화면은 캐시 즉시 표시, 갱신은 나중에 완료. 갱신 결과는 다음 조회에 반영.
+사용할 수 있는 캐시가 있으면 먼저 반환하고 갱신은 기다리지 않아요. 갱신된 값은 다음 조회에 반영되며, 이미 표시한 화면을 자동으로 갱신하지는 않아요.
 
 **포인트 4 — SWR 실패는 조용히**  
-`_revalidate` 의 에러는 throw 하지 않음 — 옵션 콜백 `onRevalidateError` 로만 로깅. "백그라운드 갱신" 이 사용자에게 노출되면 UX 혼란.
+백그라운드 갱신 오류는 이미 반환한 캐시 응답의 오류로 전달하지 않아요. 설정된 `onRevalidateError` 콜백이 있으면 이를 호출해 기록할 수 있어요.
 
 **포인트 5 — `invalidateByPrefix` 는 강력한 무효화**  
-목록을 `expenses_list_page_0`, `expenses_list_page_1` 로 저장하면 `invalidateByPrefix('expenses_list_')` 로 전체 삭제. 프리픽스 명명 규칙을 잘 잡아두는 게 중요.
+목록 키를 `expenses_list_page_0`, `expenses_list_page_1` 처럼 정하면 `invalidateByPrefix('expenses_list_')` 로 관련 키를 함께 지울 수 있어요. 다른 데이터가 함께 삭제되지 않도록 접두사 범위를 정해요.
 
 **포인트 6 — CacheStore 는 `core/` 에, 구현은 교체 가능**  
-`MemoryCacheStore` 가 기본. 필요 시 `DriftCacheStore` 로 `providers.dart` override. ADR-006 의 Debug 폴백 패턴과 같음.
+기본 구현은 MemoryCacheStore 예요. 영속 저장이 필요하면 앱에서 CacheStore 구현을 만들고 Provider 를 교체할 수 있어요. DriftCacheStore 는 제공되는 클래스가 아니라 이런 확장의 예예요.
 
 ## 이 선택이 가져온 것
 
@@ -262,9 +270,9 @@ class ExpenseRepository {
 
 - **ViewModel 캐시 인지 0**: ViewModel 은 `repository.getById(42)` 호출. 캐시 여부 · 정책 모름.
 - **화면별 UX 최적**: 각 화면이 자기 요구에 맞는 정책 선택. 한 정책으로 강제 안 함.
-- **SWR 로 빠른 첫 화면**: 대시보드 진입 시 캐시 즉시 (100ms) + 갱신은 백그라운드.
-- **CUD 후 자동 반영**: `invalidateByPrefix` 한 줄로 관련 목록 전체 무효화.
-- **오프라인 대응 (networkFirst)**: 네트워크 실패 시 캐시 fallback. 비행기 모드에서도 최근 데이터.
+- **캐시 우선 응답**: 유효한 캐시가 있으면 네트워크 갱신을 기다리지 않고 반환해요. 화면에 표시되는 시간은 앱에서 측정해요.
+- **쓰기 후 무효화**: 호출자가 `invalidateByPrefix`를 실행하면 관련 키를 지워요. 이미 표시 중인 목록을 바꾸려면 화면에서 다시 조회해야 해요.
+- **오프라인 fallback**: 실패 시 TTL이 아직 유효한 캐시가 있으면 반환해요. 기본 메모리 저장소는 앱을 다시 시작하면 비워지고, 만료된 캐시는 반환하지 않아요.
 - **저장소 교체 가능**: 영속 캐시 필요하면 `DriftCacheStore` 구현 + override.
 
 ### 부정적 결과
@@ -272,35 +280,41 @@ class ExpenseRepository {
 - **정책 선택 피로**: 화면 짤 때마다 "뭐 쓰지?" 판단 필요. 위 가이드 표 제공하지만 결정 비용.
 - **fromJson / toJson 보일러플레이트**: 각 호출마다 `fromJson: (json) => ...` 람다. `freezed` + `json_serializable` 로 자동화 가능하지만 본 템플릿은 미도입 (ADR-009).
 - **TTL 관리 수동**: "이 화면 캐시 TTL 5분? 1시간?" 결정이 반복. 기본값 상수 제공하면 개선.
-- **캐시 크기 제한 없음**: 현재 `MemoryCacheStore` 는 무제한. 장기 실행 시 메모리 누적 가능. LRU 정책 같은 게 필요할 수 있음.
+- **캐시 축출 기준**: `MemoryCacheStore`의 기본 상한은 100개예요. 새 키를 넣을 때 가득 차 있으면 가장 오래전에 저장한 항목을 지워요. 읽은 횟수나 최근 조회 시각을 반영하는 LRU는 아니에요.
 - **멀티 디바이스 일관성 없음**: 클라 캐시라 기기 간 동기화 안 됨. 중요한 데이터는 networkFirst 가 안전.
 
 ## 교훈
 
+<a id="교훈-1--정책-은-화면-맥락에서만-결정-가능"></a>
+
 ### 교훈 1 — "정책" 은 화면 맥락에서만 결정 가능
 
-초기엔 Repository 안에 `CachePolicy.cacheFirst` 하드코딩. 하지만 **같은 Repository 의 같은 메서드** 도 화면에 따라 정책이 다를 수 있음. 예: 홈에서 목록 → SWR, 검색 화면에서 목록 → networkFirst. **정책을 파라미터** 로 받아 ViewModel 이 결정하는 게 맞아요.
+같은 데이터도 목록 화면과 검색 화면에서 필요한 최신성이 다를 수 있어요. Repository 메서드가 정책을 고정할지 인자로 받을지는 해당 앱의 사용처에 맞춰 결정해요. 캐시 정책은 CachedRepository 호출에서 명시해요.
 
-**교훈**: 인프라 레이어의 동작 양식은 **도메인 컨텍스트 (어느 화면? 어떤 상황?)** 에서 결정. 인프라가 스스로 결정하면 유연성 상실.
+정책은 데이터의 최신성, 실패 시 허용할 표시 방식, 캐시 수명을 고려해 정해요. 모든 화면에서 같은 정책을 사용하거나 매번 ViewModel 로 노출할 필요는 없어요.
+
+<a id="교훈-2--swr-의-에러는-실패로-치지-않는-게-맞다"></a>
 
 ### 교훈 2 — SWR 의 에러는 실패로 치지 않는 게 맞다
 
-초기엔 `_revalidate` 실패 시 로그 · 메트릭에 "Cache revalidate failed" 로 표시. 그러면 **백그라운드 실패로 대시보드 가득**. SWR 은 본질적으로 "best-effort 갱신" 이므로 실패가 정상 동작. `onRevalidateError` 콜백으로만 기록, 메트릭 무시.
+백그라운드 갱신에 실패해도 이미 반환한 캐시 값은 유지돼요. 다만 실패 자체가 사라지는 것은 아니므로, 반복 실패를 확인하려면 `onRevalidateError` 로 기록해요.
 
-**교훈**: "best-effort 작업" 의 실패는 **실패가 아닌 정상 동작의 일부**. 성공만 측정하세요.
+**운영 시 고려할 점**: 백그라운드 갱신 실패가 이미 표시한 데이터를 지우지는 않아요. 필요하면 `onRevalidateError`로 기록하고 반복 실패를 확인해요. 실패를 사용자에게 즉시 알릴지와 운영에서 관찰할지는 별도로 판단해요.
+
+<a id="교훈-3--invalidatebyprefix-가-목록-상세-연관의-주춧돌"></a>
 
 ### 교훈 3 — `invalidateByPrefix` 가 목록-상세 연관의 주춧돌
 
-목록을 `expenses_list_page_0` · `expenses_list_page_1` · ... 로 저장하면, 한 건 수정 후 **전체 페이지** 를 재조회해야. 개별 invalidate 로는 비용이 커서 prefix 기반 일괄 삭제가 필수. 프리픽스 명명 규칙만 지키면 강력.
+상세 데이터를 수정하면 여러 목록 페이지가 낡을 수 있어요. 관련 목록 키가 같은 접두사를 사용한다면 한 번에 지운 뒤 필요한 화면에서 다시 조회할 수 있어요. 어떤 목록까지 영향을 받는지는 앱이 정해야 해요.
 
-**교훈**: 캐시 키는 **도메인 계층 구조** (resource_list_... · resource_detail_...) 를 반영. 일관된 키 스킴이 무효화를 가능하게.
+캐시 키에는 자원 종류와 목록·상세 구분, 검색 조건처럼 응답을 바꾸는 값을 반영해요. 접두사로 지울 범위도 이 규칙과 함께 정해요.
 
 ## 관련 사례 (Prior Art)
 
 - [SWR (React)](https://swr.vercel.app/) — Stale-While-Revalidate 패턴의 대중화. 본 ADR 의 `staleWhileRevalidate` 이름 출처
 - [TanStack Query](https://tanstack.com/query/latest) — 정책 기반 캐싱 + 자동 무효화. 본 ADR 과 가장 가까운 개념
 - [Apollo Client Cache](https://www.apollographql.com/docs/react/caching/overview) — GraphQL 진영의 캐싱 전략
-- [Android Room + Repository Pattern](https://developer.android.com/topic/libraries/architecture/data-layer) — 캐시 + 네트워크 결합
+- [Android Room + Repository Pattern](https://developer.android.com/topic/architecture/data-layer) — 캐시 + 네트워크 결합
 - [HTTP Cache-Control RFC 7234](https://datatracker.ietf.org/doc/html/rfc7234) — HTTP 수준 캐싱 표준 (Option 1 의 근거)
 
 ## Code References
@@ -309,7 +323,7 @@ class ExpenseRepository {
 - [`lib/core/cache/cache_policy.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/cache/cache_policy.dart) — 5가지 enum
 - [`lib/core/cache/cache_store.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/cache/cache_store.dart) — 추상 인터페이스
 - [`lib/core/cache/memory_cache_store.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/cache/memory_cache_store.dart) — 기본 구현
-- [`lib/core/cache/cached_repository.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/cache/cached_repository.dart) — 149줄 정책 구현
+- [`lib/core/cache/cached_repository.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/cache/cached_repository.dart) — 다섯 정책과 무효화 구현
 
 **Provider 연결**
 - [`lib/common/providers.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/common/providers.dart) — `cacheStoreProvider` · `cachedRepositoryProvider`

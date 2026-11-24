@@ -1,6 +1,6 @@
 # Scripts
 
-이 문서는 루트의 `factory` 통합 dispatcher, `scripts/` 의 bash 도구, `tool/` 의 Dart 스크립트를 정리해요.
+`factory` 명령과 `scripts/`의 셸 도구, `tool/`의 Dart 검사 도구를 정리해요. 명령별 실행 시점, 입력과 결과물을 확인할 때 사용하는 문서예요. 초기 앱 설정은 Onboarding, 출시 순서는 배포 문서에서 이어서 확인하세요.
 
 ---
 
@@ -44,6 +44,8 @@ env-verb dispatch 방식이에요 — 첫 인자가 `local`/`dev`/`prod`/`all` �
 | `docs/sync-docs.sh` | docs/ → docs-template-flutter mirror | docs 변경 push 시 (CI) |
 
 ---
+
+<a id="factory--test-verb"></a>
 
 ## factory + test verb
 
@@ -272,7 +274,7 @@ Android 업로드 keystore 를 생성해요 (Play App Signing 에 등록할 키)
 동작:
 
 1. pending 폴더의 앱들을 **암호화 7z 아카이브** (`keystores-<타임스탬프>.7z`, 비밀번호 자동 생성 + 헤더 암호화) 로 묶어 `<backup-dir>` 에 생성해요
-2. 아카이브 비밀번호를 화면에 출력해요 — **업무 노트에 꼭 저장하세요** (분실 시 복구 불가)
+2. 아카이브 비밀번호를 화면에 출력해요 — **암호 관리 도구에 보관하세요** (분실 시 복구 불가)
 3. 저장 확인 (y) 후 pending 폴더를 비워요
 
 의존성: `7z` (`brew install p7zip`).
@@ -320,6 +322,8 @@ gh secret set SENTRY_PROJECT
 | 파일 | 용도 |
 |------|------|
 | `configure_app.dart` | `app_kits.yaml` 선언 · 의존 검증 (`main.dart` 는 읽지 않음 — 수동 대조) |
+
+<a id="configure_appdart"></a>
 
 ### configure_app.dart
 

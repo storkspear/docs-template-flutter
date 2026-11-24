@@ -1,3 +1,5 @@
+<a id="interceptor_chain"></a>
+
 # Interceptor_Chain
 
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `lib/kits/backend_api_kit/interceptors/` 하위 3개 파일 (`auth_interceptor.dart` · `error_interceptor.dart` · `logging_interceptor.dart`). `ApiClient` 생성자에서 이 순서로 설치.
@@ -6,12 +8,7 @@
 
 ## 결론부터
 
-메인 Dio 의 모든 HTTP 요청은 **AuthInterceptor → ErrorInterceptor → LoggingInterceptor** 의 3개 인터셉터를 거쳐요 (토큰 refresh 전용 `_refreshDio` 는 재진입 데드락을 피하려고 AuthInterceptor 없이 Error · Logging 2개만 — ADR-010). 각 인터셉터는 하나의 관심사만 담당:
-- **Auth**: 토큰 첨부 + 401 자동 refresh (ADR-010)
-- **Error**: `DioException` → `ApiException` 변환 (ADR-009 계약 기반)
-- **Logging**: 요청/응답 콘솔 출력 (dev 환경만 — 런타임 `isDev` 분기)
-
-순서가 고정돼 있고, 각 인터셉터는 **자기 관심사 외에는 개입하지 않음**. 추가 관심사 (예: tracing · rate limiting) 는 새 인터셉터로 넣되 이 3개의 순서는 불변.
+일반 API 요청에는 인증·오류 변환·개발 환경 로깅 인터셉터를 연결해요. 갱신 전용 Dio에는 인증 인터셉터를 붙이지 않아요. `ErrorInterceptor`가 `ApiException`을 담은 Dio 오류를 만들면 `ApiClient`가 이를 꺼내 호출자에게 전달해요. 로깅 여부는 `AppConfig.isDev`로 결정해요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -42,6 +39,8 @@ Logging 은 dev 환경만. Production 에 log 남기면 성능 · 프라이버�
 
 ## 고민했던 대안들
 
+<a id="option-1--단일-interceptor-대형-클래스"></a>
+
 ### Option 1 — 단일 Interceptor 대형 클래스
 
 `HttpInterceptor.onRequest()` 가 토큰 첨부 + 로깅 + tracing 을 한 번에 처리.
@@ -52,6 +51,8 @@ Logging 은 dev 환경만. Production 에 log 남기면 성능 · 프라이버�
 - **단점 3**: `if (isDebug) log(...)` 분기가 여기저기. Debug/Release 분리 안 됨.
 - **탈락 이유**: 압력 A 정면 위반.
 
+<a id="option-2--인터셉터-체인--aop-수준-추상화"></a>
+
 ### Option 2 — 인터셉터 체인 + AOP 수준 추상화
 
 Spring AOP 처럼 `@Around` · `@Before` 어노테이션으로 선언.
@@ -61,6 +62,8 @@ Spring AOP 처럼 `@Around` · `@Before` 어노테이션으로 선언.
 - **단점 2**: 코드 생성 + reflection 의 cold start 비용.
 - **단점 3**: Dio 의 기본 interceptor API 와 호환 안 됨 → 자체 프레임워크 구축 필요.
 - **탈락 이유**: 엔터프라이즈 JVM 관용을 Flutter 에 끌어옴. 과잉.
+
+<a id="option-3--dio-의-interceptorswrapper--3개-클래스--채택"></a>
 
 ### Option 3 — Dio 의 InterceptorsWrapper + 3개 클래스 ★ (채택)
 
@@ -109,6 +112,8 @@ class ApiClient {
 
 ### 3개 인터셉터의 역할
 
+<a id="1-authinterceptor--토큰-관리-adr-010-상세"></a>
+
 #### 1. AuthInterceptor — 토큰 관리 (ADR-010 상세)
 
 ```dart
@@ -131,6 +136,8 @@ class AuthInterceptor extends QueuedInterceptor {
 
 **책임**: Authorization 헤더 첨부 · 401 자동 처리.  
 **관심 없는 것**: 에러 변환 · 로깅.
+
+<a id="2-errorinterceptor--dioexception--apiexception-변환"></a>
 
 #### 2. ErrorInterceptor — DioException → ApiException 변환
 
@@ -180,6 +187,8 @@ class ErrorInterceptor extends Interceptor {
 
 **책임**: `DioException` 을 `ApiException` 으로 변환 (ADR-009 의 계약). 서버 ApiError 포맷 파싱, 네트워크 에러 유형별 매핑.  
 **관심 없는 것**: 재시도 · 토큰 · 로깅.
+
+<a id="3-logginginterceptor--debug-빌드-로깅"></a>
 
 #### 3. LoggingInterceptor — debug 빌드 로깅
 
@@ -272,44 +281,38 @@ Dio 의 onError 체인은 설치 순이라 `Auth → Error → Logging`. Auth �
 
 ### 긍정적 결과
 
-- **파일 당 < 100줄**: auth 89줄, error 49줄, logging 44줄. 각 파일 한눈에.
-- **단일 책임**: 각 인터셉터는 자기 관심사만. 테스트도 개별 가능.
-- **추가 관심사 확장 용이**: Tracing 추가 시 `TracingInterceptor` 새 파일, ApiClient 생성자에 설치만 추가.
-- **ApiException 일관성**: 모든 에러가 `ErrorInterceptor` 를 거쳐 `ApiException` 으로 표준화. ViewModel 은 Dio 특이성 모름.
+인증, 오류 변환, 로깅 책임을 나누어 각각 테스트할 수 있어요. 설치 순서는 ApiClient 에서 확인해요. 새 인터셉터를 추가할 때는 기존 순서와 오류 전달 방식을 함께 검증해야 해요. 모든 예외가 자동으로 ApiException 으로 바뀐다고 일반화하지 않아요.
 
 ### 부정적 결과
 
-- **Dio 실행 순서 학습 비용**: OkHttp · Axios 의 "응답은 역순" 관행에 익숙하면 Dio 의 "세 체인 모두 설치 순" 이 처음 혼란. 위 다이어그램 필요.
-- **Error 와 호출자의 암묵적 협력**: Error 가 `ApiException` 을 `DioException.error` 에 담아 전파하는 관행. 누가 이 관행을 깨면 (예: ApiException 을 그대로 throw) `ApiClient` 의 `e.error is ApiException` 언랩과 Logging 의 에러 로깅이 깨짐.
-- **LoggingInterceptor 출력 포맷 통일 필요**: 각 로그 라인이 `[HTTP] ...` 로 시작하도록 수동 관리. 일관성 유지 피로.
-- **테스트 설정 복잡**: 통합 테스트에서 3개 인터셉터 모두 설치한 ApiClient 를 구성. 초기 설정 줄이 길어짐.
+Dio 의 handler 호출과 설치 순서를 이해해야 해요. ErrorInterceptor 는 ApiException 을 DioException.error 에 넣고 ApiClient 가 이를 꺼내므로 두 코드의 계약을 함께 유지해야 해요. 로그 형식과 여러 인터셉터를 조립한 테스트도 별도로 확인해야 해요.
 
 ## 교훈
 
-### 교훈 1 — 순서가 의미인 체인은 **명시적 파일 상수** 로
+<a id="교훈-1-순서가-의미인-체인은-명시적-파일-상수-로"></a>
+<a id="교훈-1--순서가-의미인-체인은-명시적-파일-상수-로"></a>
 
-`ApiClient._buildInterceptors()` 함수로 뽑아내지 않고 **생성자 body 에 직접** 3줄 나열. 이 순서가 **코드의 한 장소에만** 있고, 누구나 보면 이해 가능. 순서를 함수로 감추면 "어디서 실행 순서가 정해지지?" 가 탐색 비용.
+### 교훈 1 — 설치 순서를 조립 코드에 드러내요
 
-**교훈**: 순서가 의미인 리스트는 **간접 추상화 없이 직접 노출**. 5줄 짜리 상수가 10줄 짜리 helper 보다 명확.
+현재 ApiClient 의 조립 코드에 설치 순서를 직접 드러내요. 순서가 동작을 바꾸므로 기능을 추가할 때 배열과 관련 테스트를 함께 확인해요.
+
+<a id="교훈-2--환경-기반-분기--설치-분기-vs-내부-분기-모두-합리적"></a>
 
 ### 교훈 2 — 환경 기반 분기 — 설치 분기 vs 내부 분기 모두 합리적
 
-처음엔 `kDebugMode` 로 설치 자체를 분기 (`if (kDebugMode) interceptors.add(LoggingInterceptor())`) 하는 안을 검토했어요. 이러면 release 빌드에 LoggingInterceptor 인스턴스 자체가 없어 메모리 · CPU 오버헤드가 0이 되는 장점이 있어요. 단 `kDebugMode` 는 debug/release 이분법이라 staging 처럼 **중간 환경에서 로깅을 켜고 싶을 때 유연성** 이 떨어져요.
+LoggingInterceptor 는 설치된 뒤 `AppConfig.instance.isDev` 를 확인해요. 현재 조건에서는 dev 만 로그를 내고 staging·prod 는 건너뛰어요. 이는 kDebugMode 로 설치 여부를 나누는 방식과 다르며, release 빌드 여부 하나로 동작을 설명하지 않아요.
 
-지금은 **인터셉터를 항상 설치하고 내부에서 `AppConfig.instance.isDev` 분기**. dev / staging / prod 3환경을 구분 가능하고, 인스턴스 메모리 · 호출 오버헤드는 실측 <1ms 로 무시 가능. release 에서도 LoggingInterceptor 가 존재하지만 if 가드로 빠르게 통과해요.
+<a id="교훈-3-dioexception-의-error-필드-활용이-정석"></a>
+<a id="교훈-3--dioexception-의-error-필드-활용이-정석"></a>
 
-**교훈**: 환경 기반 분기에는 두 길이 있어요. (1) `kDebugMode` 같은 const 로 **설치 자체** 를 분기 — release tree-shaking 효과 최대, 단 환경 구분이 이분법. (2) 런타임 환경 변수로 **내부** 분기 — 환경 세분화 가능, 단 release 에도 인스턴스 존재. **요구사항에 따라 선택**. 본 템플릿은 dev/staging/prod 3환경 구분을 우선해 (2) 를 채택했어요.
+### 교훈 3 — 인터셉터와 ApiClient의 오류 계약을 맞춰요
 
-### 교훈 3 — "DioException 의 error 필드" 활용이 정석
-
-`ErrorInterceptor` 가 새 `ApiException` 을 만들되 `DioException` 으로 감싸서 전파. 이렇게 해야 Dio 가 **자기 타입만 다음 인터셉터에 넘겨** 주면서도, ViewModel 은 `DioException.error` 를 꺼내 `ApiException` 으로 사용. Dio 의 설계 의도를 정확히 따른 패턴.
-
-**교훈**: 프레임워크 체인 타입 (DioException, Exception 등) 을 **대체** 하지 말고 **감싸기**. 프레임워크가 기대하는 타입을 유지하면 다른 인터셉터 · 훅들이 정상 동작.
+ErrorInterceptor 는 Dio 의 체인에서 기대하는 DioException 을 유지하고 `error` 에 ApiException 을 담아요. ApiClient 가 이를 꺼내므로 화면의 호출부는 정해진 오류 계약을 사용할 수 있어요. 예외를 새 방식으로 전달할 때는 다음 인터셉터와 언랩 코드도 함께 확인해요.
 
 ## 관련 사례 (Prior Art)
 
 - [Dio Interceptors 공식 문서](https://pub.dev/documentation/dio/latest/dio/Interceptor-class.html)
-- [OkHttp Interceptor 체인](https://square.github.io/okhttp/interceptors/) — Kotlin/Java 의 동일 패턴
+- [OkHttp Interceptor 체인](https://lysine.dev/okhttp/features/interceptors/) — Kotlin/Java 의 동일 패턴
 - [Axios Interceptors](https://axios-http.com/docs/interceptors) — JavaScript 의 동일 개념
 - [Node.js Express middleware chain](https://expressjs.com/en/guide/using-middleware.html) — 서버 측 미들웨어 체인 원리
 - [Spring WebClient ExchangeFilterFunction](https://docs.spring.io/spring-framework/reference/web/webflux-webclient/client-filter.html) — JVM 쪽의 동일 개념

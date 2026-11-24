@@ -1,6 +1,6 @@
 # Coding Conventions
 
-이 디렉토리는 `template-flutter` 과 이를 기반으로 생성된 모든 파생 레포의 **코딩 규약** 을 담아요. 규약은 취향이 아니라 **일관성을 위한 계약** 이에요. 혼자 작업해도 6개월 뒤의 나 자신이 과거 코드를 이해해야 하고, 파생 레포가 여러 개 생겼을 때 코드 스타일이 비슷해야 cherry-pick 전파가 매끄럽게 돼요.
+이 디렉터리는 템플릿과 파생 앱이 함께 따르는 코딩 규약을 정리해요. 이름, 상태 관리, 오류 처리, UI 패턴을 일관되게 유지하면 코드를 다시 읽거나 공통 개선을 가져올 때 변경 의도를 파악하기 쉬워요. 각 규칙의 적용 범위와 예외도 함께 설명해요.
 
 > **ADR 과의 관계**: 컨벤션 문서는 **실행 규칙** (어떻게 쓸 것인가) 이고, ADR 은 **설계 결정의 근거** (왜 이렇게?) 예요. 각 컨벤션의 "왜?" 는 해당 ADR 에 링크되어 있어요.
 
@@ -10,9 +10,9 @@
 
 | 파일 | 내용 | 관련 ADR |
 |------|------|----------|
-| [`architecture.md`](./architecture.md) | MVVM 3계층 · 모듈 의존 방향 · 새 화면 step-by-step | [`ADR-002`](../philosophy/adr-002-layered-modules.md) · [`ADR-005`](../philosophy/adr-005-riverpod-mvvm.md) |
+| [`architecture.md`](viewmodel-mvvm.md) | MVVM 3계층 · 모듈 의존 방향 · 새 화면 step-by-step | [`ADR-002`](../philosophy/adr-002-layered-modules.md) · [`ADR-005`](../philosophy/adr-005-riverpod-mvvm.md) |
 | [`kits.md`](./kits.md) | FeatureKit 작성 · 동기화 3종 · 의존 규칙 · 제거 | [`ADR-003`](../philosophy/adr-003-featurekit-registry.md) · [`ADR-004`](../philosophy/adr-004-manual-sync-ci-audit.md) |
-| [`api-contract.md`](./api-contract.md) | 백엔드 1:1 계약 한눈 요약 (response · error · auth · search) | [`ADR-009`](../philosophy/adr-009-backend-contract.md) · [`ADR-012`](../philosophy/adr-012-per-app-user.md) |
+| [`api-contract.md`](../api-contract/README.md) | 백엔드 1:1 계약 한눈 요약 (response · error · auth · search) | [`ADR-009`](../philosophy/adr-009-backend-contract.md) · [`ADR-012`](../philosophy/adr-012-per-app-user.md) |
 | [`naming.md`](./naming.md) | 파일 · 클래스 · 변수 · Provider · i18n 키 네이밍 | - |
 | [`viewmodel-mvvm.md`](./viewmodel-mvvm.md) | `Notifier + ConsumerWidget` 패턴 | [`ADR-005`](../philosophy/adr-005-riverpod-mvvm.md) |
 | [`error-handling.md`](./error-handling.md) | `ApiException` · `safeErrorCode` · 인터셉터 흐름 | [`ADR-009`](../philosophy/adr-009-backend-contract.md) · [`ADR-010`](../philosophy/adr-010-queued-interceptor.md) · [`ADR-011`](../philosophy/adr-011-interceptor-chain.md) |

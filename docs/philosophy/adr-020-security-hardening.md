@@ -1,10 +1,12 @@
+<a id="security_hardening"></a>
+
 # Security_Hardening
 
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 Android R8 난독화 (`android/app/build.gradle.kts` · `proguard-rules.pro`) + Dart `--obfuscate --split-debug-info` + Sentry 심볼 업로드 + iOS Keychain `first_unlock_this_device` + SSL pinning opt-in (`lib/kits/backend_api_kit/ssl_pinning.dart`).
 
 ## 결론부터
 
-**보안은 5중 방어선** — Android R8 난독화 · Dart 심볼 난독화 · Cleartext HTTP 차단 · SSL pinning (opt-in) · iOS Keychain / Android KeyStore. 각각 공격 유형이 달라서 한 층이 뚫려도 나머지가 막아요. 추가 비용은 CI 설정 약간 + Sentry 심볼 업로드 · 핀 관리. 인디 앱이 과도하게 엔터프라이즈 보안을 흉내 내는 건 피하되, **기본선은 지켜요**.
+R8과 Dart 심볼 난독화, 플랫폼 네트워크 설정, 보안 저장소, 선택적 인증서 핀 검증으로 위험을 줄여요. 각 장치는 보호 범위와 한계가 달라요. Dart 난독화는 문자열이나 앱에 포함한 비밀을 숨기지 않고, 보안 저장소도 탈옥·루팅 환경에서의 안전을 보장하지 않아요. 실제 릴리스 경로의 빌드 플래그와 심볼 보관·업로드 여부를 함께 확인해요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -36,6 +38,8 @@ SSL pinning 은 인증서 갱신 시 앱 업데이트 필요. 핀 1개만 쓰면
 
 ## 고민했던 대안들
 
+<a id="option-1--보안-장치-없음-plain-빌드"></a>
+
 ### Option 1 — 보안 장치 없음 (plain 빌드)
 
 난독화 · 핀닝 · 암호화 저장 전부 생략.
@@ -46,6 +50,8 @@ SSL pinning 은 인증서 갱신 시 앱 업데이트 필요. 핀 1개만 쓰면
 - **단점 3**: 스토어 리뷰에서 **"기본 보안 없음"** 으로 반려될 수 있음.
 - **탈락 이유**: 압력 A 의 "기본선" 위반.
 
+<a id="option-2--엔터프라이즈-수준"></a>
+
 ### Option 2 — 엔터프라이즈 수준
 
 RASP (Runtime Application Self-Protection) · 디버거 감지 · root/jailbreak 감지 · 화이트박스 암호화 · certificate transparency 검증.
@@ -55,6 +61,8 @@ RASP (Runtime Application Self-Protection) · 디버거 감지 · root/jailbreak
 - **단점 2**: false positive 많음 — 루팅 탐지로 정상 사용자 차단.
 - **단점 3**: 인디 앱에 과한 수준. 공격 동기 · 규모가 엔터프라이즈와 다름.
 - **탈락 이유**: 과투자.
+
+<a id="option-3--5중-방어선-기본선--opt-in--채택"></a>
 
 ### Option 3 — 5중 방어선 (기본선 + opt-in) ★ (채택)
 
@@ -72,6 +80,8 @@ RASP (Runtime Application Self-Protection) · 디버거 감지 · root/jailbreak
 - **압력 D 만족**: SSL pinning 은 인증서 관리 가능한 팀만 활성화.
 
 ## 결정
+
+<a id="방어선-1--android-r8-난독화"></a>
 
 ### 방어선 1 — Android R8 난독화
 
@@ -106,6 +116,8 @@ buildTypes {
 
 효과: Java/Kotlin 클래스명 · 메서드명을 `a.b.c()` 로 난독화. 리버스 엔지니어링 비용 대폭 증가.
 
+<a id="방어선-2--dart-심볼-난독화--sentry-업로드"></a>
+
 ### 방어선 2 — Dart 심볼 난독화 + Sentry 업로드
 
 난독화 빌드와 심볼 업로드는 fastlane lane 으로 구현돼 있고, `.github/workflows/release-android.yml` 이 이 lane 들을 호출해요.
@@ -136,6 +148,8 @@ end
 - Dart 클래스 / 메서드 이름이 **최종 바이너리에서 제거**. `strings app.so | grep` 으로 API 엔드포인트 · 비밀 추출 어려움.
 - Sentry 에 **debug symbols** 업로드 → 크래시 발생 시 Sentry 가 원본 심볼로 스택 복원. 개발자는 평소처럼 읽을 수 있는 stack trace 확인.
 
+<a id="방어선-3--cleartext-http-차단"></a>
+
 ### 방어선 3 — Cleartext HTTP 차단
 
 ```xml
@@ -158,6 +172,8 @@ end
 
 iOS 는 ATS (App Transport Security) 가 기본 HTTPS 강제.
 
+<a id="방어선-4--ios-keychain--android-keystore-adr-013-상세"></a>
+
 ### 방어선 4 — iOS Keychain / Android KeyStore (ADR-013 상세)
 
 ```dart
@@ -176,6 +192,8 @@ static const _storage = FlutterSecureStorage(
 Android 쪽에 `aOptions` 가 없는 건 **의도** 예요. Android 구현은 기본이 KeyStore 기반 cipher 라 고를 옵션이 없고, 예전에 쓰이던 `AndroidOptions(encryptedSharedPreferences: true)` 는 Jetpack Security 의 deprecate 와 함께 deprecated 돼서 (v11 제거 예정) 지금은 지정해도 무시돼요.
 
 상세는 [`ADR-013`](./adr-013-token-atomic-storage.md) 참조.
+
+<a id="방어선-5--ssl-pinning-opt-in"></a>
 
 ### 방어선 5 — SSL Pinning (opt-in)
 
@@ -213,6 +231,8 @@ flutter build appbundle \
 ```
 
 pinning 은 **opt-in**. 기본은 플랫폼 TLS 검증만. 이유: 핀 관리 부담 (인증서 갱신 시 핀도 갱신).
+
+<a id="심볼-업로드--난독화된-스택-복원"></a>
 
 ### 심볼 업로드 · 난독화된 스택 복원
 
@@ -257,39 +277,32 @@ Android keystore · Play store JSON key · Apple p12 등은 `.gitignore` + GitHu
 
 ### 긍정적 결과
 
-- **기본 공격 차단**: `strings app.so` 로 API 엔드포인트 · 비밀 추출 어려움.
-- **MITM 방어 (opt-in)**: SSL pinning 활성화 시 공용 Wi-Fi 에서도 안전.
-- **토큰 하드웨어 보호**: iOS Keychain · Android KeyStore 로 탈옥/루팅 방어.
-- **크래시 여전히 디버깅 가능**: Sentry 심볼 업로드 덕분에 난독화해도 원본 스택 확인.
-- **release 실수 방지**: Cleartext 차단이 `http://` 실수 배포 원천 차단.
+R8 과 Dart 난독화는 코드와 심볼을 읽기 어렵게 만들지만 문자열·자격증명의 비밀성을 보장하지 않아요. 인증서 핀닝은 현재 구현과 설정 범위 안에서 추가 검사를 하고, OS 보안 저장소는 토큰 보관에 사용해요. 루팅·탈옥이나 모든 네트워크 공격을 차단한다고 표현하지 않아요. 난독화 빌드의 스택을 읽으려면 대응하는 심볼이 필요해요.
 
 ### 부정적 결과
 
-- **빌드 시간 증가**: R8 + `--obfuscate` 로 빌드 시간 ~50% 증가. CI 캐싱으로 완화.
-- **심볼 업로드 인프라 필요**: Sentry 프로젝트 + auth token 설정. 처음 1회 셋업.
-- **SSL 핀 관리 피로**: pinning 쓸 경우 인증서 갱신 시 앱 업데이트 + 핀 동기화.
-- **proguard-rules 의 keep 실수**: 플러그인마다 필요한 keep 규칙 놓치면 런타임 NullPointer. 테스트 필수.
-- **보안 Null 인 기분**: "이거로 충분?" 의 의심. 완벽한 보안은 불가능이니 "상식적 수준" 이 목표라고 받아들여야.
+난독화와 플러그인 keep 규칙은 실제 release 빌드에서 검증해야 해요. Sentry 심볼 업로드를 사용하면 프로젝트와 인증 토큰 설정이 필요해요. 핀닝은 인증서 교체와 백업 핀 운영을 함께 준비해야 하며, 빌드 시간 증가를 측정 없이 고정 비율로 설명하지 않아요. 보호할 데이터와 실제 위협에 맞춰 추가 대책을 검토해요.
 
 ## 교훈
 
-### 교훈 1 — 난독화는 **심볼 업로드 없이** 는 시간 낭비
+<a id="교훈-1-난독화는-심볼-업로드-없이-는-시간-낭비"></a>
+<a id="교훈-1--난독화는-심볼-업로드-없이-는-시간-낭비"></a>
 
-초기엔 `--obfuscate` 만 하고 symbols 업로드를 안 했어요. 프로덕션 크래시 보니 **`a.b.c at x.dart:1`** — 전혀 디버깅 불가. 심볼 업로드 추가 후 정상화.
+### 교훈 1 — 난독화한 빌드의 심볼을 보관해요
 
-**교훈**: 난독화와 **심볼 관리는 동등한 중요도**. 난독화만 하고 심볼 놓치면 디버깅 포기. 반드시 **CI 파이프라인에 함께**.
+난독화된 오류를 분석하려면 해당 앱 버전과 빌드에 대응하는 심볼을 보관하고 업로드해요. 심볼이 없으면 원래 함수명과 위치를 복원하기 어려워져요. 현재 릴리스 흐름에서는 심볼 업로드 조건과 실패 여부도 확인해요.
+
+<a id="교훈-2--ssl-pinning-은-무조건-좋음-이-아님"></a>
 
 ### 교훈 2 — SSL pinning 은 "무조건 좋음" 이 아님
 
-처음엔 "보안 강화" 라며 모든 프로덕션 빌드에 pinning 켰어요. Let's Encrypt 인증서 만료 · 자동 갱신 시점에 **핀 불일치로 앱 전체 먹통**. 핀 관리 프로세스 없이 도입하면 자기 사이트 위조 공격을 하게 됨.
+핀을 설정하면 서버 인증서 교체가 앱 연결에 영향을 줄 수 있어요. 도입 전에 현재 검증 방식, 백업 핀, 인증서 교체, 앱 업데이트 절차를 확인해요.
 
-**교훈**: pinning 은 **인증서 관리 인프라가 있을 때만**. 백업 핀 · 갱신 프로세스 준비 없으면 안 쓰는 게 안전.
+<a id="교훈-3--보안은-정도-의-결정"></a>
 
 ### 교훈 3 — 보안은 "정도" 의 결정
 
-"해커 수준 방어 가능?" 같은 절대 기준보단 **"일반 공격 도구 (jadx · Frida 기본값) 로 5분 안에 안 뚫림?"** 이 현실적. 인디 앱에 대한 공격 비용이 높아지면 공격자는 다른 타깃.
-
-**교훈**: 보안은 **"비용 대비 가치"** 의 선. 인디 앱 타깃의 공격 비용 · 동기를 감안한 수준이 답. 과도하면 자기 비용 > 보호 가치.
+보안 대책은 보호할 정보와 공격 경로를 기준으로 정해요. 특정 도구로 몇 분 안에 분석되지 않는다는 기준이나 공격자가 다른 앱으로 옮겨 간다는 가정을 보장으로 삼지 않아요. 현재 제공되는 방어와 별도로 확인해야 할 범위를 분명히 해요.
 
 ## 관련 사례 (Prior Art)
 

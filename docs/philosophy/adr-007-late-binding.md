@@ -1,10 +1,12 @@
+<a id="late_binding"></a>
+
 # Late_Binding
 
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `lib/common/providers.dart` 의 `apiClientProvider` ↔ `authServiceProvider` 쌍에 적용. `onTokenRefresh` 콜백 주입 방식.
 
 ## 결론부터
 
-`ApiClient` 는 토큰 refresh 시 `AuthService` 를 호출해야 하고, `AuthService` 는 API 호출에 `ApiClient` 를 써요. 고전적 **순환 의존** 이에요. 이걸 **생성자 주입 대신 `ref.read` 콜백 (late binding)** 으로 풀어요. `ApiClient` 는 "토큰이 만료되면 이 콜백을 호출" 만 알고, 콜백이 실제로 누구인지는 실행 시점에 Riverpod container 에서 해석돼요.
+서로 참조하는 인증 서비스와 API 클라이언트는 필요한 시점에 서비스를 읽는 콜백으로 연결해요. 객체를 만드는 시점과 콜백을 실행하는 시점을 분리해 초기화 중 순환 참조를 피하는 방식이에요. 콜백도 생성자를 통해 주입하며, 갱신 요청용 Dio를 따로 두는 것은 인터셉터 재진입을 피하기 위한 별도 장치예요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -50,6 +52,8 @@ refresh 는 앱 실행 중 **특정 순간에만** 필요. ApiClient 가 **평�
 
 ## 고민했던 대안들
 
+<a id="option-1--service-locator-전역-접근"></a>
+
 ### Option 1 — Service Locator 전역 접근
 
 `get_it` 같은 전역 로케이터로 `ApiClient` 내부에서 `GetIt.I<AuthService>()` 호출.
@@ -60,6 +64,8 @@ refresh 는 앱 실행 중 **특정 순간에만** 필요. ApiClient 가 **평�
 - **단점 3**: "이 클래스가 뭘 쓰는지" 가 생성자에 안 나타나 가시성 저하.
 - **탈락 이유**: 압력 A (명시성) 위반. Riverpod 을 이미 쓰는데 별도 로케이터 도입은 중복.
 
+<a id="option-2--apiclient-를-두-번-만들기"></a>
+
 ### Option 2 — ApiClient 를 두 번 만들기
 
 `AuthService` 전용 `ApiClient` (refresh 없음) + 일반 `ApiClient` (refresh 가능) 분리.
@@ -69,6 +75,8 @@ refresh 는 앱 실행 중 **특정 순간에만** 필요. ApiClient 가 **평�
 - **단점 2**: `/auth/refresh` 요청은 일반 ApiClient 로, 다른 요청은 refresh 가능 ApiClient 로? 경계가 애매.
 - **단점 3**: Dio 인터셉터가 두 곳에 중복 구현. DRY 위반.
 - **탈락 이유**: 비용이 너무 큼. 실제로 공통 자원을 쪼개면 동기화 버그 위험.
+
+<a id="option-3--콜백-주입-late-binding--채택"></a>
 
 ### Option 3 — 콜백 주입 (Late Binding) ★ (채택)
 
@@ -194,44 +202,45 @@ class ApiClient {
 
 ### 긍정적 결과
 
-- **순환 제거**: Riverpod `CircularDependencyException` 없음. 의존 그래프가 DAG.
-- **테스트 용이**: `ApiClient` 단위 테스트에서 `onTokenRefresh: () async => true` 주입. AuthService mock 불필요.
-- **인터셉터 단일화**: `AuthInterceptor` 하나가 모든 요청 담당. 두 개의 ApiClient 로 나눌 필요 없음.
-- **Provider 생성 순서 자유**: `apiClientProvider` · `authServiceProvider` 어느 쪽을 먼저 read 해도 정상.
-- **리팩터 범위 작음**: AuthService 의 refresh 시그니처가 바뀌어도 콜백 람다 한 줄만 수정.
+- ApiClient 생성 시점에 AuthService 를 읽지 않아 생성 과정의 순환을 피할 수 있어요.
+- ApiClient 테스트에 갱신 콜백을 직접 넣을 수 있어요.
+- API 호출을 제공하는 ApiClient 는 하나로 유지하면서 내부에는 일반 요청용과 갱신·재시도용 Dio 를 나눠요.
+- 현재 조립은 어느 Provider 를 먼저 읽어도 필요한 의존성을 생성할 수 있어요.
+- AuthService 의 연결 방식이 바뀌면 조립부의 콜백과 관련 테스트를 확인해요.
 
 ### 부정적 결과
 
-- **"왜 콜백?" 의 학습 비용**: 처음 코드 보는 사람이 `onTokenRefresh: () => ref.read(...)` 를 보면 "왜 이렇게?" 의문. README · 본 ADR 필요.
-- **Null safety 약간 약화**: 콜백이 호출된 시점에 `authServiceProvider` 가 정말 초기화돼 있는지는 **런타임에 확인**. 이론상 early boot 에 401 이 나오면 문제 가능 (실제론 인증 안 된 상태라 401 는 정상 흐름).
-- **디버깅 시 콜 스택 간접**: 에러 발생 시 "ApiClient → onTokenRefresh 콜백 → authServiceProvider → AuthService.refreshToken" 으로 레이어가 많아 스택 추적 복잡.
+- 콜백을 통해 연결하는 이유와 호출 시점을 설명해야 해요.
+- 콜백을 실행하는 시점의 Provider 수명과 예외는 런타임에 다뤄야 해요. 이는 Dart null safety 가 약해지는 문제와는 달라요.
+- 오류를 추적할 때 ApiClient, 콜백, AuthService 의 호출 경로를 함께 봐야 해요.
 
 ## 교훈
 
-### 교훈 1 — 순환 의존은 "시점 분리" 로 푸는 게 제일 깔끔
+<a id="교훈-1-순환-의존은-시점-분리-로-푸는-게-제일-깔끔"></a>
+<a id="교훈-1--순환-의존은-시점-분리-로-푸는-게-제일-깔끔"></a>
 
-두 서비스가 서로 필요하지만 **필요한 시점이 다름** — `AuthService` 는 생성 즉시 `ApiClient` 필요, `ApiClient` 는 **401 수신 시점에만** `AuthService` 필요. 이 시점 차이를 콜백으로 변환하면 순환이 사라져요.
+### 교훈 1 — 생성 시점과 호출 시점의 의존성을 나눠요
 
-**교훈**: "순환" 은 보통 **"늘 필요함" 이라는 가정의 오류**. 실제로 필요한 시점을 분석하면 대부분 한쪽이 지연 연결이 가능해요.
+AuthService 는 생성할 때 ApiClient 가 필요하지만, ApiClient 는 갱신이 필요한 시점에만 인증 기능을 호출해요. 이 차이를 콜백으로 표현해 생성 순환을 피했어요. 모든 순환 의존을 같은 방법으로 풀 수 있다는 일반 규칙은 아니에요.
+
+<a id="교훈-2--riverpod-watch-vs-read-구분이-핵심"></a>
 
 ### 교훈 2 — Riverpod `watch` vs `read` 구분이 핵심
 
-처음엔 `ref.watch(authServiceProvider).refreshToken()` 으로 했어요. 그러면 **watch 로 순환이 재발** 했어요. `ref.read` 는 일회성 조회라 의존 그래프에 안 들어감 — 이 차이를 정확히 이해하는 게 중요.
+Provider 생성 중 `watch` 하는 의존성과, 나중에 실행하는 콜백 안에서 `read` 하는 조회는 시점과 구독 관계가 달라요. 현재 코드는 갱신 콜백 안에서 AuthService 를 읽어요. 단순히 watch 를 read 로 치환하면 모든 순환이 해결된다고 이해하지 않아요.
 
-**교훈**: Riverpod 의 `watch` 는 "이 provider 에 의존함" 선언이에요. 실제 값만 필요하고 의존 선언이 싫으면 `read` 를 써요. 둘의 차이가 Late Binding 을 가능하게 함.
+<a id="교훈-3--콜백-시그니처는-좁을수록-좋다"></a>
 
 ### 교훈 3 — 콜백 시그니처는 좁을수록 좋다
 
-`onTokenRefresh: Future<bool> Function()` 이 이상적. 만약 `onTokenRefresh: Future<void> Function(ApiClient originalClient, RequestOptions options)` 처럼 파라미터가 많아지면 **콜백이 결국 AuthService 의 얇은 포장** 이 돼서 분리 의미가 퇴색.
-
-**교훈**: Late binding 의 이득은 **"콜백 인터페이스가 원 서비스보다 훨씬 좁다"** 때 커요. 시그니처를 꼭 필요한 것만으로 좁히세요.
+인터셉터가 필요한 것은 갱신 시도와 성공 여부예요. 그래서 `Future<bool> Function()` 으로 연결해요. 새로운 정보가 필요해지면 계약을 검토하되, 호출부가 쓰지 않는 서비스 내부 상태까지 전달하지 않아요.
 
 ## 관련 사례 (Prior Art)
 
-- [Riverpod `watch` vs `read` 공식 문서](https://riverpod.dev/docs/concepts/reading) — 본 ADR 의 기반 개념
+- [Riverpod `watch` vs `read` 공식 문서](https://riverpod.dev/docs/concepts2/refs) — 본 ADR 의 기반 개념
 - [Dart `late` keyword](https://dart.dev/null-safety/understanding-null-safety#late-variables) — 언어 레벨의 지연 초기화
 - [Hollywood Principle ("Don't call us, we'll call you")](https://en.wikipedia.org/wiki/Inversion_of_control) — 콜백 주입의 추상 원리
-- [Retrofit / OkHttp Authenticator 패턴](https://square.github.io/okhttp/3.x/okhttp/okhttp3/Authenticator.html) — 401 시 refresh 를 담당하는 authenticator 인터페이스. 본 ADR 의 `onTokenRefresh` 와 구조적 동치
+- [Retrofit / OkHttp Authenticator 패턴](https://lysine.dev/okhttp/5.x/okhttp/okhttp3/-authenticator/) — 401 시 refresh 를 담당하는 authenticator 인터페이스. 본 ADR 의 `onTokenRefresh` 와 구조적 동치
 - [Spring `@Lazy` annotation](https://docs.spring.io/spring-framework/reference/core/beans/dependencies/factory-collaborators.html#beans-factory-lazy-dependencies) — 순환 의존을 지연 주입으로 푸는 Spring 패턴
 
 ## Code References

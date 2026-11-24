@@ -1,181 +1,92 @@
 # Security
 
-이 문서는 **5중 방어선** — Android R8 난독화 · Dart 심볼 난독화 · Cleartext 차단 · Keychain 정책 · SSL pinning (opt-in) — 을 다뤄요. 근거는 [`ADR-020`](../philosophy/adr-020-security-hardening.md) 에 있어요.
-
----
+앱의 난독화, 네트워크 설정, 토큰 저장과 선택적 인증서 핀 검증을 설명해요. 각 장치는 특정 위험을 줄이지만 다른 장치를 대신하거나 모든 공격을 막지는 않아요. 설계 배경은 [ADR-020](../philosophy/adr-020-security-hardening.md)에 있어요.
 
 ## 방어선 요약
 
-| 방어선 | 기본 활성 | 공격 유형 차단 |
-|--------|----------|---------------|
-| Android R8 난독화 | ✅ release | 리버스 엔지니어링 |
-| Dart 심볼 난독화 + Sentry | ✅ release | 문자열 추출 |
-| Cleartext HTTP 차단 | ✅ release | 평문 통신 실수 |
-| Keychain / EncryptedSharedPreferences | ✅ | 탈옥/루팅 시 토큰 탈취 |
-| SSL pinning | ⬜ opt-in | MITM |
+| 장치 | 현재 적용 조건 | 보호 범위와 한계 |
+|---|---|---|
+| Android R8 | Gradle release 설정 | Java/Kotlin 코드 분석 비용을 높여요. keep 규칙에 따라 이름이 남을 수 있어요. |
+| Dart 심볼 난독화 | `--obfuscate` 빌드 | 심볼 이름을 바꿔요. 문자열이나 앱에 넣은 비밀을 숨기지 않아요. |
+| 플랫폼 네트워크 설정 | Android 설정과 iOS ATS | 플랫폼 통신 정책을 설정해요. 사용하는 네트워크 구현의 실제 동작을 기기에서 확인해요. |
+| SecureStorage | 토큰 저장 시 | iOS Keychain과 Android KeyStore 기반 저장을 사용해요. 침해된 기기에서 안전을 보장하지 않아요. |
+| SSL pinning | `SSL_PINS`를 빌드에 전달할 때 | 일반 TLS 검증을 통과한 leaf 인증서의 DER 해시를 추가 검사해요. 인증서 갱신 운영이 필요해요. |
 
----
+<a id="설정-androidappbuildgradlekts"></a>
+
+<a id="androidappproguard-rulespro"></a>
+
+<a id="검증"></a>
 
 ## 1. Android R8 난독화
 
-### 설정 (`android/app/build.gradle.kts`)
+`android/app/build.gradle.kts`의 release는 `isMinifyEnabled`와 `isShrinkResources`를 켜요. `proguard-rules.pro`에는 Flutter와 플러그인별 보존 규칙이 있어요. 플러그인을 바꾸면 해당 SDK가 요구하는 규칙과 실제 release 동작을 확인해요. 모든 클래스를 무조건 보존하는 규칙을 추가하면 축소 효과가 줄 수 있어요.
 
-```kotlin
-buildTypes {
-    release {
-        isMinifyEnabled = true
-        isShrinkResources = true
-        proguardFiles(
-            getDefaultProguardFile("proguard-android-optimize.txt"),
-            "proguard-rules.pro"
-        )
-    }
-}
-```
+`build/app/outputs/mapping/prodRelease/mapping.txt`를 해당 빌드와 함께 보관해요. 짧은 클래스 이름 몇 개가 보인다는 사실만으로 보안 검증을 끝내지 않아요.
 
-### `android/app/proguard-rules.pro`
+<a id="빌드-플래그"></a>
 
-플러그인별 `-keep` 규칙을 유지해요. 주요 규칙은 이래요:
+<a id="sentry-업로드-필수"></a>
 
-```proguard
-# android/app/proguard-rules.pro 발췌
-# Flutter 공식 권장 규칙 (기본)
--keep class io.flutter.** { *; }
--keep class io.flutter.plugin.**  { *; }
--dontwarn io.flutter.embedding.**
-
-# Dio / OkHttp (간접 의존)
--keep class okhttp3.** { *; }
--dontwarn okhttp3.**
-
-# Sentry
--keep class io.sentry.** { *; }
--dontwarn io.sentry.**
-
-# Kakao Login (kakao_flutter_sdk_user) — SDK 가 GSON/Retrofit 리플렉션 사용
--keep class com.kakao.sdk.** { *; }
--dontwarn com.kakao.sdk.**
-```
-
-실물 파일엔 이 밖에도 Drift · AdMob · Naver Login · flutter_local_notifications · workmanager · flutter_secure_storage 등 플러그인별 규칙이 더 있어요. 파생 레포에서 새 의존성 추가 시 이 파일에 규칙을 보강하세요 (누락 시 release 빌드에서 `NoClassDefFoundError` 가능).
-
-### 검증
-
-Release APK 에서 클래스명이 난독화됐는지 확인해요:
-
-```bash
-cd android
-./gradlew :app:assembleRelease
-unzip -p app/build/outputs/apk/release/app-release.apk classes.dex | dexdump - | head
-```
-
-`a.b.c` 같은 짧은 이름이 보이면 난독화가 정상 적용된 거예요.
-
----
+<a id="2-dart-심볼-난독화--심볼-업로드"></a>
 
 ## 2. Dart 심볼 난독화 + 심볼 업로드
 
-### 빌드 플래그
-
 ```bash
-flutter build appbundle \
-  --release \
-  --obfuscate \
-  --split-debug-info=build/symbols
+flutter build appbundle --release --flavor prod \
+  --obfuscate --split-debug-info=build/symbols \
+  --dart-define-from-file=.env.prod
 ```
 
-`build/symbols/` 에 난독화 매핑이 생성돼요 (repo root 기준).
+`.env.prod`에는 실제 `BASE_URL`과 `APP_ENV=prod`를 준비하고, 앱의 지원 이메일·정책 URL도 설정해요.
 
-### Sentry 업로드 (필수)
+난독화는 모든 release 빌드에 자동으로 붙는 속성이 아니라 빌드 명령의 옵션이에요. 현재 Android fastlane `build_release`는 이 옵션을 사용해요. 심볼 파일은 해당 배포 버전과 연결해 보관해야 나중에 스택을 복원할 수 있어요.
 
-GHA 에서는 `android/fastlane/Fastfile` 의 `upload_sentry_mapping` lane 을 호출해요:
+GitHub Actions의 Sentry 업로드는 `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` 설정에 따라 실행돼요. `upload_sentry_mapping` lane이 ProGuard 매핑과 Dart split-debug-info를 업로드해요. Sentry를 사용하지 않아도 심볼 보관은 필요해요.
 
-```bash
-cd android
-bundle exec fastlane android upload_sentry_mapping version:1.2.3
-# 내부적으로 sentry-cli 가
-#   1) ProGuard mapping (Kotlin/Java R8) — build/app/outputs/mapping/prodRelease/mapping.txt
-#   2) Dart split-debug-info — build/symbols
-# 둘 다 업로드 (release new → upload-proguard → upload-dif → finalize)
-```
+<a id="android"></a>
 
-업로드를 안 하면 Sentry 대시보드의 스택 트레이스가 `a.b.c` 상태로 남아 디버깅이 불가능해요.
+<a id="ios"></a>
 
----
+<a id="효과"></a>
 
 ## 3. Cleartext HTTP 차단
 
-### Android
+Android의 `network_security_config.xml`과 `AndroidManifest.xml`에 평문 통신 제한이 있어요. 개발용 사용자 인증서 설정과 주석 처리된 도메인 예외도 실제 파일에서 확인하세요. iOS는 ATS 설정을 확인해요.
 
-`android/app/src/main/res/xml/network_security_config.xml`:
+설정 파일의 존재만으로 모든 Dart IO·플러그인 요청이 같은 정책을 따른다고 단정하지 않아요. 사용하는 API URL을 HTTPS로 설정하고 release 기기에서 해당 통신 경로를 확인해요. 로컬 개발 예외를 출시 설정에 그대로 남기지 않아요.
 
-```xml
-<!-- network_security_config.xml 발췌 -->
-<network-security-config>
-    <!-- Release: cleartext 전면 차단 (HTTPS만 허용) -->
-    <base-config cleartextTrafficPermitted="false">
-        <trust-anchors>
-            <certificates src="system" />
-        </trust-anchors>
-    </base-config>
-</network-security-config>
-```
+<a id="설정-libcorestoragesecurestoragedart"></a>
+<a id="설정-libcorestoragesecure_storagedart"></a>
 
-실물 파일엔 추가로 debug 빌드 전용 `<debug-overrides>` (user 인증서 신뢰 — 로컬 API 개발용) 와, dev 서버가 http 일 때 도메인을 허용하는 **주석 처리된** `<domain-config>` 블록이 있어요 (파생 레포에서 필요 시 주석 해제).
+<a id="firstunlockthisdevice-이유"></a>
+<a id="first_unlock_this_device-이유"></a>
 
-`android/app/src/main/AndroidManifest.xml`:
-
-```xml
-<application
-    android:networkSecurityConfig="@xml/network_security_config"
-    android:usesCleartextTraffic="false">
-</application>
-```
-
-### iOS
-
-`ATS (App Transport Security)` 가 기본으로 HTTPS 를 강제해요. 별도 설정이 필요 없어요.
-
-### 효과
-
-Release 빌드에서 `http://api.example.com` 요청은 즉시 실패해요. `https://` 만 허용돼요.
-
----
+<a id="4-keychain--encryptedsharedpreferences"></a>
 
 ## 4. Keychain / EncryptedSharedPreferences
 
-### 설정 (`lib/core/storage/secure_storage.dart`)
+이 절의 예전 이름은 링크 호환을 위해 남겼어요. 현재 구현은 Android에 `encryptedSharedPreferences` 옵션을 전달하지 않아요.
 
 ```dart
 static const _storage = FlutterSecureStorage(
-  aOptions: AndroidOptions(encryptedSharedPreferences: true),
   iOptions: IOSOptions(
     accessibility: KeychainAccessibility.first_unlock_this_device,
   ),
 );
 ```
 
-### `first_unlock_this_device` 이유
+Android는 설치된 `flutter_secure_storage`의 기본 KeyStore 기반 암호화를 사용해요. iOS의 `first_unlock_this_device`는 재부팅 후 처음 잠금을 해제한 뒤 접근할 수 있고 다른 기기로 이전되지 않는 접근 등급이에요. 토큰은 이 저장소에, 일반 설정은 `PrefsStorage`에 두어요. 저장 실패와 복구의 한계는 [ADR-013](../philosophy/adr-013-token-atomic-storage.md)을 확인하세요.
 
-| 옵션 | 의미 |
-|------|------|
-| `first_unlock` | 첫 unlock 이후 백그라운드도 접근 가능 (FCM · workmanager 필요) |
-| `this_device` | iCloud Keychain 백업 제외 (기기 복제 시 토큰 따라가지 않음) |
+<a id="활성화"></a>
 
-상세는 [`ADR-013`](../philosophy/adr-013-token-atomic-storage.md) 을 참고하세요.
+<a id="핀-추출-서버-인증서에서"></a>
 
----
+<a id="최소-2개-핀-유지"></a>
 
 ## 5. SSL Pinning (opt-in)
 
-### 활성화
-
-```bash
-flutter build appbundle \
-  --dart-define=SSL_PINS=sha256/AAA=,sha256/BBB=
-```
-
-### 핀 추출 (서버 인증서에서)
+핀은 leaf 인증서 **전체 DER의 SHA-256**이에요. 공개키만 추출하는 SPKI 방식과 다르며, 같은 키로 인증서를 갱신해도 DER 핀이 바뀔 수 있어요.
 
 ```bash
 echo | openssl s_client -servername api.example.com -connect api.example.com:443 2>/dev/null \
@@ -184,70 +95,64 @@ echo | openssl s_client -servername api.example.com -connect api.example.com:443
   | openssl enc -base64
 ```
 
-출력에 `sha256/` prefix 를 붙여 사용해요: `sha256/BASE64_HASH=`
+확인한 출력에 `sha256/`를 붙이고 현재 인증서와 다음 인증서 핀을 함께 빌드에 전달해요. intermediate/root 인증서나 다음 인증서의 공개키 핀은 현재 검사 방식과 일치하지 않아요.
 
-> ⚠️ 핀은 **leaf 인증서 전체 DER** 의 SHA256 이에요 (SPKI 아님) — 런타임의
-> `SslPinning.computePinFromCert(cert.der)` 와 같은 방식. SPKI(`-pubkey`) 로
-> 뽑은 핀은 절대 일치하지 않아요. 전체 DER 핀은 인증서 갱신 시 같은 키라도
-> 값이 바뀌므로 갱신 전에 다음 인증서 핀을 백업으로 함께 배포하세요.
+```bash
+flutter build appbundle --release --flavor prod \
+  --obfuscate --split-debug-info=build/symbols \
+  --dart-define-from-file=.env.prod \
+  --dart-define=SSL_PINS=sha256/AAA=,sha256/BBB=
+```
 
-### 최소 2개 핀 유지
-
-인증서 갱신 시 **앱 업데이트 전** 에 기존 앱이 먹통 되지 않도록 2개 이상을 유지해요:
-- 현재 인증서 핀
-- 백업 (다음 발급 예정 인증서 공개키 핀)
-
----
+핀을 Secret에 등록해 두는 것만으로 앱에 반영되지는 않아요. 실제 빌드 인자를 확인하세요. 인증서 교체 전에 새 핀이 포함된 앱의 배포와 사용 비율을 확인하고, 갱신 실패 시 대응 절차를 마련해요.
 
 ## 추가 보안 규칙
 
+<a id="keystore-인증서-관리"></a>
+<a id="keystore--인증서-관리"></a>
+
+### 출시 전 시크릿 점검
+
+`.env`, `android/key.properties`, 키스토어와 서비스 계정 JSON이 추적되지 않는지 확인해요. 이미 추적된 파일은 `.gitignore`를 추가하는 것만으로 추적이 끝나지 않아요. 문자열 검색은 단서만 제공하므로 전용 검사 도구와 코드 리뷰를 함께 사용해요. 비밀이 노출됐다면 먼저 폐기·교체하고 영향을 확인한 뒤 이력 정리를 검토해요.
+
+```bash
+git check-ignore -v .env android/key.properties android/app/upload-keystore.jks
+gh secret list
+```
+
+필수 Secrets와 선택 항목은 [Android 배포](./android-deployment.md)의 표에서 확인해요. 앱에 넣는 DSN·분석 프로젝트 키와 배포 권한을 가진 서비스 자격 증명을 구분해요. 키스토어 백업 암호는 별도의 암호 관리 도구에 보관해요.
+
+### 빌드 산출물 검토
+
+prod release 산출물의 패키지명·권한·서명과 실제 API 설정을 확인해요. `classes.dex` 검색만으로 Dart 라이브러리와 자산의 비밀 노출까지 검사했다고 볼 수 없어요. API 엔드포인트가 보이지 않아야 한다는 조건도 보안 기준으로 삼지 않아요.
+
+<a id="앱-디버그-기능-release-에-유출-방지"></a>
+
 ### PII 수집 최소화
 
-```dart
-// Sentry
-options.sendDefaultPii = false;  // IP · 쿠키 자동 수집 차단
+Sentry의 `sendDefaultPii = false`는 기본 개인정보 수집 옵션이에요. 직접 넣은 사용자 이메일, 이벤트 속성과 오류 메시지까지 자동 정제하지는 않아요. PostHog에도 검색어 원문 대신 필요한 최소 속성만 전달하고, 실제 송신 이벤트를 확인해요. 디버그 기능 노출은 release 모드와 실제 빌드 설정에서 검증해요.
 
-// PostHog
-properties: {
-  'query_length': input.length,  // 내용 말고 길이만
-}
-```
+### 권한과 개인정보처리방침
 
-### Keystore · 인증서 관리
+`AndroidManifest.xml`과 `Info.plist`에는 사용하는 기능에 필요한 권한·설명을 설정해요. 전이 의존성으로 합쳐진 manifest도 확인하세요. 앱의 정책 URL과 스토어에 제출한 URL이 일치하고 접근 가능한지 확인해요.
 
-- **절대 커밋 금지**: `.gitignore` 에 `*.jks`, `*.p8`, `*.p12`, `*.mobileprovision`
-- **GitHub Secrets** 만 사용
-- **Bitwarden · 1Password** 같은 패스워드 매니저에 백업
-- 팀원 합류 시 `fastlane match` 로 자동 동기화
+수집 항목·목적·보관 기간·외부 서비스·사용자 권리 처리·연락처는 실제 앱 동작에 맞게 작성해요. 이 목록을 특정 국가 법률의 완결된 준수 항목으로 해석하지 않아요. 관측성·푸시 등 서비스를 추가하면 문구와 실제 전송 범위를 함께 검토해요.
 
-### 앱 디버그 기능 Release 에 유출 방지
+### 토큰 탈취 대응 범위
 
-```dart
-// 금지
-bool showDebugPanel = true;  // 하드코딩
-
-// 올바르게
-bool showDebugPanel = kDebugMode;  // Release 에서 자동 false
-// 또는 --dart-define 로 제어
-```
-
----
+클라이언트는 토큰을 보안 저장소에 보관하고 서버의 갱신 거절이 확인되면 세션을 정리해요. refresh 회전·재사용 감지와 폐기 범위는 Spring 서버 구현을 기준으로 확인해요. 재사용 감지가 모든 앱·기기의 모든 세션을 항상 지운다고 단정하지 않아요. 생체 인증 잠금은 기본 제공 기능이 아니라 앱 요구에 따라 별도로 설계할 기능이에요.
 
 ## 파생 레포 체크리스트
 
-- [ ] R8 · proguard-rules.pro 확인 (템플릿에 기본 세팅)
-- [ ] 난독화 빌드 플래그 CI 에 포함
-- [ ] Sentry 심볼 업로드 단계 CI 에 포함
-- [ ] network_security_config.xml 확인
-- [ ] (선택) SSL pinning 도입 시 핀 관리 프로세스 수립
-- [ ] Keystore · 인증서 .gitignore 확인
-- [ ] PII 수집 설정 검토
-
----
+- [ ] 사용 중인 release 빌드에서 R8·Dart 난독화 조건과 주요 기능을 확인했어요.
+- [ ] 해당 버전의 심볼을 보관하고 필요한 업로드를 확인했어요.
+- [ ] 실제 통신 경로와 HTTPS 설정을 확인했어요.
+- [ ] 시크릿이 추적되거나 앱에 불필요하게 포함되지 않았는지 확인했어요.
+- [ ] 권한과 수집 데이터가 실제 기능·정책 문서와 일치해요.
+- [ ] pinning을 사용한다면 인증서 갱신·배포·장애 대응 절차가 있어요.
 
 ## 관련 문서
 
-- [`ADR-013 · 토큰 원자 저장`](../philosophy/adr-013-token-atomic-storage.md)
-- [`ADR-020 · 이중 난독화 + SSL 핀닝 + Keychain`](../philosophy/adr-020-security-hardening.md)
-- [`secrets-management.md`](./secrets-management.md)
-- [OWASP Mobile Top 10](https://owasp.org/www-project-mobile-top-10/)
+- [토큰 저장과 복구](../philosophy/adr-013-token-atomic-storage.md)
+- [보안 설계의 선택과 한계](../philosophy/adr-020-security-hardening.md)
+- [Secrets Management](./secrets-management.md)

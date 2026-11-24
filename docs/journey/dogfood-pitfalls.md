@@ -1,3 +1,5 @@
+<a id="dogfood-pitfalls--자주-막히는-함정-모음"></a>
+
 # Dogfood Pitfalls — 자주 막히는 함정 모음
 
 파생 레포 셋업 · 개발 · 배포 과정에서 **반복적으로 발생하는 함정** 과 해결법을 모아둔 문서예요. 각 항목은 **증상 · 원인 · 해결** 3단계로 정리했어요.
@@ -8,6 +10,8 @@
 
 ## 셋업 단계
 
+<a id="-flutter-pub-get-실패"></a>
+
 ### ❌ `flutter pub get` 실패
 
 **증상**: 네트워크 · SSL 에러 · 버전 불일치로 실패해요.
@@ -16,13 +20,13 @@
 
 **해결**:
 ```bash
-flutter --version          # 3.44.8+ 확인
-rm pubspec.lock
-flutter clean
+flutter --version          # 레포가 고정한 SDK와 일치하는지 확인
 flutter pub get
 ```
 
 ---
+
+<a id="-ios-pod-install-실패"></a>
 
 ### ❌ iOS `pod install` 실패
 
@@ -36,10 +40,8 @@ cd ios
 pod repo update
 pod install --repo-update
 
-# 여전히 실패 시
-rm Podfile.lock
-rm -rf Pods
-pod install
+# 계속 실패하면 오류에 나온 pod와 잠긴 버전을 먼저 대조해요.
+# Podfile.lock 삭제나 전체 의존성 갱신은 원인을 확인한 뒤 별도 변경으로 검토해요.
 ```
 
 M1/M2:
@@ -48,6 +50,8 @@ arch -x86_64 pod install  # 일부 플러그인이 x86 만 지원 시
 ```
 
 ---
+
+<a id="-android-licenses-미동의"></a>
 
 ### ❌ Android licenses 미동의
 
@@ -61,6 +65,8 @@ flutter doctor --android-licenses
 
 ---
 
+<a id="-rename-appsh-후-빌드-실패"></a>
+
 ### ❌ `rename-app.sh` 후 빌드 실패
 
 **증상**: `package:<old_name>/...` import 가 남아 있어요.
@@ -72,11 +78,13 @@ flutter doctor --android-licenses
 # 수동으로 일괄 치환 (macOS BSD sed) — 템플릿 sentinel 패키지명은 app_template
 grep -rl 'package:app_template' lib/ test/ | xargs sed -i '' 's|package:app_template|package:my_app|g'
 
-# 또는
-find . -name '*.dart' -exec sed -i '' 's|package:app_template|package:my_app|g' {} +
+# 변경 후 앱 코드와 테스트만 다시 확인해요.
+rg -n 'package:app_template/' lib test
 ```
 
 ---
+
+<a id="-android-에뮬레이터-화면이-까만-채로-안-뜸-m-series-mac"></a>
 
 ### ❌ Android 에뮬레이터 화면이 까만 채로 안 뜸 (M-series Mac)
 
@@ -100,6 +108,8 @@ flutter emulators --launch <AVD_ID>
 
 ---
 
+<a id="-android-빌드-후-앱-launch-시-classcastexception-mainactivity-cannot-be-cast-to-flutterfragmentactivity"></a>
+
 ### ❌ Android 빌드 후 앱 launch 시 `ClassCastException: MainActivity cannot be cast to FlutterFragmentActivity`
 
 **증상**: APK install 은 성공하는데 앱이 시작 직후 강제종료돼요. logcat 의 `GeneratedPluginRegistrant` 에 위 예외가 찍혀요.
@@ -114,6 +124,8 @@ class MainActivity : FlutterFragmentActivity()
 
 ---
 
+<a id="-repo-dev-init-후-빌드-시-no-matching-client-found-for-package-name-"></a>
+
 ### ❌ `<repo> dev init` 후 빌드 시 `No matching client found for package name ...`
 
 **증상**: Android 빌드 (특히 `flutter build apk --flavor dev` 또는 `<repo> dev start`) 가 `processDevDebugGoogleServices` 에서 실패. 메시지 끝에 "No matching client found for package name 'com.<...>.dev'".
@@ -125,6 +137,8 @@ class MainActivity : FlutterFragmentActivity()
 2. 또는 Firebase Console → 새 Android 앱 등록 → package name = `com.<your>.<app>.dev` → google-services.json 다운 → `android/app/src/dev/` 에 배치
 
 ---
+
+<a id="-ios-devprod-빌드-후-gidclientid-가-빈-값-gid_client_id-그대로"></a>
 
 ### ❌ iOS dev/prod 빌드 후 GIDClientID 가 빈 값 (`(GID_CLIENT_ID)` 그대로)
 
@@ -139,6 +153,8 @@ class MainActivity : FlutterFragmentActivity()
 4. `<repo> <env> link-oauth --check` 로 확인 — 값이 비어있지 않은지
 
 ---
+
+<a id="-파생-레포-정리하려는데-firebase-projectsdelete-가-is-not-a-firebase-command"></a>
 
 ### ❌ 파생 레포 정리하려는데 `firebase projects:delete` 가 "is not a Firebase command"
 
@@ -165,6 +181,8 @@ https://console.firebase.google.com/project/<project-id>/settings/general
 
 ---
 
+<a id="-gh-repo-delete-가-403--must-have-admin-rights-to-repository--needs-delete_repo-scope"></a>
+
 ### ❌ `gh repo delete` 가 403 — `Must have admin rights to Repository ... needs "delete_repo" scope`
 
 **증상**: 도그푸딩 검증 끝나고 파생 레포 정리하려고 `gh repo delete <owner>/<repo> --yes` → HTTP 403.
@@ -183,6 +201,8 @@ gh repo delete <owner>/<repo> --yes              # 이제 동작
 
 ## 개발 단계
 
+<a id="-appkitsinstall-후-화면-안-뜸"></a>
+
 ### ❌ `AppKits.install` 후 화면 안 뜸
 
 **증상**: 빌드는 되는데 홈 화면 대신 스플래시에 멈춰요.
@@ -197,10 +217,15 @@ final container = ProviderContainer(
   overrides: [...AppKits.allProviderOverrides],
 );                                       // 2
 AppKits.attachContainer(container);      // 3 ← 필수!
-SplashController(steps: AppKits.allBootSteps).run();  // 4
+final result = await SplashController(
+  steps: AppKits.allBootSteps,
+).run();                                // 4
+// result 의 오류와 원본 스택을 보고한 뒤 앱을 실행해요.
 ```
 
 ---
+
+<a id="-auth_kit-requires-backend_api_kit-에러"></a>
 
 ### ❌ "auth_kit requires backend_api_kit" 에러
 
@@ -225,6 +250,8 @@ await AppKits.install([
 
 ---
 
+<a id="-dart-run-toolconfigure_appdart-가-issues-found"></a>
+
 ### ❌ `dart run tool/configure_app.dart` 가 ISSUES FOUND
 
 **증상**: 빌드는 되지만 validator 가 이슈를 지적해요.
@@ -235,18 +262,18 @@ await AppKits.install([
 
 ---
 
+<a id="-sentry--posthog-안-찍힘"></a>
+
 ### ❌ Sentry · PostHog 안 찍힘
 
 **증상**: 크래시 · 이벤트가 대시보드에 안 보여요.
 
-**원인**: DSN · API Key 가 주입되지 않아 Debug 폴백으로 동작 중이거나, Release 빌드가 아니거나 (Debug 모드), PII 차단 필터에 걸린 경우예요.
+**원인**: 키가 전달되지 않았거나 Kit 와 SDK 초기화가 빠졌을 수 있어요. 네트워크·프로젝트 설정·전송 제한도 확인해요. Debug 빌드라는 이유만으로 외부 전송이 차단되거나 공통 PII 필터가 자동 적용되는 것은 아니에요.
 
 **해결**:
 ```bash
 # 환경변수 주입 확인
-flutter run \
-  --dart-define=SENTRY_DSN=$(grep SENTRY_DSN .env | cut -d= -f2) \
-  --dart-define=POSTHOG_KEY=$(grep POSTHOG_KEY .env | cut -d= -f2)
+<repo> dev start --dart-define-from-file=.env
 ```
 
 런타임 확인:
@@ -256,6 +283,8 @@ print('PostHog enabled: ${ObservabilityEnv.isPostHogEnabled}');
 ```
 
 ---
+
+<a id="-i18n-키-사용-후-컴파일-에러"></a>
 
 ### ❌ i18n 키 사용 후 컴파일 에러
 
@@ -268,9 +297,11 @@ print('PostHog enabled: ${ObservabilityEnv.isPostHogEnabled}');
 flutter gen-l10n
 ```
 
-**추가 체크**: `app_ko.arb` · `app_en.arb` 둘 다에 키가 있어야 해요. 한쪽만 있으면 gen-l10n 이 실패해요.
+**추가 확인**: 두 ARB의 키를 맞추고 `flutter gen-l10n` 뒤에 `flutter test test/core/i18n/arb_parity_test.dart`를 실행해요. 누락된 번역은 템플릿 언어로 fallback할 수 있으므로 생성 성공만으로 키 일치를 확인할 수는 없어요.
 
 ---
+
+<a id="-viewmodel-에서-buildcontext-쓰려고-함"></a>
 
 ### ❌ ViewModel 에서 `BuildContext` 쓰려고 함
 
@@ -293,6 +324,8 @@ ref.listen(viewModelProvider, (prev, next) {
 ```
 
 ---
+
+<a id="-drift-db-스키마-변경-후-크래시"></a>
 
 ### ❌ Drift DB 스키마 변경 후 크래시
 
@@ -320,11 +353,13 @@ MigrationStrategy get migration => MigrationStrategy(
 
 ---
 
+<a id="-pull-to-refresh-가-한-번만-동작"></a>
+
 ### ❌ Pull-to-refresh 가 한 번만 동작
 
 **증상**: 첫 새로고침은 되지만 그 이후엔 안 돼요.
 
-**원인**: `onRefresh` 콜백이 `Future` 를 반환하지 않아요.
+**확인할 점**: onRefresh 가 작업의 완료를 나타내는 Future 를 반환하는지 확인해요. 반환한 Future 가 끝나지 않으면 진행 표시가 계속 남을 수 있어요. 반환 타입 자체가 맞지 않는 코드는 보통 정적 분석에서 발견돼요.
 
 **해결**:
 ```dart
@@ -342,6 +377,8 @@ RefreshIndicator(
 
 ## 배포 단계
 
+<a id="-play-console-upload-key-not-matching"></a>
+
 ### ❌ Play Console "Upload key not matching"
 
 **증상**: AAB 업로드 시 서명 불일치 에러가 나요.
@@ -358,6 +395,8 @@ RefreshIndicator(
 
 ---
 
+<a id="-version-code-already-used"></a>
+
 ### ❌ "Version code already used"
 
 **증상**: AAB 업로드가 거부돼요.
@@ -367,6 +406,8 @@ RefreshIndicator(
 **해결**: `version: 1.2.3+46` 처럼 `+` 뒤 숫자를 올려요.
 
 ---
+
+<a id="-testflight-앱-invalid-binary"></a>
 
 ### ❌ TestFlight 앱 "Invalid Binary"
 
@@ -380,6 +421,8 @@ RefreshIndicator(
 ```
 
 ---
+
+<a id="-gha-배포-성공했는데-play-console-에-안-보임"></a>
 
 ### ❌ GHA 배포 성공했는데 Play Console 에 안 보임
 
@@ -395,6 +438,8 @@ cat fastlane_error.log
 
 ---
 
+<a id="-sentry-스택이-abc-로-난독화됨"></a>
+
 ### ❌ Sentry 스택이 `a.b.c` 로 난독화됨
 
 **증상**: 프로덕션 크래시 원인을 추적할 수 없어요.
@@ -409,6 +454,8 @@ cat fastlane_error.log
 ```
 
 ---
+
+<a id="-release-빌드-시-appconfiginit-release-빌드-검증-실패-stateerror"></a>
 
 ### ❌ release 빌드 시 `AppConfig.init() release 빌드 검증 실패` StateError
 
@@ -427,7 +474,7 @@ StateError: AppConfig.init() release 빌드 검증 실패:
 4. `termsUrl` 에 `example.com` 포함 (null 인 경우 검사 생략)
 5. `environment == Environment.dev` (release 는 staging/prod 만 허용)
 
-→ 의도: privacy URL 404 로 App Store 리뷰 거부 / Sentry · PostHog 이벤트가 'dev' 라벨로 박혀 운영 알람 노이즈 혼재 같은 사고를 컴파일 직후에 차단해요.
+이 검사는 release 앱 실행 시 알려진 placeholder 와 개발 환경 값을 확인해요. 컴파일 단계 검사가 아니며, 정책 URL 이 실제로 열리는지나 스토어 심사를 통과하는지까지 검증하지 않아요.
 
 > ⚠️ **자동 검출 밖의 플레이스홀더가 하나 더 있어요** — ARB 의 `contactSubject`(`app_ko.arb` 의 `"[앱 이름] 문의"`, `app_en.arb` 의 `"[App Name] Inquiry"`). `AppConfig` 가 아니라 i18n 리소스라 위 5가지 검사에 안 걸려요. 출시 전에 ko·en 양쪽을 실제 앱 이름으로 직접 바꿔주세요 — 안 바꾸면 사용자가 보내는 문의 메일 제목에 대괄호가 그대로 나가요.
 
@@ -444,11 +491,15 @@ AppConfig.init(
 );
 ```
 
-dev/profile 빌드는 가드를 통과시키므로 로컬 개발에는 영향 없어요.
+이 release 검사는 debug·profile 실행에서는 적용되지 않아요. dev/prod flavor 와 Flutter 빌드 모드는 별개예요.
 
 ---
 
+<a id="자주-하는-실수-claude--ai-코드-생성"></a>
+
 ## 자주 하는 실수 (Claude / AI 코드 생성)
+
+<a id="-viewmodel-에-refwatch-사용"></a>
 
 ### ❌ ViewModel 에 `ref.watch` 사용
 
@@ -465,6 +516,8 @@ class BadViewModel extends Notifier<...> {
 
 ---
 
+<a id="-copywith-에-nullable-폴백"></a>
+
 ### ❌ `copyWith` 에 nullable 폴백
 
 잘못:
@@ -478,6 +531,8 @@ errorMessage: errorMessage   // null 로도 clear 가능
 ```
 
 ---
+
+<a id="-kit-간-직접-import"></a>
 
 ### ❌ Kit 간 직접 import
 

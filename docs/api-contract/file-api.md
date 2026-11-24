@@ -4,7 +4,7 @@
 
 Flutter 측 호출은 [`lib/kits/file_kit/file_service.dart`](../../lib/kits/file_kit/file_service.dart) 의 `FileService` 가 담당해요. kit 사용법은 [`features/file-kit.md`](../features/file-kit.md) 에 있어요.
 
-> **왜 presigned POST policy 인가?** presigned PUT 은 스토리지가 실제 크기·타입을 강제하지 못해요(URL 만 있으면 임의 바이트 업로드 가능). POST policy 는 서버가 **content-length-range·Content-Type 을 서명(policy)에 바인딩**해서, 티켓에 선언한 크기·타입을 넘는 업로드를 스토리지가 거부해요 (임의 크기 업로드로 스토리지 소진·타입 위장 stored-XSS 우회 차단).
+> 서버는 presigned POST policy에 업로드 크기 범위와 `Content-Type` 조건을 서명해요. 스토리지는 이 조건을 어긴 요청을 거부해요. 다만 `Content-Type` 필드를 제한하는 것과 파일 바이트가 실제 이미지인지 검사하는 것은 달라요. 이 정책만으로 타입 위장이나 콘텐츠 공격이 모두 차단된다고 보장하지 않아요.
 
 ---
 
@@ -67,8 +67,7 @@ Content-Type: application/json
     },
     "previewUrl": "https://<storage-host>/template-uploads/9f1c...?X-Amz-Signature=...",
     "expiresAt": "2026-07-22T01:29:00Z"
-  },
-  "error": null
+  }
 }
 ```
 
@@ -127,8 +126,7 @@ Authorization: Bearer <access_token>
     "contentType": "image/png",
     "sizeBytes": 204800,
     "originalFilename": "photo.png"
-  },
-  "error": null
+  }
 }
 ```
 

@@ -1,10 +1,12 @@
+<a id="loading_ux"></a>
+
 # Loading_UX
 
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `lib/core/widgets/` 에 `SkeletonLoading` · `TopProgressBar` · `LoadingView` · `PrimaryButton` (스피너 내장) 등 로딩 관련 위젯. `skeletonizer` 패키지 기반.
 
 ## 결론부터
 
-로딩 상황을 **4가지 UX 패턴** 으로 규약화했어요 — **Skeleton** (첫 진입) · **Pull-to-refresh** (새로고침) · **버튼 스피너** (버튼 액션 — 진행 중 비활성) · **TopProgressBar** (백그라운드 작업). **풀스크린 블로킹 스피너 금지**. 각 패턴이 다른 맥락에 쓰여서, 개발자가 "지금 어떤 로딩?" 만 판단하면 자연스럽게 통일된 UX 가 나와요.
+첫 조회는 Skeleton, 사용자 새로고침은 `RefreshIndicator`, 버튼 액션은 버튼 안의 스피너, 백그라운드 작업은 `TopProgressBar`로 표현해요. 일반 작업 때문에 화면 전체를 가리는 로딩 오버레이를 피하고, 관련 액션의 중복 실행을 막아요. 부팅용 `LoadingView`와 데이터 없는 상태의 `EmptyView`는 각각 구분해서 사용해요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -35,6 +37,8 @@
 
 ## 고민했던 대안들
 
+<a id="option-1--각-화면이-자유롭게"></a>
+
 ### Option 1 — 각 화면이 자유롭게
 
 디자인 가이드 없이 개발자가 매번 선택.
@@ -44,6 +48,8 @@
 - **단점 2**: 결정 피로 누적.
 - **탈락 이유**: 압력 A · D 정면 위반.
 
+<a id="option-2--풀스크린-스피너-한-가지"></a>
+
 ### Option 2 — 풀스크린 스피너 한 가지
 
 모든 로딩에 `Center(child: CircularProgressIndicator())`.
@@ -52,6 +58,8 @@
 - **단점 1**: 압력 C 정면 위반. 풀스크린 블로킹이 모든 맥락에 과해요.
 - **단점 2**: 버튼 누른 직후 갑자기 화면 전체가 회색 → UX 불친절.
 - **탈락 이유**: 맥락을 무시한 획일화.
+
+<a id="option-3--4가지-패턴-규약화--채택"></a>
 
 ### Option 3 — 4가지 패턴 규약화 ★ (채택)
 
@@ -76,20 +84,35 @@
 ### 1. Skeleton (첫 진입)
 
 ```dart
-// 사용 예
-SkeletonLoading(
-  enabled: isLoading,
-  child: ListView.builder(
-    itemCount: items.isEmpty ? 6 : items.length,  // 로딩 중엔 더미 6개
-    itemBuilder: (_, i) => ListTile(
-      title: Text(items.isEmpty ? 'Placeholder' : items[i].title),
-      subtitle: Text(items.isEmpty ? 'Placeholder subtitle' : items[i].subtitle),
+import 'package:app_template/core/widgets/empty_view.dart';
+import 'package:app_template/core/widgets/skeleton_loading.dart';
+import 'package:flutter/material.dart';
+
+Widget buildItemList({
+  required bool isLoading,
+  required List<({String title, String subtitle})> items,
+  required String emptyTitle,
+}) {
+  final showSkeleton = isLoading && items.isEmpty;
+  if (!isLoading && items.isEmpty) {
+    return EmptyView(title: emptyTitle);
+  }
+  return SkeletonLoading(
+    enabled: showSkeleton,
+    child: ListView.builder(
+      itemCount: showSkeleton ? 6 : items.length,
+      itemBuilder: (_, index) => ListTile(
+        title: Text(showSkeleton ? 'Placeholder' : items[index].title),
+        subtitle: Text(
+          showSkeleton ? 'Placeholder subtitle' : items[index].subtitle,
+        ),
+      ),
     ),
-  ),
-)
+  );
+}
 ```
 
-`skeletonizer` 패키지가 자동으로 shimmer 효과 + 텍스트 blur. **실제 UI 레이아웃** 이 그대로 유지돼서 로딩 완료 시 요소가 튀지 않음.
+`emptyTitle` 은 호출 화면에서 번역한 빈 상태 문구예요. 예제의 record 대신 앱 모델을 사용할 수 있고, rename 후에는 import 의 Dart 패키지명도 맞춰요. skeletonizer 는 실제 위젯 위에 로딩 효과를 적용해요. 더미와 실제 데이터의 길이가 다르면 레이아웃이 달라질 수 있으므로 표시 결과를 확인해요.
 
 **금지**: 별도 스켈레톤 위젯 작성. `SkeletonBox(...)` 같은 것 만들지 말고 **실제 위젯을 그대로 쓰면서 enabled 로 감쌈**.
 
@@ -98,7 +121,10 @@ SkeletonLoading(
 ```dart
 RefreshIndicator(
   onRefresh: () => ref.read(myViewModelProvider.notifier).refresh(),
-  child: ListView(children: [...]),
+  child: ListView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    children: [...],
+  ),
 )
 ```
 
@@ -106,11 +132,13 @@ RefreshIndicator(
 
 ### 3. 버튼 스피너 (액션 중 비활성)
 
+로그인 화면에서는 현재 LoginState, LoginViewModel 과 입력한 email·password 를 사용해 다음처럼 연결할 수 있어요.
+
 ```dart
 PrimaryButton(
-  text: S.of(context).save,
-  isLoading: state.isLoading,       // ← true 면 내부 스피너 + 버튼 비활성
-  onPressed: () => vm.save(),
+  text: S.of(context).login,
+  isLoading: state.isLoading,
+  onPressed: () => vm.signInWithEmail(email, password),
 )
 ```
 
@@ -132,7 +160,7 @@ TopProgressBar(
 )
 ```
 
-AppBar 하단의 얇은 선형 progress. **indeterminate 전용** 이에요 — 생성자가 받는 건 `isLoading` (bool) · `child` · `color` 뿐이고, 내부의 `LinearProgressIndicator` 에 `value` 를 넘기지 않아요. 진행률 퍼센트를 보여주려면 위젯에 `value` 파라미터를 먼저 추가해야 해요. 사용자는 계속 앱 사용 가능하고, 작업 진행은 시각적으로만 알려요.
+child 위에 겹쳐 표시하는 화면 상단의 얇은 진행 표시줄이에요. 내부 `SafeArea`가 상태 표시줄 영역을 피해 배치해요. **indeterminate 전용** 이에요 — 생성자가 받는 건 `isLoading` (bool) · `child` · `color` 뿐이고, 내부의 `LinearProgressIndicator` 에 `value` 를 넘기지 않아요. 진행률 퍼센트를 보여주려면 위젯에 `value` 파라미터를 먼저 추가해야 해요. 사용자는 계속 앱 사용 가능하고, 작업 진행은 시각적으로만 알려요.
 
 ### 금지 사항
 
@@ -155,44 +183,38 @@ AppBar 하단의 얇은 선형 progress. **indeterminate 전용** 이에요 — 
 `state.isLoading: bool`. 복잡한 `Status.idle / loading / error / success` enum 도 가능하지만 대부분 bool 로 충분. 에러는 별도 `errorCode` 필드.
 
 **포인트 5 — EmptyView 는 로딩과 구분**  
-"데이터 없음" 은 로딩 아님. 별도 `EmptyView(message, icon, action)` 위젯. 로딩 → 데이터 없음 → `EmptyView` 명시적 전환.
+조회가 끝난 뒤 데이터가 없으면 `EmptyView(title: emptyTitle)` 를 표시해요. `title` 은 필수 named 인자이고 `subtitle`, `icon`, `action` 은 선택 인자예요. 로딩 중의 더미 목록과 빈 상태를 별도로 처리해요.
 
 ## 이 선택이 가져온 것
 
 ### 긍정적 결과
 
-- **앱 전체 UX 일관**: 모든 화면의 로딩이 4가지 중 하나. 사용자가 패턴 학습 후 예상 가능.
-- **결정 피로 감소**: "이 화면 로딩?" → "4개 중 무엇?" 으로 축소.
-- **풀스크린 블로킹 원천 차단**: 없음. 모든 로딩이 비-블로킹.
-- **버튼 이중 탭 방지**: `PrimaryButton(isLoading: true)` 이 `onPressed: null` 로 비활성.
-- **Skeleton 으로 레이아웃 튐 없음**: 로딩 완료 시 요소 크기가 그대로 확정.
+화면 상황에 따라 버튼 로딩, skeleton, 상단 진행 표시, 당겨서 새로고침을 선택해요. PrimaryButton 은 로딩 중 비활성화할 수 있어요. 화면 일부를 계속 보여주되 필요한 입력은 막을 수 있으므로 모든 로딩이 비차단이라는 뜻은 아니에요. skeleton 을 사용해도 실제 데이터 길이와 레이아웃이 다르면 화면 변화가 생길 수 있어요.
 
 ### 부정적 결과
 
-- **4가지 분류가 애매한 케이스**: "폼 제출 중 필드 불활성화" 는 버튼 스피너? 전체 IgnorePointer? 경계 모호.
-- **Skeleton 더미 데이터 관리 피로**: `items.isEmpty ? placeholder : items[i]` 같은 조건문 반복. helper 추출 가능.
-- **`PrimaryButton` 외 버튼 쓸 때**: 본 템플릿의 `PrimaryButton` 만 스피너 내장. `OutlinedButton` · `TextButton` 에도 같은 기능이 필요하면 각각 wrapper 필요.
-- **TopProgressBar 를 어디에 둘지 결정**: AppBar bottom? Scaffold persistentFooterButtons? 규약은 AppBar bottom 이지만 실수 가능.
+폼의 일부 입력까지 막을지, 진행 표시를 어디에 둘지 앱에서 정해야 해요. skeleton 에는 실제 위젯을 그릴 더미 데이터가 필요하고, 네트워크 이미지 같은 부수 효과도 확인해야 해요. PrimaryButton 외의 버튼은 필요한 로딩 동작을 따로 연결해요. TopProgressBar 는 화면의 배치 규약과 함께 사용해요.
 
 ## 교훈
 
+<a id="교훈-1--선택지를-좁히는-것-이-디자인"></a>
+
 ### 교훈 1 — "선택지를 좁히는 것" 이 디자인
 
-개발자는 자유를 원하지만, **일관성은 선택지 축소** 에서 나와요. "원하는대로 하세요" 가 아니라 "이 4개 중 고르세요" 가 디자인 시스템의 본질. 제약이 오히려 속도를 높임.
+자주 쓰는 상황에 공통 패턴을 정하면 화면마다 로딩 방식을 새로 설계하는 일을 줄일 수 있어요. 네 가지 패턴으로 설명하기 어려운 동작은 요구를 확인하고 확장해요.
 
-**교훈**: 디자인 시스템의 가치는 **"뭘 허용" 이 아니라 "뭘 금지"**. 금지된 패턴이 명확할수록 일관성.
+<a id="교훈-2-풀스크린-스피너는-ux-재앙"></a>
+<a id="교훈-2--풀스크린-스피너는-ux-재앙"></a>
 
-### 교훈 2 — 풀스크린 스피너는 UX 재앙
+### 교훈 2 — 기존 내용을 유지하며 진행 상태를 보여줘요
 
-처음엔 간단하다고 `Center(CircularProgressIndicator())` 를 풀스크린으로. 사용자 테스트에서 "앱이 멈춘 것 같다" · "뒤로가기 눌렀다" 피드백. 버튼 내 스피너 + IgnorePointer 조합으로 바꾸자 **이탈률 감소**.
+기존 내용을 보여줄 수 있다면 화면 전체를 지우지 않고 해당 작업의 진행 상태를 표시해요. 중복 요청이나 잘못된 입력을 막을 범위는 별도로 정해요.
 
-**교훈**: 모바일 UX 에선 **"사용자가 계속 컨트롤 가능한" 느낌** 이 중요. 전체 블로킹은 최후 수단.
+<a id="교훈-3--skeleton-은-실제-ui-를-복제하지-말고-감쌀-것"></a>
 
 ### 교훈 3 — Skeleton 은 실제 UI 를 복제하지 말고 감쌀 것
 
-초기엔 `SkeletonListItem` 같은 별도 위젯 작성. 실제 `ListItem` 업데이트 시 Skeleton 도 같이 수정해야 — **중복 유지 부담**. `Skeletonizer(enabled: true, child: 실제위젯)` 방식이 DRY + 레이아웃 일치.
-
-**교훈**: Skeleton 은 **"더미가 아니라 실제 + 효과"**. shimmer 효과가 텍스트 / 이미지를 자동 처리.
+실제 화면 위젯을 skeleton 으로 감싸면 구조를 두 벌로 유지하는 부담을 줄일 수 있어요. 다만 적절한 더미 데이터, 이미지 처리, 로딩 중 상호작용은 앱에서 준비해야 해요. 효과만 켜면 모든 레이아웃과 데이터 문제가 해결되는 것은 아니에요.
 
 ## 관련 사례 (Prior Art)
 
@@ -200,13 +222,13 @@ AppBar 하단의 얇은 선형 progress. **indeterminate 전용** 이에요 — 
 - [Skeletonizer 패키지](https://pub.dev/packages/skeletonizer) — 본 ADR 이 채택한 라이브러리
 - [Nielsen Norman Group — Response Times](https://www.nngroup.com/articles/response-times-3-important-limits/) — 0.1s / 1s / 10s 경계와 UX
 - [Apple Human Interface Guidelines — Loading](https://developer.apple.com/design/human-interface-guidelines/loading) — iOS 관용
-- [Android Material Design 의 ProgressIndicator](https://m3.material.io/components/progress-indicators/implementation/android)
+- [Android Material Design 의 ProgressIndicator](https://github.com/material-components/material-components-android/blob/master/docs/components/ProgressIndicator.md)
 
 ## Code References
 
 **4가지 패턴 위젯**
 - [`lib/core/widgets/skeleton_loading.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/widgets/skeleton_loading.dart) — Skeletonizer 래퍼
-- [`lib/core/widgets/top_progress_bar.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/widgets/top_progress_bar.dart) — AppBar 하단 progress
+- [`lib/core/widgets/top_progress_bar.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/widgets/top_progress_bar.dart) — child 위에 SafeArea 로 배치하는 화면 상단 진행 표시줄
 - [`lib/core/widgets/primary_button.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/widgets/primary_button.dart) — 스피너 내장 버튼
 - [`lib/core/widgets/loading_view.dart`](https://github.com/storkspear/template-flutter/blob/main/lib/core/widgets/loading_view.dart) — 스플래시 등 특수 케이스
 

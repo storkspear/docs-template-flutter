@@ -1,6 +1,6 @@
 # Recipes
 
-이 문서는 `recipes/` 에 제공되는 **4개 샘플 앱 구성** 을 다뤄요. 파생 레포가 복사해서 `app_kits.yaml` 로 덮어써요. 상세 근거는 [`ADR-021 · Multi-Recipe`](../philosophy/adr-021-multi-recipe.md) 에 있어요.
+네 가지 recipe는 앱 유형별 Kit 조합의 시작점이에요. YAML을 복사한 뒤 실제 Dart 조립, 앱 식별자와 플랫폼 설정을 맞춰야 해요. 아래 표로 가까운 구성을 고르고 필요한 기능만 조정하세요.
 
 ---
 
@@ -179,9 +179,9 @@ kits:
 
 - [`template-spring`](https://github.com/storkspear/template-spring) 쌍 운영 + 4-provider OAuth 등록
 - **Kakao**: 네이티브 앱 키 발급 + `KakaoSdk.init` 호출 (`lib/main.dart` 자리표시 참조)
-- **Naver**: Client ID / Secret / URL scheme 발급 + `FlutterNaverLogin.initSdk` 호출
-- iOS `Info.plist` + `AndroidManifest.xml` 의 OAuth 자리표시 채우기 (`lib/kits/auth_kit/README.md` "Native 플랫폼 셋업" 섹션)
-- `.env.example` 의 `KAKAO_NATIVE_KEY` / `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` 채우기
+- **Naver**: Client ID·Secret·앱 이름·URL Scheme 을 발급받아 Android metadata 와 iOS `Nid*` 설정에 연결해요. 현재 SDK 에는 Dart `initSdk` 가 없어요.
+- 소셜 로그인 native 설정은 [Kakao/Naver 통합 가이드](../integrations/kakao-naver-auth.md) 에서 확인해요.
+- Kakao 키는 Dart 빌드 상수로, Naver 값은 native 설정으로 주입해요. `.env` 나 CI Secrets 에 보관한 값을 빌드로 전달하는 단계도 필요해요.
 
 ### 대표 사례
 
@@ -203,7 +203,7 @@ cp recipes/backend-auth-app.yaml app_kits.yaml
 # app_kits.yaml
 app:
   name: My Cool App          # ← 변경
-  slug: my_cool_app
+  slug: my-cool-app
   # ...
 
 kits:
@@ -239,11 +239,13 @@ dart run tool/configure_app.dart
 
 Status: OK 를 확인해요.
 
+<a id="5-앱-정체성-변경--로컬-셋업"></a>
+
 ### 5. 앱 정체성 변경 + 로컬 셋업
 
 ```bash
 ./factory install                                          # 1회
-<repo> local init my_cool_app com.example.mycoolapp        # rename + .env + pub get
+<repo> local init my-cool-app com.example.mycoolapp        # rename + .env + pub get
 ```
 
 ### 6. 실행
@@ -257,6 +259,8 @@ Status: OK 를 확인해요.
 ---
 
 ## 혼합 유형 처리
+
+<a id="로컬--서버-백업-옵션-같은-혼합"></a>
 
 ### "로컬 + 서버 백업 옵션" 같은 혼합
 

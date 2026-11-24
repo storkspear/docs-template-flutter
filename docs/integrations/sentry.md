@@ -3,17 +3,17 @@
 > **목표**: Sentry DSN 발급 → `--dart-define` 주입 → 운영 환경에서 크래시 1건 이상 수신 확인까지.
 
 **관련 Kit**: [`observability_kit`](../features/observability-kit.md)
-**관련 ADR**: 없음 (관측성 도입 결정은 [`ADR-019 · 솔로 친화적 운영`](../philosophy/adr-019-solo-friendly.md) 의 "관리형 서비스 선호" 원칙을 따라요)
+**관련 ADR**: [`ADR-019 · 솔로 친화적 운영`](../philosophy/adr-019-solo-friendly.md) — 관리형 서비스와 직접 운영의 부담을 비교하는 기준이에요. 현재 Flutter 크래시 수집에는 Sentry를 사용해요.
 
 ---
 
 ## 0. Sentry 가 하는 일
 
-크래시 + 비동기 에러 + 사용자 zone error 까지 자동 캡처해서 Sentry 대시보드에 업로드해요. 우리 템플릿은:
+Sentry를 설정하면 Flutter 오류와 SDK가 관찰하는 비동기 오류를 보고할 수 있어요. 직접 잡아서 처리한 오류나 모든 isolate의 오류가 무조건 자동 보고되는 것은 아니므로 실제 앱 경로에서 확인해야 해요. 명시적으로 보고할 오류는 `CrashService.reportError`를 사용해요.
 
-- `main.dart` 의 `SentryFlutter.init` 으로 `runZonedGuarded` 래핑 — Future / Stream / 이벤트 루프 어디서 터져도 잡혀요
-- DSN 미주입 시 `DebugCrashService` 로 폴백 — 콘솔 출력만, 외부 전송 없음 (로컬/CI 안전)
-- `tracesSampleRate: 0.2` (트랜잭션 20%) — 무료 플랜 quota 절약
+- `main.dart`에서 `SentryFlutter.init(..., appRunner: _bootstrap)`으로 앱을 시작해요. 그 전에 실행하는 초기화와 별도 isolate의 오류는 수집 범위를 따로 확인해요.
+- DSN을 설정하지 않으면 외부로 전송하지 않는 `DebugCrashService`를 사용해요.
+- 성능 추적의 기본 샘플링 비율은 `tracesSampleRate: 0.2`예요. 실제 수집량과 필요한 진단 범위에 맞춰 조정해요.
 
 ---
 
@@ -31,6 +31,8 @@
 
 `.env` 또는 IDE run config 에서 dart-define 으로 전달.
 
+<a id="옵션-a--env--셸-스크립트-권장"></a>
+
 ### 옵션 A — `.env` + 셸 스크립트 (권장)
 
 ```bash
@@ -41,6 +43,8 @@ SENTRY_DSN=https://abcdef@o123456.ingest.sentry.io/789
 flutter run \
   --dart-define=SENTRY_DSN=$(grep SENTRY_DSN .env | cut -d= -f2)
 ```
+
+<a id="옵션-b--vs-code-launchjson"></a>
 
 ### 옵션 B — VS Code launch.json
 
@@ -63,6 +67,8 @@ flutter run \
 > launch.json 은 보통 git ignore 안 되므로 DSN 직접 박지 말고 환경변수에서 읽도록 wrapper 작성 권장.
 
 ---
+
+<a id="3-ci--운영에-주입-github-actions"></a>
 
 ## 3. CI / 운영에 주입 (GitHub Actions)
 

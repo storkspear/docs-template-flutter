@@ -1,6 +1,8 @@
+<a id="payment_kit"></a>
+
 # payment_kit
 
-결제 통합 FeatureKit 의 **골격** 이에요. Stripe 사용을 가정한 인터페이스와 Debug 폴백, Stripe 구현체 placeholder 로 구성돼요. **template 에선 의도적으로 SDK 의존을 추가하지 않았어요** — 결제 정책 (Stripe vs Toss vs PayPal · 가격 모델 · 정산 백엔드) 이 파생 레포마다 다르기 때문이에요.
+결제 서비스의 인터페이스와 개발용 Debug 구현을 제공해요. Stripe 구현체는 `init`과 결제 호출이 아직 구현되지 않은 골격이에요. 실제 결제를 제공하려면 파생 앱의 결제 정책에 맞춰 SDK·서버·영수증 검증과 오류 처리를 연결해야 해요.
 
 > ⚠️ **이 kit 은 template 에 commit 됐지만 `app_kits.yaml` default 에는 enable 되어 있지 않아요**. 결제를 도입할 때만 활성화해요.
 

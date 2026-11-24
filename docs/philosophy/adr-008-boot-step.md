@@ -1,10 +1,12 @@
+<a id="boot_step"></a>
+
 # Boot_Step
 
 **Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 line 수 갱신 / 2026-10-28 계약을 `core/kits/` 로 이관. `lib/core/kits/boot_step.dart` (계약), `lib/common/splash/splash_controller.dart` (61줄) + 각 Kit 이 기여하는 BootStep (`AuthCheckStep` 등). `lib/common/splash/boot_step.dart` 는 파생 레포 호환용 re-export 예요.
 
 ## 결론부터
 
-앱 시작 시 "토큰 유효성 확인 · PostHog init · 강제 업데이트 체크" 같은 **부팅 단계들** 이 있어요. 이걸 **`BootStep` 인터페이스** 로 추상화하고, 각 Kit 이 자기 단계를 기여하며 `SplashController` 가 순차 실행해요. 단계 추가 · 제거가 **Kit 수준에서 선언적** 이라 `main.dart` 를 건드리지 않고도 초기화 로직을 확장할 수 있어요.
+Kit가 제공한 `BootStep`을 설치 순서대로 모아 실행해요. `SplashController`는 첫 예외에서 남은 단계를 중단하고 원래 오류와 스택을 결과에 담아요. `main.dart`는 이를 보고한 뒤 앱 실행을 이어가요. 단계 내부에서 실패를 처리하는 경우와 실행기까지 예외가 전파되는 경우를 구분해야 해요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -39,6 +41,8 @@ ADR-003 이 FeatureKit 동적 레지스트리를 도입하자마자 이 구조�
 
 ## 고민했던 대안들
 
+<a id="option-1--maindart-에-고정-순서로-나열"></a>
+
 ### Option 1 — main.dart 에 고정 순서로 나열
 
 기존 방식 유지. Kit 마다 "이 함수를 main.dart 에 추가하세요" 를 README 에 적기.
@@ -47,6 +51,8 @@ ADR-003 이 FeatureKit 동적 레지스트리를 도입하자마자 이 구조�
 - **단점 1**: Kit on/off 시 main.dart 수정 필수 — ADR-003 의 "선언만 바꾸면 됨" 철학 위반.
 - **단점 2**: 순서 · 에러 처리 · 관측성 보일러플레이트가 main.dart 에 누적.
 - **탈락 이유**: 앱 공장 scale 에 안 맞음.
+
+<a id="option-2--riverpod-futureprovider-체인"></a>
 
 ### Option 2 — Riverpod FutureProvider 체인
 
@@ -63,6 +69,8 @@ final authBootProvider = FutureProvider((ref) async {
 - **단점 2**: 순서 제어가 간접적. "auth 먼저 PostHog 다음" 을 Provider 의존 그래프로 표현해야 하는데 그게 자연스럽지 않음.
 - **단점 3**: 에러 처리 (부팅 실패 시 어떻게?) 가 각 Provider 마다 흩어짐.
 - **탈락 이유**: Provider 시스템은 상태 공유용. 부팅 sequence 에는 과함.
+
+<a id="option-3--bootstep-인터페이스--splashcontroller--채택"></a>
 
 ### Option 3 — BootStep 인터페이스 + SplashController ★ (채택)
 
@@ -236,43 +244,45 @@ runApp(UncontrolledProviderScope(container: container, child: const App()));
 
 ### 긍정적 결과
 
-- **main.dart 불변성**: Kit 추가 · 제거해도 `_bootstrap()` 함수 수정 없음. `install([...])` 리스트만 변경.
-- **Kit 자체 완결**: `auth_kit/` 폴더만 보면 "이 Kit 이 부팅 시 뭐 하는지" 까지 파악 가능. 코드가 흩어지지 않음.
-- **테스트 격리**: `AuthCheckStep` 을 단독으로 테스트. `SplashController([testStep]).run()` 으로 부팅 flow 도 테스트 가능.
-- **순서가 명시적**: Kit install 순서가 그대로 부팅 순서. "왜 auth check 가 PostHog init 보다 먼저?" 를 `install` 리스트를 보면 5초 안에 이해.
-- **실패 격리**: 한 BootStep 실패해도 graceful fallback. 앱 전체가 멈추지 않음.
+- Kit 가 필요한 부팅 작업을 제공하고 앱은 모은 단계를 실행해요.
+- Kit 의 폴더에서 부팅 작업과 의존성을 함께 확인할 수 있어요.
+- SplashController 에 BootStep 목록을 주입해 순서와 실패 처리를 따로 테스트할 수 있어요.
+- 설치 목록과 각 Kit 의 단계 목록에서 실행 순서를 확인할 수 있어요.
+- 실패한 단계 이름, 원본 오류, 스택을 SplashResult 에 보관해 원인을 전달해요.
 
 ### 부정적 결과
 
-- **BootStep 간 의존성 표현 불가**: 현재 구조는 **순서만** 보장. "auth check 가 PostHog init 에 의존" 같은 것을 코드로 표현 못 함. install 순서에 의존.
-- **동기 · 비동기 혼합 불가**: 모두 `Future<void> execute()` 라 동기 초기화도 Future 로 감싸야 함. 오버헤드는 미미하지만 순수성 저하.
-- **에러 분류 없음**: 현재는 "성공 / 실패" 두 상태만. "warning (부분 실패 하지만 계속 진행)" 같은 표현이 없음. 향후 필요.
-- **병렬 실행 불가**: 모든 step 이 순차 `await`. `PostHog init` 과 `force update check` 는 이론상 병렬 가능하지만 현재는 안 함. 필요 시 `SplashController` 개선.
+- 단계 간 의존성을 그래프로 선언하지 않고 목록 순서로 관리해요.
+- `execute()` 는 Future<void> 계약이므로 동기 작업도 이 반환 형식에 맞춰야 해요.
+- SplashResult 는 준비 완료와 오류를 구분하지만 경고·부분 성공은 별도 모델로 제공하지 않아요.
+- 단계는 순차 실행해요. 예외가 나면 오류 결과를 반환하며 뒤 단계는 실행하지 않아요.
+- 예외를 단계 안에서 처리하고 정상 반환한 경우에는 다음 단계로 진행해요. 모든 실패를 자동으로 무시하는 구조는 아니에요.
 
 ## 교훈
 
+<a id="교훈-1--최소-인터페이스가-유지보수를-쉽게"></a>
+
 ### 교훈 1 — 최소 인터페이스가 유지보수를 쉽게
 
-`BootStep` 을 멤버 둘(`name` · `execute`)로 끝낸 게 정답이었어요. 초기엔 `Future<void> execute(BuildContext context, ProviderContainer container)` 같이 파라미터 늘리려 했는데, **Kit 이 container.read 로 알아서 가져가게** 하니 인터페이스가 변하지 않고도 모든 의존성 주입 가능. 4년 지나도 이 인터페이스는 안 바뀔 것 같아요.
+BootStep 은 `name` 과 `execute()` 를 제공해요. 필요한 의존성은 생성자나 현재 Kit 조립 방식으로 전달할 수 있으므로 모든 구현체가 BuildContext 를 받도록 만들 필요는 없어요.
 
-**교훈**: 인터페이스 설계 시 **"외부에서 필요할 것 같은 것" 보다 "구현체가 진짜 필요로 하는 최소"** 를 택하세요. 필요 시 구현체가 자기 해결.
+<a id="교훈-2-부팅-실패는-앱-멈춤-보다-fallback-이-좋다"></a>
+<a id="교훈-2--부팅-실패는-앱-멈춤-보다-fallback-이-좋다"></a>
 
-### 교훈 2 — 부팅 실패는 "앱 멈춤" 보다 "fallback" 이 좋다
+### 교훈 2 — 단계별로 실패 후 동작을 정해요
 
-초기엔 `AuthCheckStep` 이 실패하면 예외가 전파되어 앱이 크래시. 그러자 "Sentry 서버가 잠시 200 대신 500 을 내면 앱이 못 뜨는" 웃픈 상황 발생. 지금은 **부팅 실패는 로그만 남기고 fallback 상태로 진행**. 앱 가용성 크게 개선.
+부팅 실패를 허용할지는 각 단계의 역할에 따라 달라요. AuthCheckStep 처럼 내부에서 실패를 처리하는 단계는 다음 단계로 이어질 수 있지만, SplashController 까지 전달된 예외는 부팅 오류 결과를 만들어요. 앱이 계속 열리는지와 해당 기능을 사용할 수 있는지는 따로 확인해야 해요.
 
-**교훈**: 외부 의존성 (API · 저장소 · 플러그인) 은 부팅 시점에도 실패 가능. **graceful degradation** 을 기본으로. 앱이 부팅되기만 하면 사용자는 로그인부터 다시 할 수 있음.
+<a id="교훈-3--부팅-단계-관측성은-중요"></a>
 
 ### 교훈 3 — 부팅 단계 관측성은 중요
 
-BootStep 이 실패해도 `crashService` 가 off 면 원인 모름. `[Splash] running AuthCheckStep` · `[Splash] step failed after 423ms` 같은 로그를 콘솔에 찍어두는 게 디버깅에 결정적. 현재는 각 BootStep 이 자기 알아서 찍는데, `SplashController` 중앙에서 강제로 찍는 게 나았을 것.
-
-**교훈**: 부팅 같은 **시간적으로 1회성** 이벤트는 관측성을 **중앙에서 강제** 해야 일관적. 분산 로깅은 놓치기 쉬움.
+SplashController 는 실패한 단계 이름과 원본 예외·스택을 결과에 담아요. main.dart 는 이 결과를 크래시 서비스에 보고해요. 단계별 실행 시간이나 성공 로그는 현재 중앙에서 자동 수집하지 않으므로 이미 제공되는 기능으로 설명하지 않아요. 필요하면 측정 목적과 기록 범위를 정해 추가해요.
 
 ## 관련 사례 (Prior Art)
 
 - [Android Jetpack Startup](https://developer.android.com/jetpack/androidx/releases/startup) — `Initializer` 인터페이스. 본 ADR 의 개념적 원천
-- [iOS AppDelegate Lifecycle](https://developer.apple.com/documentation/uikit/uiapplicationdelegate/1623053-application) — didFinishLaunchingWithOptions 의 step 들
+- [iOS AppDelegate Lifecycle](https://developer.apple.com/documentation/uikit/uiapplicationdelegate/application(_:didfinishlaunchingwithoptions:)) — didFinishLaunchingWithOptions 의 step 들
 - [Spring Boot ApplicationRunner / CommandLineRunner](https://docs.spring.io/spring-boot/reference/features/spring-application.html#features.spring-application.application-runner) — 부팅 단계 hook
 - [Flutter `flutter_native_splash` 패키지](https://pub.dev/packages/flutter_native_splash) — 네이티브 스플래시와의 연결점
 - [Rx `Observable.concat`](https://reactivex.io/documentation/operators/concat.html) — 순차 실행의 reactive 버전

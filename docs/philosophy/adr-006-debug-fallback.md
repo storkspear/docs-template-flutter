@@ -1,10 +1,12 @@
+<a id="debug_fallback"></a>
+
 # Debug_Fallback
 
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `AnalyticsService`, `CrashService`, `NotificationService` 3개 인터페이스에 `Debug*` 폴백 제공. 실제 구현체는 `observability_kit`, `notifications_kit` 가 Provider override 로 교체.
 
 ## 결론부터
 
-외부 SDK (Sentry · PostHog · FCM 등) 에 의존하는 서비스는 전부 **추상 인터페이스** 로 정의하고, 템플릿은 **Debug 폴백 구현체** 를 기본 제공해요. DSN · API Key 주입이 없거나 Kit 이 활성화되지 않아도 앱은 정상 부팅 → Debug 구현체가 `print` 로 출력만. 파생 레포에서 실제 Kit 활성화 + 환경 변수 주입 시 Provider override 로 진짜 구현체가 자동 연결돼요.
+크래시 보고와 분석 같은 외부 서비스는 인터페이스로 사용하고, 설정이 없을 때 개발용 구현으로 실행할 수 있게 해요. 현재 기본 조립은 Sentry DSN과 PostHog 키를 보고 구현을 선택해요. 이 폴백을 모든 Kit의 자동 전환으로 일반화하지 않아요. FCM과 권한 요청은 별도 연결이 필요해요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -31,6 +33,8 @@ ViewModel 코드가 `analyticsProvider.trackEvent(...)` 같이 호출하는데, 
 
 ## 고민했던 대안들
 
+<a id="option-1--nullable-provider"></a>
+
 ### Option 1 — Nullable Provider
 
 Sentry 가 비활성이면 `crashServiceProvider` 가 `null` 반환.
@@ -49,6 +53,8 @@ ref.read(crashServiceProvider)?.reportError(e, st);  // 매번 ?.
 - **단점 2**: 호출이 silently no-op 돼서 버그 추적 어려움 — "왜 이벤트가 안 찍히지? Provider 가 null 인가?" 를 매번 확인.
 - **탈락 이유**: 압력 B 위반. 호출처가 복잡해짐.
 
+<a id="option-2--조건부-import--dart-conditional-import"></a>
+
 ### Option 2 — 조건부 import + Dart `conditional import`
 
 ```dart
@@ -60,6 +66,8 @@ import 'debug_crash_service.dart'
 - **단점 1**: `conditional import` 는 **플랫폼 조건** 만 지원 (web / io). Sentry DSN 유무 같은 **런타임 값** 은 분기 불가.
 - **단점 2**: 그럼에도 Sentry SDK 는 import 되어 바이너리에 포함. tree-shaking 에 도움 안 됨.
 - **탈락 이유**: Sentry DSN 유무는 런타임 환경 변수 기반이라 conditional import 로 해결 불가.
+
+<a id="option-3--추상-인터페이스--debug-폴백--provider-override--채택"></a>
 
 ### Option 3 — 추상 인터페이스 + Debug 폴백 + Provider override ★ (채택)
 
@@ -209,46 +217,45 @@ Debug 환경이면 콘솔 print, 프로덕션 환경이면 Sentry 전송. ViewMo
 
 ### 긍정적 결과
 
-- **첫 실행 장벽 0**: 파생 레포 `flutter run` → 아무 환경 변수 없이도 부팅. Sentry · PostHog · Firebase 설정은 나중에.
-- **ViewModel 코드 불변**: 환경에 무관하게 `ref.read(analyticsProvider).trackEvent(...)`. 조건 분기 · null 체크 0.
-- **테스트 용이성**: 테스트에서 `analyticsProvider.overrideWithValue(MockAnalytics())` 한 줄. 실제 Sentry SDK 로딩 없이 단위 테스트 가능.
-- **개발 중 가시성**: `DebugAnalyticsService` 가 콘솔에 이벤트 · 에러 출력 → "어 트래킹이 제대로 돼?" 로컬 검증이 쉬움.
-- **점진적 Kit 활성화**: 처음엔 observability_kit 꺼두고 나중에 활성화. 호출 코드 변경 없음.
+- 관측성 키가 없어도 Debug 구현체로 같은 인터페이스를 호출할 수 있어요. 다른 native 설정과 앱 부팅 조건까지 면제되지는 않아요.
+- 호출부를 바꾸지 않고 관측성 구현체를 교체할 수 있어요.
+- 테스트에서는 Provider override 로 외부 SDK 대신 fake 를 주입할 수 있어요.
+- 개발 실행에서 이벤트와 오류를 콘솔로 확인할 수 있어요. DebugAnalyticsService 는 assert, DebugCrashService 의 출력은 kDebugMode 조건을 사용해요.
 
 ### 부정적 결과
 
-- **"Debug 로 돌아가는 걸 프로덕션으로 착각"**: 배포 전 DSN 주입 여부를 **개발자가 직접 확인** 해야 함. "Sentry 가 안 찍혀요" 이슈의 80% 가 DSN 주입 누락.
-- **인터페이스 변경 비용**: `AnalyticsService.trackEvent` 시그니처 바꾸면 Debug · Sentry · PostHog 구현체 3개 모두 수정.
-- **매 Kit 마다 인터페이스 설계 피로**: 새 외부 서비스 추가 시 "이 서비스의 최소 인터페이스는?" 고민 필요. 너무 좁으면 확장 어려움, 너무 넓으면 Debug 구현 부담.
-- **Debug 구현 누락 시 Null Pointer**: 새 메서드를 인터페이스에 추가 후 Debug 구현에 빼먹으면 `NoSuchMethodError`. abstract method 는 dart analyzer 가 잡지만 default 구현 놓치기 쉬움.
+- Debug 구현으로 동작하는지 외부 전송 구현으로 동작하는지 배포 전에 확인해야 해요.
+- 인터페이스를 바꾸면 이를 구현한 클래스와 테스트도 수정해야 해요. AnalyticsService 의 Debug·PostHog 구현과 CrashService 의 Debug·Sentry 구현은 별개예요.
+- 새 서비스의 인터페이스는 실제 호출부가 필요한 범위로 정해야 해요. 사용하지 않는 메서드를 예상해 늘리면 구현체 관리 부담이 커져요.
+- abstract 메서드 구현 누락은 정적 분석으로 확인해요. 기본 구현이 요구한 동작을 하는지는 테스트가 필요해요.
 
 ## 교훈
 
+<a id="교훈-1--인터페이스--구현-분리-의-진짜-이득은-동작-가능-범위-넓히기"></a>
+
 ### 교훈 1 — "인터페이스 + 구현 분리" 의 진짜 이득은 **"동작 가능 범위 넓히기"**
 
-초기엔 "테스트 용이성" 때문에 인터페이스를 도입했어요. 하지만 실제 가치는 **"아무 환경에서나 앱이 돌게"** 였어요. 신입 개발자가 레포 클론 → `flutter run` → 바로 화면 → 나중에 Sentry 설정. 이 진입장벽 0 이 앱 공장의 scale 에 결정적.
+외부 의존성을 인터페이스 뒤로 두면 SDK 를 연결하지 않은 환경에서도 해당 기능을 대체할 수 있어요. 이 장점은 앱 전체가 아무 설정 없이 실행된다는 보장과는 달라요. 각 Kit 의 필수 조건과 Debug 구현의 동작 범위를 함께 안내해요.
 
-**교훈**: 인터페이스 분리의 가치는 테스트만이 아니에요. **"외부 의존 없이 돌 수 있는 최소 기능"** 을 만드는 것이 더 큰 가치.
+<a id="교훈-2--fluttererroronerror-덮어쓰기-주의"></a>
 
 ### 교훈 2 — `FlutterError.onError` 덮어쓰기 주의
 
-처음엔 `DebugCrashService.init()` 이 단순히 `FlutterError.onError = ...` 로 덮어썼어요. 그 결과 Sentry 가 먼저 init 됐더라도 Debug 가 Sentry 핸들러를 **무효화** 시키는 버그. 몇 시간 디버깅 후 `previous?.call(details)` 체인 관용을 발견.
+DebugCrashService 는 초기화 시 기존 FlutterError.onError 를 보관하고 새 핸들러에서 함께 호출해요. 전역 오류 훅을 추가할 때는 기존 핸들러와의 관계를 확인해야 해요. 현재 Sentry 활성화와 CrashService 선택은 같은 조건으로 연결되어 있어, 기본 조립에서 Debug 가 Sentry 뒤에 선택되는 흐름으로 설명하지 않아요.
 
-**교훈**: 전역 훅 (FlutterError.onError, zoneSpecification 등) 은 **덮어쓰지 말고 체인 호출**. 먼저 등록된 것을 보존하는 습관.
+<a id="교훈-3----dart-define-확인이-어려움"></a>
 
 ### 교훈 3 — `--dart-define` 확인이 어려움
 
-Sentry 가 안 찍혀서 "Sentry SDK 버그?" 의심했는데 원인은 `--dart-define=SENTRY_DSN=...` 누락. 런타임 검증 로직 (`ObservabilityEnv.isSentryEnabled`) 은 지금도 조건부 override 판단에 쓰이지만, **그 값을 부팅 로그로 내보내지는 않아요**. 부팅 때 `Sentry: enabled/disabled` 한 줄을 찍도록 하면 이런 종류의 디버깅이 30분에서 5초로 줄어요.
-
-**교훈**: 환경 변수 기반 기능은 **부팅 시 상태 로그** 를 내보내는 게 좋아요. "어 이게 켜진 건가?" 를 5초 안에 확인 가능하게.
+ObservabilityEnv 는 빌드 상수의 존재로 활성 여부를 판단하지만 현재 부팅 로그에 그 상태를 자동 출력하지는 않아요. 전송이 보이지 않으면 Kit 설치, 키 주입, SDK 초기화, 네트워크 상태를 차례로 확인해요. 상태 진단을 추가할 때는 키 값 자체를 출력하지 않아요.
 
 ## 관련 사례 (Prior Art)
 
-- [Riverpod `overrideWith` 공식 가이드](https://riverpod.dev/docs/essentials/testing#testing-a-provider) — Provider 교체 패턴의 기반
-- [Dependency Injection in Flutter](https://flutter.dev/blog/2021/12/09/dependency-injection-flutter) — 공식 블로그의 DI 관점
+- [Riverpod `overrideWith` 공식 가이드](https://riverpod.dev/docs/how_to/testing) — Provider 교체 패턴의 기반
+- [Dependency Injection in Flutter](https://docs.flutter.dev/app-architecture/case-study/dependency-injection) — 공식 아키텍처 가이드의 의존성 주입 설명
 - [Sentry Flutter 공식 통합](https://docs.sentry.io/platforms/flutter/) — `SentryCrashService` 구현의 기반
 - [PostHog Flutter 공식 통합](https://posthog.com/docs/libraries/flutter) — 동일
-- [Null Object Pattern (Martin Fowler)](https://martinfowler.com/bliki/NullObject.html) — Debug 구현체의 개념적 뿌리
+- [Null Object Pattern (Martin Fowler)](https://refactoring.com/catalog/introduceSpecialCase.html) — Debug 구현체의 개념적 뿌리
 
 ## Code References
 

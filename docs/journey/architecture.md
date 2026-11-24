@@ -1,12 +1,14 @@
+<a id="architecture--한눈-요약"></a>
+
 # Architecture — 한눈 요약
 
-파생 레포 개발자가 **10분 안에 전체 구조** 를 파악할 수 있게 쓴 개요. 깊이 들어가려면 [`Module Dependencies`](../architecture/module-dependencies.md) · [`FeatureKit Contract`](../architecture/featurekit-contract.md) · [`ADR`](../philosophy/README.md) 참조.
+앱을 구성하는 계층과 실행 흐름을 설명해요. 각 계층의 자세한 계약은 [`Module Dependencies`](../architecture/module-dependencies.md), [`FeatureKit Contract`](../architecture/featurekit-contract.md), [ADR](../philosophy/README.md) 에서 확인해요.
 
 ---
 
 ## 큰 그림
 
-이 템플릿은 **FeatureKit 아키텍처** 기반이에요. 앱의 기능들이 독립 Kit 으로 쪼개져 있고, 앱 유형에 맞는 Kit 만 조립해서 쓰는 구조.
+공통 기능을 Kit 으로 나누고 앱에 필요한 Kit 를 조립해요. 테마·저장소 같은 기반은 `core/` 에, 앱 고유 화면은 `features/` 에 둬요.
 
 ```text
 ┌─────────────────────────────────────────────────────┐
@@ -42,7 +44,7 @@
 
 ### `core/` (항상 사용)
 
-모든 앱이 **무조건** 쓰는 기반. 47개 파일, 10개 모듈.
+`core/` 는 여러 앱이 공유하는 기반이에요. Kit 를 조립하는 계약과 테마, 저장소, 공용 위젯 등을 제공해요.
 
 | 모듈 | 핵심 자산 |
 |------|----------|
@@ -59,7 +61,7 @@
 
 ### `kits/` (선택 15개)
 
-앱마다 켜고 끄는 기능 단위. [`Features 인덱스`](../features/README.md) 상세.
+`kits/` 에는 앱마다 선택해서 설치하는 기능을 둬요. 활성화 조건과 의존성은 [Features 인덱스](../features/README.md) 에서 확인해요.
 
 - **인프라**: `backend_api_kit`, `file_kit`, `observability_kit`, `local_db_kit`, `notifications_kit`, `background_kit`, `update_kit`, `permissions_kit`, `device_info_kit`
 - **UI · UX**: `nav_shell_kit`, `onboarding_kit`, `charts_kit`, `ads_kit`
@@ -78,11 +80,12 @@
 
 ```text
 lib/features/
-├── home/             # 템플릿은 스텁 (홈 화면 뼈대)
-└── settings/         # 템플릿은 스텁 (프로필 · 로그아웃 샘플)
+├── home/             # 홈 화면 예시
+├── settings/         # 설정 · 로그아웃 예시
+└── profile/          # 프로필 스텁 화면
 ```
 
-파생 레포가 여기에 **자기 도메인** 화면 추가:
+파생 레포에서는 이 영역에 앱 고유 화면을 추가해요. 예를 들어 가계부 앱은 지출과 카테고리 화면을 둘 수 있어요.
 ```text
 lib/features/
 ├── home/
@@ -98,7 +101,7 @@ lib/features/
 
 ## 상태 관리 흐름
 
-**Riverpod + MVVM** — Screen 은 UI, ViewModel 은 로직.
+Screen 은 화면을 그리고 사용자 입력을 전달해요. ViewModel 은 화면 상태를 관리하며, 필요한 Service 나 Repository 를 호출해요.
 
 ```text
 사용자 클릭
@@ -124,6 +127,8 @@ Screen: ref.watch 가 state 변화 감지 → 리빌드
 
 ---
 
+<a id="네트워크-흐름-backend_api_kit-활성-시"></a>
+
 ## 네트워크 흐름 (backend_api_kit 활성 시)
 
 ```text
@@ -139,7 +144,7 @@ AuthInterceptor: 401 이면 refresh 시도 + 재시도 (설치 순 FIFO — Dio 
   ↓
 ErrorInterceptor: DioException → ApiException 변환
   ↓
-LoggingInterceptor: debug 빌드에 콘솔 출력
+LoggingInterceptor: AppConfig.isDev 일 때 콘솔 출력
   ↓
 ViewModel: try/catch 로 수신
 ```
@@ -177,6 +182,8 @@ main()
 
 ## 조립 규약
 
+<a id="app_kitsyaml"></a>
+
 ### `app_kits.yaml`
 
 ```yaml
@@ -202,13 +209,13 @@ await AppKits.install([
 dart run tool/configure_app.dart
 ```
 
-이 3단계 동기화가 전체 템플릿의 핵심 관용이에요. 근거: [`ADR-003`](../philosophy/adr-003-featurekit-registry.md) · [`ADR-004`](../philosophy/adr-004-manual-sync-ci-audit.md).
+YAML 선언과 Dart 조립 코드를 함께 수정한 뒤 검사해요. 도구가 조립 코드를 대신 생성하지는 않아요. 이 방식을 선택한 이유는 [ADR-003](../philosophy/adr-003-featurekit-registry.md) 과 [ADR-004](../philosophy/adr-004-manual-sync-ci-audit.md) 에서 설명해요.
 
 ---
 
 ## 환경 분리 인프라 (dev/prod flavor)
 
-파생 레포 출시 운영을 위해 **iOS Build Configuration 6 + Android productFlavors + xcconfig 변수 계층** 으로 dev/prod 환경을 분리해요. Crashlytics/Analytics 데이터 격리 + 동일 디바이스에 dev/prod 공존 설치 가능.
+iOS 의 여섯 Build Configuration 과 Android 의 두 product flavor 로 dev/prod 를 나눠요. dev 앱은 식별자에 `.dev` 를 붙여 prod 앱과 같은 기기에 설치할 수 있어요. Firebase 도 각 환경의 프로젝트와 설정 파일을 연결해 구분해요. 이 구성이 Crashlytics 나 Firebase Analytics 연동까지 제공하는 것은 아니에요.
 
 ### Bundle ID 결정 흐름
 
@@ -229,6 +236,8 @@ ios/Runner.xcodeproj 의 PRODUCT_BUNDLE_IDENTIFIER:
 ```
 
 Android 도 동일 원리 — `android/app/build.gradle.kts` 의 `productFlavors { dev { applicationIdSuffix = ".dev" } / prod {} }`.
+
+<a id="ios-build-configuration--scheme-구조"></a>
 
 ### iOS Build Configuration / Scheme 구조
 
@@ -269,11 +278,11 @@ ios/Runner/Info.plist (committed):
   CFBundleURLSchemes  = $(GID_REVERSED_CLIENT_ID)
 ```
 
-Xcode 가 빌드 시점에 `$(VAR)` placeholder 를 (Build Config 의 xcconfig 체인에서 해결된) 실 값으로 치환. flavor 충돌 없이 dev/prod 빌드가 각자 맞는 OAuth/Bundle ID 를 가짐.
+Xcode 는 빌드할 configuration 의 xcconfig 값을 읽어 `$(VAR)` 를 치환해요. 이때 선택된 값에 따라 Bundle ID 와 Google OAuth 설정이 달라지므로, dev/prod 파일이 올바르게 연결되어 있는지 확인해요.
 
 ### 빌드 시 GoogleService-Info.plist 선택
 
-`ios/Runner.xcodeproj` 의 Build Phase Run Script 가 `$CONFIGURATION` 검사 (`*-dev` / `*-prod`) 후 `ios/Runner/GoogleService-Info-<env>.plist` → `GoogleService-Info.plist` 자동 카피. Firebase SDK 가 번들에서 읽음.
+Xcode Build Phase 의 스크립트가 configuration 이름의 `-dev` 또는 `-prod` 를 확인해요. 해당 환경의 `GoogleService-Info-<env>.plist` 를 앱 번들의 `GoogleService-Info.plist` 로 복사하면 Firebase SDK 가 그 파일을 읽어요.
 
 ### 운영 흐름
 
@@ -294,6 +303,30 @@ Xcode 가 빌드 시점에 `$(VAR)` placeholder 를 (Build Config 의 xcconfig �
 
 ---
 
+## 기술 스택 한눈에 보기
+
+필요한 기능을 선택해 `main.dart`에서 Kit을 조립하고 `app_kits.yaml` 선언을 함께 관리해요. 아래 그림은 사용 가능한 연결을 보여주며 모든 앱이 모든 Kit을 설치한다는 뜻은 아니에요.
+
+```mermaid
+flowchart TB
+  app[main.dart · app.dart] --> screen[Flutter 화면 · GoRouter]
+  screen --> state[Riverpod Notifier · 화면 상태]
+  state --> services[Kit의 Service · Repository]
+  services --> api[Dio · API 클라이언트]
+  api --> backend[template-spring]
+  services --> local[Drift · 로컬 데이터]
+  services --> secure[SecureStorage · 인증 토큰]
+  services -. 선택 연동 .-> native[소셜 로그인 · 권한 · 기기 정보]
+  services -. 선택 연동 .-> platform[로컬 알림 · WorkManager · 광고]
+  app -. 오류 수집 .-> sentry[Sentry]
+  app -. 이벤트 기록 .-> posthog[PostHog]
+  screen --> ui[테마 · i18n · 차트 · 로딩 위젯]
+```
+
+Sentry·PostHog는 해당 Kit과 키를 연결했을 때 외부로 전송해요. 키가 없으면 디버그 구현을 사용하며 초기화·기록 범위는 [관측성 Kit](../features/observability-kit.md)에 있어요. FCM 원격 푸시는 로컬 알림 Kit과 별도로 초기화하고 토큰을 등록해요. [FCM 설정](../integrations/fcm.md)을 참고하세요.
+
+정적 분석과 테스트는 Flutter 도구 및 GitHub Actions에서 실행해요. Android 자동 배포는 Fastlane을 사용하고, iOS는 파생 레포에서 서명·업로드 절차를 준비해요. 버전은 다음 표와 실제 `pubspec.yaml`·lockfile을 대조해요.
+
 ## 기술 스택
 
 | 영역 | 기술 |
@@ -312,7 +345,7 @@ Xcode 가 빌드 시점에 `$(VAR)` placeholder 를 (Build Config 의 xcconfig �
 | 백엔드 연동 | [`template-spring`](https://github.com/storkspear/template-spring) 짝 |
 
 최소 지원:
-- **Android**: API 24 (7.0) +
+- **Android**: `android/app/build.gradle.kts` 는 `flutter.minSdkVersion` 을 사용해요. 고정 숫자로 가정하지 말고 사용 중인 Flutter SDK 와 추가 플러그인의 요구사항을 함께 확인해요.
 - **iOS**: 14.0 +
 
 ---
@@ -326,6 +359,8 @@ Xcode 가 빌드 시점에 `$(VAR)` placeholder 를 (Build Config 의 xcconfig �
 - 코딩 규약: [`Conventions Overview`](../conventions/README.md)
 
 ---
+
+<a id="-책-목차--journey-1단계"></a>
 
 ## 📖 책 목차 — Journey 1단계
 

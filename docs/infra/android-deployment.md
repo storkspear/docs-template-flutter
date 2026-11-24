@@ -1,245 +1,143 @@
 # Android Deployment
 
-이 문서는 **Fastlane + GitHub Actions + Play Console Internal** 배포를 다뤄요. `git tag v1.0.0 && git push --tags` 만으로 자동 배포돼요.
-
----
+Play Console 준비부터 GitHub Actions의 Internal 트랙 업로드까지 한곳에서 설명해요. 계정·앱·서명 설정을 마친 뒤 `v*` 태그를 올리면 검증과 배포가 실행돼요.
 
 ## 전체 흐름
 
 ```text
-개발자                         GitHub                    Play Console
-  │                              │                          │
-  │ git tag v1.0.0               │                          │
-  │ git push --tags              │                          │
-  │─────────────────────────────▶│                          │
-  │                              │                          │
-  │                 release-android.yml 트리거                │
-  │                  1. Keystore 디코딩                        │
-  │                  2. fastlane android beta                  │
-  │                     (AAB 빌드 + 난독화 + 심볼 생성)           │
-  │                  3. Play Store 업로드 (Internal track)      │
-  │                  4. Sentry 심볼 업로드                       │
-  │                              │─────────────────────────▶│
-  │                              │                          │ 내부 테스터 배포
-  │                              │                          │
+앱·서비스 계정·업로드 키 준비
+  → GitHub Secrets 등록
+  → 필요한 첫 AAB 업로드와 콘솔 설정 확인
+  → v* 태그 push
+  → verify (format · config audit · docs contract · analyze · test)
+  → prod AAB 빌드 및 Internal 업로드
+  → 조건부 Sentry 심볼 업로드
+  → 임시 자격 증명 정리
 ```
-
----
 
 ## 최초 설정 (1회)
 
-### 1. 업로드 키스토어 생성
+<a id="3-play-console-설정"></a>
+
+### 1. Play Console 앱과 서비스 계정
+
+Play Console에서 앱을 만들고 콘텐츠 등급, 광고 여부, 데이터 안전과 개인정보처리방침 등 해당 앱에 요구되는 정보를 작성해요. 실제 업로드 AAB의 패키지명이 `android/app/build.gradle.kts`의 prod `applicationId`와 일치해야 해요.
+
+자동 업로드에 사용할 Google Cloud 서비스 계정을 만들고 Android Publisher API 사용 설정과 Play Console의 대상 앱 권한을 확인해요. 앱의 테스트 트랙에 릴리스를 올릴 수 있는 권한을 부여하고 JSON 키를 안전하게 보관해요. 콘솔 메뉴 이름·요금·심사 기간·테스터 제한은 바뀔 수 있으므로 현재 콘솔 안내를 확인해요.
+
+<a id="1-업로드-키스토어-생성"></a>
+
+### 2. 업로드 키스토어 생성
 
 ```bash
 ./scripts/signing/generate-upload-keystore.sh <app-slug>
 ```
 
-생성물은 `~/Documents/keystores-pending/<app-slug>/` 에 임시 저장돼요 (키스토어 + `passwords.txt`, 커밋 금지)
+스크립트는 `android/app/upload-keystore.jks`, `android/key.properties`와 `~/Documents/keystores-pending/<app-slug>/`의 백업 사본·비밀번호 파일을 만들어요. 이 파일들은 커밋하지 않아요. 이미 키가 있는 앱은 새 키로 덮어쓰지 말고 등록된 업로드 인증서와 일치하는지 확인해요. 장기 백업 절차는 [Secrets Management](./secrets-management.md)를 따라요.
 
-### 2. 키스토어 · Play Console 자격 증명 GitHub Secrets 등록
+<a id="2-키스토어-play-console-자격-증명-github-secrets-등록"></a>
+<a id="2-키스토어--play-console-자격-증명-github-secrets-등록"></a>
+
+### 3. GitHub Secrets 등록
 
 ```bash
 ./scripts/signing/upload-secrets-to-github.sh <app-slug>
 ```
 
-이 스크립트는 `~/Documents/keystores-pending/<app-slug>/` 의 키스토어·비번을 읽어 **`ANDROID_*` 4종만 자동 업로드**해요. 나머지는 스크립트가 출력하는 안내대로 `gh secret set` 으로 직접 등록하세요:
+이 스크립트는 pending 디렉터리에서 읽은 Android 서명 값 네 개만 자동 등록해요. 대상 GitHub 계정과 레포를 확인한 뒤 실행하세요.
 
-필요한 GitHub Secrets:
-- `ANDROID_KEYSTORE_BASE64` — 업로드 키스토어 (base64 인코딩) — *스크립트 자동*
-- `ANDROID_KEYSTORE_PASSWORD` — *스크립트 자동*
-- `ANDROID_KEY_PASSWORD` — *스크립트 자동*
-- `ANDROID_KEY_ALIAS` — *스크립트 자동*
-- `PLAY_STORE_JSON_KEY` — Play Console 서비스 계정 JSON — *수동*
-- `GOOGLE_SERVICES_JSON_PROD` — prod Firebase `google-services.json` (base64) — *수동* — 이 파일은 gitignore 라 CI 가 secret 으로 복원해요. 없으면 `google-services` 플러그인이 적용되지 않아 `default_web_client_id` 가 안 생기고 **출시 빌드에서만 구글 로그인이 안 돼요** → 워크플로가 fail-fast 로 막아요 (`base64 -i android/app/src/prod/google-services.json | gh secret set GOOGLE_SERVICES_JSON_PROD`)
-- `SENTRY_AUTH_TOKEN` — 심볼 업로드 — *수동*
-- `SENTRY_ORG` · `SENTRY_PROJECT` — *수동*
+| 설정 | 등록 방식과 용도 |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | 자동: 업로드 키스토어 |
+| `ANDROID_KEYSTORE_PASSWORD` | 자동: 저장소 비밀번호 |
+| `ANDROID_KEY_PASSWORD` | 자동: 키 비밀번호 |
+| `ANDROID_KEY_ALIAS` | 자동: 키 별칭 |
+| `PLAY_STORE_JSON_KEY` | 수동: 대상 앱 권한이 있는 서비스 계정 JSON |
+| `GOOGLE_SERVICES_JSON_PROD` | 수동: prod Firebase 설정 파일의 base64 값 |
+| `SENTRY_DSN`, `POSTHOG_KEY`, `POSTHOG_HOST` | 선택: 앱 관측성 설정 |
+| `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | 선택: Sentry 심볼 업로드에 필요한 세 값 |
 
-### 3. Play Console 설정
+현재 릴리스 워크플로는 Android 서명 값, Play JSON과 prod Firebase 설정을 필수로 확인해요. 사용하지 않는 SDK를 제거한 파생 앱은 워크플로의 필수 조건도 함께 검토해야 해요.
 
-- [Play Console](https://play.google.com/console) 에서 앱을 생성해요
-- 서비스 계정 생성 → JSON 키 다운로드 → Google Cloud Console 에서 "Android Publisher" 권한을 부여해요
-- 내부 테스트 track 을 활성화해요
-- 최초 1번은 **수동 업로드** 가 필요해요 (AAB 직접 업로드) — 이후엔 API 로 가능해요
+```bash
+base64 -i android/app/src/prod/google-services.json | gh secret set GOOGLE_SERVICES_JSON_PROD
+```
 
----
+### 4. 첫 AAB와 내부 테스트
+
+첫 API 업로드에 필요한 앱 등록 상태를 확인하고, 필요한 경우 prod AAB를 콘솔에 직접 업로드해요. 처음부터 자동 배포만 반복하기보다 서명·패키지명·콘솔 요구사항을 이 단계에서 확인하세요.
+
+```bash
+flutter build appbundle --release --flavor prod \
+  --obfuscate --split-debug-info=build/symbols \
+  --dart-define-from-file=.env.prod
+```
+
+이 명령은 필요한 값을 채운 `.env.prod`를 명시적으로 읽어요. `APP_ENV=prod`와 실제 `BASE_URL`을 넣고, 지원 이메일·정책 URL은 `main.dart`의 앱 설정도 바꿔요. 빌드 성공 후에는 실제 실행도 확인해요. `AppConfig`의 release 검증을 통과하도록 서버 주소·환경·지원 이메일·정책 URL을 설정해야 해요. 기본 예제 값을 남겨둔 빌드는 설치 후 부팅에서 실패할 수 있어요.
 
 ## 배포 트리거
 
+`pubspec.yaml`의 `version: 1.2.3+45`에서 `1.2.3`은 표시 버전, `45`는 Android `versionCode`예요. 이미 사용한 build number를 다시 쓰지 않아요. 의도한 변경만 커밋하고 태그가 그 커밋을 가리키는지 확인한 뒤 해당 태그를 push해요.
+
 ```bash
-# 버전 업 (pubspec.yaml 의 version 필드)
-# version: 1.2.3+45
-#         |     |
-#         |     +- build number (Android versionCode)
-#         +- semver (Android versionName)
-
-git commit -am "chore: bump to 1.2.3+45"
 git tag v1.2.3
-git push origin main --tags
+git push origin v1.2.3
 ```
-
-태그가 올라가면 **GHA 워크플로우가 자동 실행돼요** → `release-android.yml`.
-
----
 
 ## 워크플로우 상세
 
-```yaml
-# .github/workflows/release-android.yml (개요)
-on:
-  push:
-    tags: ['v*']
+정본은 [release-android.yml](https://github.com/storkspear/template-flutter/blob/main/.github/workflows/release-android.yml)이에요. 태그 push는 일반 `ci.yml` 검증을 대신하지 않으므로 릴리스 워크플로의 `verify` job이 먼저 검사를 실행해요. 배포 job은 검증 성공 뒤에만 시작해요.
 
-jobs:
-  # 태그 push 는 ci.yml 을 트리거하지 않아서(main 브랜치 push·PR 전용)
-  # 같은 검사를 릴리스 워크플로가 직접 들고 있어요.
-  verify:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-      - run: flutter pub get
-      - run: dart format --output=none --set-exit-if-changed lib/ test/
-      - run: dart run tool/configure_app.dart --audit
-      - run: bash tools/docs-check/docs-contract-test.sh
-      - run: flutter analyze
-      - run: flutter test --reporter=expanded
-
-  release-android:
-    runs-on: ubuntu-latest
-    needs: verify          # verify 가 그린일 때만 빌드·업로드로 넘어가요
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-
-      - name: Decode Keystore
-        run: echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/upload-keystore.jks
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-
-      # gitignore 된 prod google-services.json 복원 (없으면 구글 로그인 불능 → fail-fast)
-      - name: Write google-services.json (prod)
-        run: echo "$GOOGLE_SERVICES_JSON_PROD" | base64 -d > android/app/src/prod/google-services.json
-        env:
-          GOOGLE_SERVICES_JSON_PROD: ${{ secrets.GOOGLE_SERVICES_JSON_PROD }}
-
-      - name: Write Play Store JSON
-        run: echo "$PLAY_STORE_JSON_KEY" > android/play-store-credentials.json
-
-      - name: Run fastlane beta (build + Play Internal upload)
-        working-directory: android
-        env:
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
-          POSTHOG_HOST: ${{ secrets.POSTHOG_HOST }}
-        # Fastfile 의 build_release lane 이 ENV → --dart-define 으로 주입
-        # (--obfuscate + --split-debug-info=build/symbols 포함)
-        run: bundle exec fastlane android beta
-
-      - name: Upload Sentry mapping
-        # ProGuard mapping (Kotlin/Java) + Dart split-debug-info 둘 다 업로드
-        working-directory: android
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-        run: bundle exec fastlane android upload_sentry_mapping version:${{ steps.version.outputs.version }}
-
-      - name: Cleanup
-        run: rm -f android/app/upload-keystore.jks android/play-store-credentials.json
-```
-
----
+배포 job은 임시 파일로 서명 키·Play 자격 증명·prod Firebase 설정을 복원하고 fastlane `beta`를 호출해요. Sentry 업로드는 관련 설정이 있을 때 실행하며, 임시 자격 증명은 성공 여부와 관계없이 정리하는 단계가 있어요. 문서의 축약 YAML을 복사하기보다 현재 워크플로를 기준으로 수정하세요.
 
 ## Fastlane 구성
 
-```ruby
-# android/fastlane/Fastfile (요약 — 실제 4 lane 구성)
-default_platform(:android)
+| lane | 현재 역할 |
+|---|---|
+| `build_release` | prod AAB 빌드, Dart 난독화와 심볼 생성, 관측성 값 전달 |
+| `beta` | `build_release` 호출 뒤 Internal 업로드 |
+| `deploy` | Internal의 빌드를 Production으로 승격하는 수동 lane |
+| `upload_sentry_mapping` | ProGuard 매핑과 Dart split-debug-info 업로드 |
 
-platform :android do
-  # 1) AAB 빌드 + Dart 난독화 + 관측성 키 주입
-  lane :build_release do
-    sh "cd ../.. && flutter build appbundle --release --flavor prod " \
-       "--obfuscate --split-debug-info=build/symbols " \
-       "--dart-define=SENTRY_DSN=#{ENV['SENTRY_DSN'] || ''} " \
-       "--dart-define=POSTHOG_KEY=#{ENV['POSTHOG_KEY'] || ''}"
-  end
+현재 `build_release`가 자동 전달하는 환경 값은 Sentry·PostHog 관련 값이에요. `BASE_URL`, `APP_ENV`, `SSL_PINS`를 GitHub Secret에 등록하는 것만으로 앱에 전달되지는 않아요. 파생 앱의 설정 방식에 맞춰 실제 빌드 명령과 값을 대조하세요.
 
-  # 2) Play Internal 업로드 (build_release 호출 후)
-  lane :beta do
-    build_release
-    upload_to_play_store(
-      track: 'internal',
-      aab: '../build/app/outputs/bundle/prodRelease/app-prod-release.aab',
-      json_key: ENV['PLAY_STORE_JSON_KEY_PATH'] || 'play-store-credentials.json',
-      skip_upload_metadata: true,
-      skip_upload_images: true,
-      skip_upload_screenshots: true,
-    )
-  end
-
-  # 3) Production 트랙 승격 (수동)
-  lane :deploy do
-    upload_to_play_store(track: 'production', track_promote_to: 'production', ...)
-  end
-
-  # 4) Sentry 심볼 업로드 (ProGuard mapping + Dart split-debug-info)
-  lane :upload_sentry_mapping do |options|
-    # sentry-cli 로 release new → upload-proguard → upload-dif → finalize
-  end
-end
-```
-
----
+<a id="internal--closed--open--production"></a>
 
 ## Internal → Closed → Open → Production
 
-Play Console 워크플로우:
+GitHub Actions의 자동 업로드 대상은 Internal이에요. 내부 테스터를 등록해 실제 설치·로그인·주요 기능을 확인한 뒤 다음 트랙으로 승격해요. 각 트랙의 공개 범위와 요구사항은 현재 Play Console에서 확인해요. Production 승격은 콘솔이나 수동 `deploy` lane으로 별도 실행해요.
 
-1. **Internal test**: 100명 이하 · 즉시 · 승인 불필요
-2. **Closed test** (Alpha): 1000명 이하 · 이메일 초대
-3. **Open test** (Beta): 무제한 · 공개 URL
-4. **Production**: 정식 배포 · 심사 1~7일
+<a id="upload-key-not-matching"></a>
 
-본 GHA 는 **Internal 만** 자동 배포해요. 상위 track 승격은 Play Console 에서 수동으로 해요.
+<a id="version-code-already-used"></a>
 
----
+<a id="package-name-conflict"></a>
 
 ## 트러블슈팅
 
-### "Upload key not matching"
+| 증상 | 확인할 내용 |
+|---|---|
+| App not found / Package name conflict | 업로드 대상 앱과 prod applicationId, 서비스 계정의 앱 접근 권한 |
+| Upload key not matching | Play Console의 업로드 인증서와 실제 서명 키 지문 |
+| Version code already used | `pubspec.yaml`의 build number와 업로드 이력 |
+| fastlane 권한 오류 | API 활성화, 서비스 계정과 대상 앱의 릴리스 권한 |
+| prod Google 로그인 실패 | prod Firebase 파일, 패키지명, 서명 인증서 등록 |
 
-Play Console 의 App Signing 에서 "Upload certificate" 가 `upload-keystore.jks` 와 다르면 발생해요. 처음 앱 등록 시 **Play App Signing 을 활성화** 하고 upload 인증서 지문을 맞춰요.
-
-### "Version code already used"
-
-`pubspec.yaml` 의 `version` 의 `+` 뒤 숫자가 Play 에 이미 올라간 값과 같거나 작으면 실패해요. 항상 증가시켜요.
-
-### "Package name conflict"
-
-Play Console 앱 패키지명과 Android `applicationId` 가 같아야 해요. 새 앱 생성 시 `rename-app.sh` 결과를 확인하세요.
-
----
+키를 잃었으면 Play App Signing의 업로드 키 재설정 절차를 확인해요. 처리 기간을 문서의 고정 숫자로 가정하지 않아요.
 
 ## 파생 레포 체크리스트
 
-- [ ] `<repo> local init <slug> com.<org>.<slug>` 실행 완료 (rename + .env + pub get)
-- [ ] `<repo> prod init` 으로 Firebase prod project + Android 앱 등록 + SHA-1 추가 + google-services.json 다운
-- [ ] Play Console 앱 생성 + Play App Signing 활성화
-- [ ] 서비스 계정 · JSON 키 발급 + Android Publisher 권한
-- [ ] `generate-upload-keystore.sh` 로 keystore 생성
-- [ ] `upload-secrets-to-github.sh` 로 `ANDROID_*` 4종 자동 업로드
-- [ ] `PLAY_STORE_JSON_KEY` · `GOOGLE_SERVICES_JSON_PROD` · `SENTRY_AUTH_TOKEN` · `SENTRY_ORG` · `SENTRY_PROJECT` 를 `gh secret set` 으로 수동 등록
-- [ ] 최초 AAB 수동 업로드 (Play Console)
-- [ ] 내부 테스터 이메일 등록
-- [ ] `v1.0.0` 태그 push → 자동 배포 확인
-
----
+- [ ] 앱 식별자, 실제 release 설정과 prod Firebase 설정을 확인했어요.
+- [ ] Play 앱과 서비스 계정을 만들고 대상 앱 권한을 확인했어요.
+- [ ] 업로드 키를 보관하고 필요한 Secrets를 등록했어요.
+- [ ] 최초 업로드와 콘솔 요구사항을 확인했어요.
+- [ ] 원하는 커밋의 태그에서 verify와 Internal 업로드가 성공했어요.
+- [ ] 내부 테스터가 설치해 주요 기능을 확인했어요.
+- [ ] 난독화 심볼을 보관하고 필요한 경우 Sentry에서 확인했어요.
 
 ## 관련 문서
 
-- [`ios-deployment.md`](./ios-deployment.md)
-- [`security.md`](./security.md) — 난독화 · 심볼 업로드
-- [`ci-cd.md`](./ci-cd.md)
-- [`secrets-management.md`](./secrets-management.md)
-- [`ADR-020 · 보안 방어선`](../philosophy/adr-020-security-hardening.md)
+- [iOS 배포](./ios-deployment.md)
+- [보안 설정과 출시 점검](./security.md)
+- [CI](./ci-cd.md)
+- [Secrets Management](./secrets-management.md)

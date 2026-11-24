@@ -1,6 +1,8 @@
+<a id="kakao--naver-소셜-로그인-통합"></a>
+
 # Kakao / Naver 소셜 로그인 통합
 
-> **목표**: 한국 시장 앱에 카카오/네이버 로그인 추가. 콘솔 키 발급 → 플랫폼 설정 → app_kits.yaml 활성화 → 검증까지.
+카카오·네이버 로그인을 추가할 때 필요한 콘솔 등록, native 설정, Kit 활성화, 검증 절차를 안내해요.
 
 **관련 Kit**: [`auth_kit`](../features/auth-kit.md)
 **관련 패키지**: `kakao_flutter_sdk_user`, `flutter_naver_login` (pubspec.yaml 에 이미 선언됨)
@@ -9,11 +11,13 @@
 
 ## 0. 본 템플릿의 위치
 
-기본적으로 이메일 + 4개 소셜 provider (총 5개) 지원: `email · google · apple · kakao · naver`. 한국 외 시장이면 카카오/네이버는 비활성 권장 (앱 사이즈 ~3MB 절약).
+템플릿은 이메일과 Google·Apple·Kakao·Naver 인증을 지원해요. 앱에 필요한 provider 만 활성화하고, 사용하지 않는 소셜 SDK 를 제거할 때는 관련 import 와 native 설정도 함께 확인해요.
 
-> 사이즈 영향: kakao_flutter_sdk + flutter_naver_login 의 native 라이브러리만 ~3MB. pubspec 에 선언만 해도 APK 에 포함되므로, **사용 안 하는 시장의 앱은 pubspec 에서도 제거 권장** ([features/README.md tree-shaking 주의](../features/README.md)).
+> Kit 목록에서 provider 를 끄는 것만으로 native SDK 가 앱에서 빠지지는 않아요. 의존성 제거 후 실제 산출물을 측정해야 용량 변화를 알 수 있어요. 자세한 범위는 [Features 의 tree-shaking 설명](../features/README.md) 을 참고해요.
 
 ---
+
+<a id="1-kakao-developers-콘솔--앱-등록"></a>
 
 ## 1. Kakao Developers 콘솔 — 앱 등록
 
@@ -39,6 +43,8 @@
 
 ---
 
+<a id="2-naver-developers-콘솔--앱-등록"></a>
+
 ## 2. Naver Developers 콘솔 — 앱 등록
 
 1. https://developers.naver.com 가입
@@ -55,6 +61,8 @@
 ---
 
 ## 3. Flutter 측 활성화
+
+<a id="3-1-app_kitsyaml"></a>
 
 ### 3-1. `app_kits.yaml`
 
@@ -110,6 +118,8 @@ KakaoSdk.init(
 );
 ```
 
+<a id="4-2-android--androidmanifestxml"></a>
+
 ### 4-2. Android — `AndroidManifest.xml`
 
 `android/app/src/main/AndroidManifest.xml` 의 `<application>` 안에 카카오 redirect activity 등록:
@@ -128,7 +138,9 @@ KakaoSdk.init(
 </activity>
 ```
 
-> 보안: native key 는 base64 등으로 한 번 더 가리는 게 좋아요. 다만 Kakao SDK 가 native key 만으로는 임의 작업이 안 되도록 설계되어 있어서 노출돼도 치명적이진 않아요.
+> native 앱 키는 앱에 포함되는 설정이에요. base64 로 바꿔도 비밀이 되지 않아요. 발급처에 등록한 패키지명·Bundle ID·키 해시를 확인하고, 서버 권한을 가진 자격증명과 구분해 관리해요.
+
+<a id="4-3-ios--infoplist"></a>
 
 ### 4-3. iOS — `Info.plist`
 
@@ -166,29 +178,28 @@ KakaoSdk.init(
 
 ## 5. 키 주입
 
-`.env`:
-
-```
-KAKAO_NATIVE_KEY=1234567890abcdefghij
-NAVER_CLIENT_ID=ABCDEFGHIJKLMNOP
-NAVER_CLIENT_SECRET=abcdefghij
-```
-
-빌드:
+Kakao 초기화 코드는 `KAKAO_NATIVE_KEY` 를 Dart 상수로 읽어요. `.env` 에 값을 넣고 실행할 때 파일을 명시해요.
 
 ```bash
-flutter run \
-  --dart-define=KAKAO_NATIVE_KEY=$(grep KAKAO_NATIVE_KEY .env | cut -d= -f2) \
-  --dart-define=NAVER_CLIENT_ID=$(grep NAVER_CLIENT_ID .env | cut -d= -f2)
+<repo> dev start --dart-define-from-file=.env
 ```
 
-GHA Secrets:
+Naver 는 설정 방식이 달라요. 현재 잠긴 `flutter_naver_login 2.1.1` 에는 Dart `FlutterNaverLogin.initSdk` 메서드가 없어요. `main.dart` 의 해당 주석을 그대로 해제하거나 `NAVER_CLIENT_ID` 를 dart-define 으로 전달하는 것만으로 초기화되지 않아요.
+
+- Android: Manifest 의 `com.naver.sdk.clientId`, `com.naver.sdk.clientSecret`, `com.naver.sdk.clientName` metadata 를 앱 값으로 설정해요. 리소스를 참조한다면 해당 문자열 리소스도 빌드에 포함해야 해요.
+- iOS: `Info.plist` 에 `NidClientID`, `NidClientSecret`, `NidAppName`, `NidUrlScheme` 를 설정해요. URL Scheme 및 앱 복귀 처리는 사용 중인 SDK 버전의 설정 절차와 함께 확인해요.
+
+dev/prod 값을 나누려면 각 native 빌드 설정에서 올바른 값을 주입하는지도 확인해요. 현재 템플릿에는 이 Naver 설정 파일을 자동 생성하는 단계가 없어요.
+
+CI 에서는 발급값을 GitHub Secrets 로 보관할 수 있어요.
 
 ```bash
 gh secret set KAKAO_NATIVE_KEY
 gh secret set NAVER_CLIENT_ID
-gh secret set NAVER_CLIENT_SECRET   # Flutter FlutterNaverLogin.initSdk 인자 (spring 백엔드는 미사용)
+gh secret set NAVER_CLIENT_SECRET
 ```
+
+Secrets 를 등록하는 것만으로 앱에 반영되지는 않아요. 파생 레포의 빌드 단계에서 Kakao 의 dart-define 과 Naver 의 native 설정으로 연결해야 해요. 현재 Android 릴리스 워크플로우는 이 세 값을 자동 주입하지 않아요.
 
 ---
 
@@ -232,7 +243,7 @@ AuthService._handleAuthResponse → 토큰 저장 + authenticated 상태
 - [ ] Kakao Developers 콘솔에서 앱 등록 + 네이티브 앱 키 발급
 - [ ] Android keystore 해시를 release/debug 모두 콘솔에 등록
 - [ ] iOS Bundle ID 콘솔에 등록
-- [ ] 카카오 로그인 활성화 + OpenID Connect 활성화
+- [ ] 카카오 로그인을 활성화해요. 현재 access token 검증 흐름에서 OpenID Connect 는 필수가 아니에요.
 - [ ] 이메일을 **필수 동의** 항목으로 설정
 - [ ] `AndroidManifest.xml` 에 redirect activity + `kakao{KEY}://oauth` scheme 등록
 - [ ] `Info.plist` 에 `LSApplicationQueriesSchemes` + `CFBundleURLTypes` (카카오 scheme)
@@ -245,7 +256,7 @@ AuthService._handleAuthResponse → 토큰 저장 + authenticated 상태
 - [ ] Android 패키지명 + iOS Bundle ID 등록
 - [ ] 이메일 제공 정보 필수 설정
 - [ ] `Info.plist` 에 `LSApplicationQueriesSchemes` + URL Scheme 등록
-- [ ] `.env` + GHA Secrets 에 `NAVER_CLIENT_ID` · `NAVER_CLIENT_SECRET` (둘 다 Flutter `FlutterNaverLogin.initSdk` 인자 — spring 백엔드는 secret 미사용)
+- [ ] Naver Client ID·Secret·앱 이름을 Android metadata 와 iOS `Nid*` 설정에 연결해요. CI Secrets 를 쓰면 native 설정으로 전달하는 단계도 작성해요. spring 백엔드는 Client Secret 을 사용하지 않아요.
 - [ ] `app_kits.yaml` + `main.dart` 에 `naver` provider 활성화
 
 ### 백엔드 (template-spring)
@@ -254,12 +265,13 @@ AuthService._handleAuthResponse → 토큰 저장 + authenticated 상태
 
 ---
 
+<a id="8-개인정보--동의-정책"></a>
+
 ## 8. 개인정보 / 동의 정책
 
-- **수집 항목 명시**: 개인정보처리방침에 "카카오 (이메일, 닉네임, 프로필 이미지)" / "네이버 (이메일, 이름)" 명시
-- **위탁사**: Kakao Corp., NAVER Corp. (한국)
-- **보관 기간**: 회원 탈퇴 시 즉시 삭제 또는 법적 보관 기간 (예: 5년)
-- 이메일 미동의 시 안내 메시지: "이메일은 계정 식별에 필수입니다. 동의 후 다시 시도해주세요"
+- 개인정보처리방침에는 실제 요청·전달·저장하는 항목과 처리 주체를 적어요. 템플릿이 닉네임이나 프로필 이미지를 모두 수집한다고 가정하지 않아요.
+- 회원 탈퇴 시 삭제 범위와 별도 보관이 필요한 항목은 앱의 처리 방식과 적용 기준에 맞춰 정해요. 모든 데이터에 동일한 보관 연수를 적용하지 않아요.
+- 이메일 미동의로 가입할 수 없으면 이유와 다시 시도할 방법을 안내해요. 예: "가입에 필요한 이메일을 확인할 수 없어요. 이메일 제공 동의를 확인한 뒤 다시 시도해주세요."
 
 ---
 

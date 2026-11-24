@@ -1,3 +1,5 @@
+<a id="claudemd--docs-template-flutter"></a>
+
 # CLAUDE.md — docs-template-flutter
 
 이 저장소는 `template-flutter/docs/`의 공개 문서 미러와 정적 뷰어예요. 앱 소스 저장소가 아니에요.

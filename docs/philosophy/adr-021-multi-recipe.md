@@ -1,10 +1,12 @@
+<a id="multi_recipe"></a>
+
 # Multi_Recipe
 
 **Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 갱신 (4번째 recipe `social-auth-app.yaml` 편입). `recipes/` 폴더에 4개 YAML 파일 (`local-only-tracker.yaml` · `local-notifier-app.yaml` · `backend-auth-app.yaml` · `social-auth-app.yaml`). 파생 레포가 복사 → `app_kits.yaml` 로 덮어쓰기.
 
 ## 결론부터
 
-이 템플릿은 **하나의 Flutter 프로젝트로 네 가지 유형의 앱** 을 만들 수 있게 설계됐어요 — 완전 로컬 앱 · 로컬 알림 앱 · 백엔드 연동 앱 · 한국 시장 소셜 로그인 앱. 각 유형은 **활성화하는 Kit 조합이 다름**. `recipes/*.yaml` 가 이 조합을 선언적으로 제공 → 파생 레포가 원하는 recipe 를 복사 → `app_kits.yaml` 로 사용. Kit 조합 외엔 모두 공통이라 template 유지 비용이 단일.
+네 가지 recipe가 대표적인 Kit 조합의 시작점을 제공해요. 원하는 YAML을 복사한 뒤 앱 이름·slug를 바꾸고, `main.dart`의 설치 목록·생성자·provider override와 필요한 플랫폼 설정을 맞춰요. YAML 복사만으로 실행 코드나 네이티브 SDK가 바뀌지는 않아요. 세부 사용법은 [Recipes](../reference/recipes.md)에서 관리해요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -36,6 +38,8 @@ recipe 를 너무 세분화 (예: "local + 차트 없음" · "local + 차트 있
 
 ## 고민했던 대안들
 
+<a id="option-1--유형별-template-분리"></a>
+
 ### Option 1 — 유형별 template 분리
 
 `flutter-local-template` · `flutter-backend-template` · `flutter-notifier-template` 로 3개 repo.
@@ -46,6 +50,8 @@ recipe 를 너무 세분화 (예: "local + 차트 없음" · "local + 차트 있
 - **단점 3**: 4번째 유형 생기면 또 template 추가. 무한 확장.
 - **탈락 이유**: 제약 2 · 압력 C 위반.
 
+<a id="option-2--단일-template-모든-kit-항상-활성"></a>
+
 ### Option 2 — 단일 template, 모든 Kit 항상 활성
 
 Kit 조립 개념 포기. 모든 기능이 기본 포함. 안 쓰는 건 그냥 UI 에 노출 안 함.
@@ -55,6 +61,8 @@ Kit 조립 개념 포기. 모든 기능이 기본 포함. 안 쓰는 건 그냥 
 - **단점 2**: 스토어 리뷰에서 "왜 로컬 앱인데 Apple Sign In 권한?" 같은 지적 가능.
 - **단점 3**: `app_kits.yaml` 의 의도 (선택 조립) 가 무의미.
 - **탈락 이유**: 압력 A 의 "반복 작업" 을 해결하지만 바이너리 · 권한 낭비.
+
+<a id="option-3--single-template--4-recipes--채택"></a>
 
 ### Option 3 — Single template + 4 recipes ★ (채택)
 
@@ -77,7 +85,7 @@ Template 하나. `recipes/` 에 **대표 유형별 `app_kits.yaml` 샘플**. 파
 # update_kit 생략: 완전 로컬 앱 의도.
 app:
   name: My Tracker
-  slug: my_tracker
+  slug: my-tracker
   environment: prod
   palette_class: DefaultPalette
 
@@ -101,7 +109,7 @@ kits:
 # 로컬 알림 중심 앱 — 인증 없음, DB + 알림 + 백그라운드 + 차트 + 광고.
 app:
   name: Notifier App
-  slug: notifier_app
+  slug: notifier-app
   environment: prod
   palette_class: DefaultPalette
 
@@ -130,7 +138,7 @@ kits:
 # 백엔드 API + JWT 인증 앱.
 app:
   name: Authed App
-  slug: authed_app
+  slug: authed-app
   environment: prod
   palette_class: DefaultPalette
 
@@ -150,6 +158,8 @@ kits:
 **활성 Kit**: 5개  
 **특징**: `template-spring` 쌍 운영 전제
 
+<a id="4-social-auth-app-백엔드--한국-시장-소셜-로그인"></a>
+
 #### 4. social-auth-app (백엔드 + 한국 시장 소셜 로그인)
 
 ```yaml
@@ -159,7 +169,7 @@ kits:
 # Kakao / Naver 는 native SDK 셋업이 필요 — lib/kits/auth_kit/README.md 참고.
 app:
   name: Social Login App
-  slug: social_app
+  slug: social-app
   environment: prod
   palette_class: DefaultPalette
 
@@ -201,7 +211,7 @@ vi lib/main.dart
 dart run tool/configure_app.dart
 
 # 6. 앱 정체성 설정
-./scripts/app/rename-app.sh my_app com.my.app
+./scripts/app/rename-app.sh my-app com.my.app
 
 # 7. 실행
 flutter run
@@ -236,7 +246,7 @@ Recipe 는 **"시작점"** 일 뿐. 파생 레포가 자유롭게 조정.
 YAML 파일 상단에 "이건 로컬 전용" · "ads_kit 활성 시 ATT 자동 노출" 같은 주석. 복사한 사람이 "왜 이 Kit 이 켜져?" 바로 이해.
 
 **포인트 3 — `app.slug` · `app.name` 은 placeholder**  
-recipe 의 `slug: my_tracker` 는 그대로 쓰지 말고 파생 레포의 본인 slug 로 교체. `rename-app.sh` 가 자동 변환.
+recipe 의 `slug: my-tracker` 는 그대로 쓰지 말고 파생 레포의 본인 slug 로 교체. `rename-app.sh` 가 자동 변환.
 
 **slug 는 소문자 · 숫자 · 하이픈만 써요 — 언더스코어는 못 써요.** `AppConfig` 가 부트에서 `^[a-z][a-z0-9-]*$` 로 검증하고 어긋나면 `ArgumentError` 로 앱이 크래시해요 (백엔드 `AppSlugExtractor` 와 같은 규칙이라 어긋난 slug 는 서버 라우팅부터 실패해요). `recipes/*.yaml` 4개의 `slug` 값 (`my-tracker` · `notifier-app` · `authed-app` · `social-app`) 은 전부 **자리 표시용 이름** 이라 파생 레포의 본인 slug 로 바꿔야 해요. `rename-app.sh` 도 같은 정규식으로 인자를 검증하니 언더스코어를 넣으면 그 자리에서 거부돼요.
 
@@ -255,39 +265,32 @@ YAML 의 Kit 선언에 파라미터 넣을 수 있음 (`local_db_kit: { database
 
 ### 긍정적 결과
 
-- **신규 앱 시작 1분**: recipe 복사 + rename-app.sh + `flutter run`. 이전엔 30분.
-- **template 단일성**: 공통 코드 개선이 모든 recipe 에 자동 반영.
-- **유형별 최적화**: 로컬 앱은 Apple Sign In SDK 포함 안 함 (tree-shaking). 바이너리 경량.
-- **실수 방지**: recipe 가 검증된 조합이라 "auth 켜고 backend 끔" 같은 모순 실수 줄어듦.
-- **확장 자유**: recipe 기반으로 시작 + 필요한 Kit 추가. 제한 없음.
-- **주석으로 의도 전달**: 파일 상단 주석이 복사 후에도 남아있어 유지보수 쉬움.
+대표 구성을 복사해 출발하고 필요한 Kit 를 조정할 수 있어요. 같은 템플릿 코드를 쓰는 recipe 는 공통 검증을 공유해요. 파생 레포에 복사된 코드까지 자동 갱신되는 것은 아니에요. 실제 실행에는 Dart 조립과 외부 설정이 필요하고, native SDK 제거도 별도 작업이에요.
 
 ### 부정적 결과
 
-- **정확히 맞는 recipe 없는 경우**: "로컬 + 서버 옵션" 같은 혼합은 4개 중 정확한 선택 안 됨. 커스터마이징 필요.
-- **recipe 유지 부담**: 새 Kit 추가 시 4개 recipe 중 관련된 것에 반영 필요. 예: `feature_flag_kit` 추가 시 backend-auth-app · social-auth-app 에 포함?
-- **YAML 파라미터의 제한**: YAML 엔 `database_class: AppDatabase` 같은 단순 값만. Dart 객체 (e.g., `update_kit` 의 `service: NoUpdateAppUpdateService()`) 는 `main.dart` 에서만. 두 곳 수동 동기화 피로 (ADR-004).
-- **신규 유형 발견 시 recipe 추가?**: 새 유형이 필요하면 recipe 추가 고민 (교훈 1 의 임계점 조건). 현재 4개로 제한이지만 성장 시 조정.
+앱에 정확히 맞는 recipe 가 없으면 조정해야 해요. Kit 를 추가하거나 계약을 바꾸면 관련 recipe 와 테스트도 확인해요. YAML 에 선언한 구성을 Dart 객체로 자동 생성하지 않으므로 두 곳을 맞춰야 해요. recipe 수는 현재 네 개이며 고정 상한을 의미하지 않아요.
 
 ## 교훈
 
-### 교훈 1 — "대표 유형 단위" 의 균형점은 3~5 사이
+<a id="교훈-1-대표-유형-단위-의-균형점은-35-사이"></a>
+<a id="교훈-1--대표-유형-단위-의-균형점은-35-사이"></a>
 
-recipe 를 2개로 줄이면 유형 커버 부족. 6개 이상으로 늘리면 drift 관리 부담. **3~5개** 가 경험상 sweet spot. 본 템플릿은 처음 3개로 출발했다가 한국 시장 소셜 로그인 케이스(`social-auth-app`)가 SDK 셋업 차이로 별도 recipe 가 정당화돼 4번째로 편입했어요. **세분화 임계점 조건**: (a) SDK · 외부 서비스 셋업이 본질적으로 다름, (b) 사용자 (파생 레포 개발자) 가 자주 마주칠 시장.
+### 교훈 1 — 반복해서 쓰는 구성을 recipe로 제공해요
 
-**교훈**: 샘플 제공은 **3~5개 정도가 관리 가능 상한**. 세분화 욕구가 생길 때 "이건 recipe 분리할 가치가 있나? 파생 레포 커스터마이징으로 충분한가?" 임계점 조건을 먼저 확인.
+별도 recipe 는 SDK·외부 서비스 설정이 실질적으로 다르고 반복해서 쓰는 조합일 때 검토해요. 현재는 네 가지 대표 구성을 제공해요.
+
+<a id="교훈-2--recipe-는-시작점-이지-완제품-아님"></a>
 
 ### 교훈 2 — recipe 는 "시작점" 이지 "완제품" 아님
 
-초기엔 recipe 를 "이거 쓰면 끝" 으로 생각. 실제론 파생 레포마다 조금씩 커스터마이징 필요. recipe 의 가치는 **"첫 30분 절약"** 이지 "완벽 일치" 가 아님.
+recipe 는 첫 구성을 제안하는 출발점이에요. 화면, 도메인 로직, 서비스 키, native 설정은 파생 레포에서 완성해야 해요.
 
-**교훈**: 샘플 · recipe 는 **90% 커버** 를 목표. 10% 커스터마이징은 파생 레포 몫. 100% 추구는 recipe 수 폭발.
+<a id="교훈-3--recipe-주석의-가치"></a>
 
 ### 교훈 3 — Recipe 주석의 가치
 
-`# ads_kit 활성 시 ATT 자동 노출됨` 같은 주석 한 줄이 신규 개발자의 혼란 방지. YAML 은 간결하지만 **숨은 의도** 가 많아서 주석이 코드보다 가치 클 때 있음.
-
-**교훈**: YAML · JSON 같은 선언적 파일엔 **주석으로 맥락** 을 담으세요. 코드 가독성과 다른 관점의 문서화.
+주석에는 설정 이름만으로 드러나지 않는 조건과 선행 작업을 적어요. 예를 들어 광고를 켠다고 모든 플랫폼에서 ATT 요청이 자동으로 나타나는 것은 아니므로, 조건을 정확히 적어요. JSON 처럼 주석을 지원하지 않는 형식은 연결된 문서에서 설명해요.
 
 ## 관련 사례 (Prior Art)
 

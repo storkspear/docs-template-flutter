@@ -1,7 +1,7 @@
 {
   "brand": {
     "name": "template-flutter",
-    "sub": "Architecture Docs"
+    "sub": "개발 문서"
   },
   "groups": [
     {
@@ -9,18 +9,18 @@
       "files": [
         {
           "path": "README.md",
-          "title": "Overview",
-          "desc": "템플릿 개요 · 사용 흐름 · 문서 읽는 순서"
+          "title": "문서 안내",
+          "desc": "템플릿의 목적과 읽는 순서"
         },
         {
           "path": "journey/README.md",
-          "title": "Developer Journey",
-          "desc": "책 목차 — 0~7 단계 전체 읽는 순서"
+          "title": "개발 순서",
+          "desc": "환경 설정부터 첫 배포까지"
         },
         {
           "path": "STYLE_GUIDE.md",
-          "title": "Style Guide",
-          "desc": "문서 작성 컨벤션 (§1~§10 귀납 추출)"
+          "title": "문서 작성 가이드",
+          "desc": "공통 작성 기준과 Flutter 문서의 적용 규칙"
         }
       ]
     },
@@ -29,23 +29,23 @@
       "files": [
         {
           "path": "journey/architecture.md",
-          "title": "Architecture",
-          "desc": "모듈 구조 10분 요약 (Level 2)"
+          "title": "앱 구조",
+          "desc": "계층, 실행 흐름과 dev/prod 환경"
         },
         {
           "path": "journey/onboarding.md",
-          "title": "Onboarding",
-          "desc": "파생 레포 최초 셋업 (1시간)"
+          "title": "첫 실행 준비",
+          "desc": "파생 레포 설정과 필요한 도구"
         },
         {
           "path": "journey/build-first-app.md",
-          "title": "Build First App",
-          "desc": "첫 기능 완성 walkthrough (2~3시간)"
+          "title": "첫 기능 만들기",
+          "desc": "목록 조회, 로딩·오류 처리와 테스트"
         },
         {
           "path": "journey/deployment.md",
-          "title": "Deployment",
-          "desc": "Play Internal + TestFlight 배포"
+          "title": "첫 배포",
+          "desc": "Android 내부 테스트와 iOS 업로드 준비"
         },
         {
           "path": "journey/dogfood-pitfalls.md",
@@ -94,8 +94,8 @@
       "files": [
         {
           "path": "philosophy/adr-005-riverpod-mvvm.md",
-          "title": "Riverpod_MVVM",
-          "desc": "ADR-005: StateNotifier + ConsumerWidget + autoDispose"
+          "title": "Riverpod와 MVVM",
+          "desc": "ADR-005 · Notifier, 화면 상태와 수명 관리"
         },
         {
           "path": "philosophy/adr-006-debug-fallback.md",
@@ -119,13 +119,13 @@
       "files": [
         {
           "path": "philosophy/adr-009-backend-contract.md",
-          "title": "Backend_Contract",
-          "desc": "ADR-009: {data,error} · PageResponse · ErrorCode 1:1 매핑"
+          "title": "백엔드 계약",
+          "desc": "ADR-009 · 응답, 오류와 페이지네이션 규약"
         },
         {
           "path": "philosophy/adr-010-queued-interceptor.md",
-          "title": "Queued_Interceptor",
-          "desc": "ADR-010: QueuedInterceptor + 무한루프 방지 + signOut 위임"
+          "title": "인증 요청과 재시도",
+          "desc": "ADR-010 · 토큰 갱신, 회전 감지와 재시도 경계"
         },
         {
           "path": "philosophy/adr-011-interceptor-chain.md",
@@ -199,13 +199,13 @@
         },
         {
           "path": "philosophy/adr-021-multi-recipe.md",
-          "title": "Multi_Recipe",
-          "desc": "ADR-021: local-only / local-notifier / backend-auth 3개 recipe"
+          "title": "앱 구성 예제",
+          "desc": "ADR-021 · 필요한 Kit을 선택하는 recipe"
         },
         {
           "path": "philosophy/adr-022-very-good-analysis.md",
-          "title": "Very_Good_Analysis",
-          "desc": "ADR-022: 100+ 룰 도입 + 16개 disable 큐레이션 (앱 컨텍스트 적합도)"
+          "title": "정적 분석 규칙",
+          "desc": "ADR-022 · 분석 규칙을 선택하고 관리하는 기준"
         }
       ]
     },
@@ -230,12 +230,12 @@
       ]
     },
     {
-      "name": "Features (Kit 14개)",
+      "name": "Features · 기능별 Kit",
       "files": [
         {
           "path": "features/README.md",
-          "title": "Overview",
-          "desc": "14개 Kit 인덱스 + 의존 관계도 + 활성화"
+          "title": "Kit 안내",
+          "desc": "기능별 의존성과 활성화 방법"
         },
         {
           "path": "features/backend-api-kit.md",
@@ -245,7 +245,7 @@
         {
           "path": "features/auth-kit.md",
           "title": "auth_kit",
-          "desc": "JWT + Google · Apple 로그인"
+          "desc": "이메일·소셜 로그인, 토큰과 세션 상태"
         },
         {
           "path": "features/observability-kit.md",
@@ -255,7 +255,7 @@
         {
           "path": "features/notifications-kit.md",
           "title": "notifications_kit",
-          "desc": "로컬 알림 + FCM"
+          "desc": "로컬 알림과 일정 예약"
         },
         {
           "path": "features/local-db-kit.md",
@@ -265,7 +265,7 @@
         {
           "path": "features/update-kit.md",
           "title": "update_kit",
-          "desc": "강제 업데이트"
+          "desc": "업데이트 정책 조회와 안내 화면"
         },
         {
           "path": "features/onboarding-kit.md",
@@ -305,7 +305,12 @@
         {
           "path": "features/payment-kit.md",
           "title": "payment_kit",
-          "desc": "결제 골격 (파생 레포에서 Stripe 등 SDK 추가)"
+          "desc": "결제 인터페이스와 디버그 구현"
+        },
+        {
+          "path": "features/file-kit.md",
+          "title": "file_kit",
+          "desc": "파일 선택과 서버 업로드·다운로드"
         }
       ]
     },
@@ -314,8 +319,8 @@
       "files": [
         {
           "path": "api-contract/README.md",
-          "title": "Overview",
-          "desc": "짝 백엔드와의 1:1 계약 + 변경 규칙"
+          "title": "API 계약 안내",
+          "desc": "Spring과 공유하는 규약 및 변경 확인 순서"
         },
         {
           "path": "api-contract/response-schema.md",
@@ -339,8 +344,8 @@
         },
         {
           "path": "api-contract/user-profile.md",
-          "title": "User Profile",
-          "desc": "/api/core/users/me GET / PATCH (글로벌 endpoint)"
+          "title": "사용자 프로필",
+          "desc": "앱별 users/me 조회·수정 계약"
         },
         {
           "path": "api-contract/devices.md",
@@ -351,6 +356,11 @@
           "path": "api-contract/notification-settings.md",
           "title": "Notification Settings",
           "desc": "kind 별 push / email 채널 toggle (ADR-031)"
+        },
+        {
+          "path": "api-contract/file-api.md",
+          "title": "파일 API",
+          "desc": "업로드 정책, 완료 처리와 파일 상태"
         }
       ]
     },
@@ -379,18 +389,8 @@
         },
         {
           "path": "integrations/analytics.md",
-          "title": "Analytics 선택",
-          "desc": "PostHog vs Mixpanel · Amplitude · Firebase 비교"
-        },
-        {
-          "path": "integrations/deployment-android.md",
-          "title": "Play Console",
-          "desc": "앱 등록 + Service Account + GHA Secrets"
-        },
-        {
-          "path": "integrations/security.md",
-          "title": "Security 체크리스트",
-          "desc": "출시 전 보안 점검 + SSL pinning"
+          "title": "분석 도구 선택",
+          "desc": "현재 PostHog 연동과 도구 교체 시 확인할 항목"
         },
         {
           "path": "integrations/google-apple-auth.md",
@@ -409,18 +409,18 @@
       "files": [
         {
           "path": "infra/android-deployment.md",
-          "title": "Android Deployment",
-          "desc": "Fastlane + GHA + Play Internal"
+          "title": "Android 배포",
+          "desc": "Play Console 준비부터 Fastlane·Actions 배포까지"
         },
         {
           "path": "infra/ios-deployment.md",
-          "title": "iOS Deployment",
-          "desc": "Fastlane + TestFlight"
+          "title": "iOS 배포",
+          "desc": "서명 설정과 파생 레포의 TestFlight 배포 준비"
         },
         {
           "path": "infra/security.md",
-          "title": "Security",
-          "desc": "5중 방어선 · 난독화 · SSL pin · Keychain"
+          "title": "보안 설정과 출시 점검",
+          "desc": "빌드, 저장소, 인증서와 개인정보 점검"
         },
         {
           "path": "infra/ci-cd.md",
@@ -443,19 +443,9 @@
           "desc": "컨벤션 인덱스 + 우선순위 + 자동화"
         },
         {
-          "path": "conventions/architecture.md",
-          "title": "Architecture",
-          "desc": "MVVM 패턴 · 모듈 의존 방향 · 새 화면 step-by-step"
-        },
-        {
           "path": "conventions/kits.md",
           "title": "Kits",
           "desc": "FeatureKit 작성 · 제거 · yaml↔dart 동기화"
-        },
-        {
-          "path": "conventions/api-contract.md",
-          "title": "API Contract",
-          "desc": "백엔드 1:1 계약 한눈 요약 (response/error/auth/search)"
         },
         {
           "path": "conventions/naming.md",
@@ -464,8 +454,8 @@
         },
         {
           "path": "conventions/viewmodel-mvvm.md",
-          "title": "ViewModel + MVVM",
-          "desc": "StateNotifier + ConsumerWidget · copyWith 관용"
+          "title": "ViewModel과 화면",
+          "desc": "Notifier의 상태·수명과 Consumer 화면 작성"
         },
         {
           "path": "conventions/error-handling.md",
@@ -513,19 +503,14 @@
       "name": "Reference",
       "files": [
         {
-          "path": "reference/environment-ui.md",
-          "title": "Environment UI",
-          "desc": "기술 스택 한눈 다이어그램 (아이콘)"
-        },
-        {
           "path": "reference/scripts.md",
           "title": "Scripts",
           "desc": "scripts/ · tool/ 전체 명령"
         },
         {
           "path": "reference/recipes.md",
-          "title": "Recipes",
-          "desc": "4개 샘플 구성 · 선택 가이드"
+          "title": "앱 구성 예제",
+          "desc": "기능 요구에 맞는 Kit 조합 선택"
         },
         {
           "path": "reference/glossary.md",

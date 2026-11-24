@@ -1,12 +1,12 @@
+<a id="redirect_priority"></a>
+
 # Redirect_Priority
 
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `lib/core/kits/app_kit.dart` 의 `redirectPriority` + `lib/core/kits/app_kits.dart` 의 안정 정렬 + `lib/common/router/app_router.dart` 의 합성 로직.
 
 ## 결론부터
 
-여러 Kit 이 라우팅 게이트 (리다이렉트 규칙) 를 가질 때, **낮은 숫자일수록 먼저 실행** 하는 `redirectPriority` 정수로 순서 표현. 기본값은 `100`, 동일 우선순위는 **install 순서로 안정 정렬**. 각 규칙은 `null` 반환 시 개입 안 함 — 첫 non-null 결과가 최종 리다이렉트.
-
-지금 `buildRedirect()` 를 실제로 구현하는 Kit 은 **`AuthKit` (10) 과 `OnboardingKit` (50) 둘뿐** 이에요. `UpdateKit` 은 `redirectPriority = 1` 을 선언하지만 `buildRedirect()` 를 구현하지 않아 체인에 들어가지 않아요 — 강제 업데이트는 리다이렉트가 아니라 **Navigator 밖 다이얼로그 오버레이** 로 처리해요.
+Kit의 라우팅 규칙은 낮은 `redirectPriority`부터 평가하고 같은 값이면 설치 순서를 따라요. 한 번의 평가에서는 첫 non-null 결과를 반환해요. 현재 규칙을 제공하는 Kit는 AuthKit과 OnboardingKit이며, UpdateKit은 별도 다이얼로그 게이트를 사용해요. GoRouter가 새 경로를 다시 평가하므로 우선순위만으로 순환 리다이렉트가 방지되는 것은 아니에요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -41,6 +41,8 @@
 
 ## 고민했던 대안들
 
+<a id="option-1--install-순서--실행-순서"></a>
+
 ### Option 1 — install 순서 = 실행 순서
 
 `AppKits.install([UpdateKit(), AuthKit(), OnboardingKit()])` 순서대로 redirect 실행.
@@ -51,6 +53,8 @@
 - **단점 3**: **명시적 순서 선언 없음** — 코드 읽는 사람이 "왜 auth 가 먼저?" 를 install 순서에서 유추.
 - **탈락 이유**: 압력 A 위반.
 
+<a id="option-2--dependson-기반-위상-정렬"></a>
+
 ### Option 2 — `dependsOn` 기반 위상 정렬
 
 `AuthKit` 가 "UpdateKit 다음에 실행" 를 `runAfter: [UpdateKit]` 로 선언.
@@ -60,6 +64,8 @@
 - **단점 2**: 위상 정렬 알고리즘 + 순환 감지 구현 필요. 복잡.
 - **단점 3**: 새 Kit 추가 시 **기존 Kit 수정** 가능성 — "AuthKit 이 ForceUpdateKit 뒤에 실행" 을 어느 시점에 누가 업데이트?
 - **탈락 이유**: 압력 B (독립성) 위반.
+
+<a id="option-3--정수-redirectpriority--안정-정렬--채택"></a>
 
 ### Option 3 — 정수 `redirectPriority` + 안정 정렬 ★ (채택)
 
@@ -184,96 +190,66 @@ MaterialApp.router(
 
 ### 실행 흐름 예시
 
-상황: 미인증 + 온보딩 미완료 상태에서 앱 진입 (OnboardingKit 을 설치한 앱 기준).
+인증 규칙과 온보딩 규칙은 각각의 단독 조건뿐 아니라 함께 평가되는 경로를 확인해야 해요. 현재 구현에서 미인증 상태로 두 Kit를 설치하고 온보딩이 미완료이면, `/login`에서 온보딩 규칙이 `/onboarding`을 반환하고 새 경로에서는 인증 규칙이 `/login`을 반환할 수 있어요.
 
-1. `AppKits.redirectRules` = `[AuthKit rule, OnboardingKit rule]` (priority 정렬)
-2. AuthKit rule 실행 → `'/login'` 반환 (미인증)
-3. 첫 non-null 이므로 OnboardingKit 은 실행 안 됨
-4. `/login` 으로 이동
+따라서 이 조합을 로그인 뒤 온보딩으로 자동 진행하는 검증된 예제로 제시하지 않아요. 실제 앱의 라우터 조립에서 재평가 흐름과 리다이렉트 제한을 검증한 뒤 적용해야 해요.
 
-로그인 후:
-
-1. AuthKit rule → null (인증됐고 홈 접근)
-2. OnboardingKit rule → `'/onboarding'` (온보딩 미완료)
-3. `/onboarding` 로 이동
-
-온보딩 완료 후: 모든 rule null → 홈 유지.
-
-여기에 업데이트 필요 상태가 겹쳐도 위 흐름은 그대로예요. `_ForceUpdateGate` 가 그 결과 화면 **위** 를 덮으니, 사용자는 `/login` 화면 위에서 강제 업데이트 다이얼로그를 봐요. 두 메커니즘이 서로를 가로채지 않아요.
+강제 업데이트는 별도의 `_ForceUpdateGate`가 화면 위에 표시해요. 업데이트 게이트의 표시와 라우팅 규칙의 재평가는 서로 다른 경로예요.
 
 ### 권장 우선순위 범위
 
 | 카테고리 | 범위 | 예 |
-|---------|------|---|
-| **최우선 게이트** (앱 사용 금지) | 1~9 | MaintenanceKit (`1` 은 UpdateKit 이 예약) |
-| **인증 게이트** | 10~19 | AuthKit |
-| **온보딩 · 동의** | 50~59 | OnboardingKit, TosConsentKit |
-| **기능 게이트** | 60~99 | FeatureFlagKit, ABTestKit |
-| **기본** | 100 | 대부분 |
+|---|---|---|
+| 최우선 게이트 | 1~9 | 유지보수 게이트 등 파생 앱의 규칙 |
+| 인증 | 10~19 | AuthKit |
+| 온보딩·동의 | 50~59 | OnboardingKit |
+| 기능별 조건 | 60~99 | 파생 앱의 기능 제한 |
+| 기본값 | 100 | 별도 값을 지정하지 않은 Kit |
 
-**숫자 사이를 띄워둬요** — `1, 2, 3` 이 아닌 `1, 10, 50` 로 하면 나중에 "최우선 게이트와 AuthKit 사이" 에 새 게이트 (priority 5) 삽입 가능.
+이 범위는 순서를 읽기 위한 규약이에요. 같은 값도 허용하며 설치 순서로 정렬해요. UpdateKit의 1은 현재 규칙을 만들지 않아 평가되지 않아요.
 
 ### 설계 선택 포인트
 
-**포인트 1 — 정수 타입 (enum 이 아님)**  
-Enum 으로 `Priority.highest / high / medium / low` 도 고려. 하지만 **사용자 정의 우선순위** 를 허용해야 하므로 정수가 맞음. 파생 레포가 `priority = 15` 같은 세밀한 값 쓸 수 있음.
-
-**포인트 2 — 낮은 숫자 = 먼저 실행**  
-"높은 숫자 = 높은 우선순위" 는 직관적이지만, 리스트 인덱스 (0부터 시작) 와 맞는 건 "낮은 숫자 = 먼저". 둘 다 관용적인데 본 템플릿은 **"낮을수록 강한 차단"** 철학으로 낮은 숫자 택함.
-
-**포인트 3 — 동일 우선순위는 install 순서**  
-tie-break 규칙이 "install 순" 이라 예측 가능. 같은 priority 쓰는 경우는 드물지만 (AuthKit = 10, BetaAccessKit = 10) tie-break 이 있으면 안심.
-
-**포인트 4 — 첫 non-null 이 최종**  
-모든 rule 을 순회하며 **중첩 리다이렉트** 하지 않음. 첫 non-null 에서 중단. 이유: 체인 리다이렉트는 무한 루프 위험.
-
-**포인트 5 — `buildRedirect()` 가 nullable**  
-Kit 이 라우팅 개입 안 해도 됨. `BackendApiKit` · `ObservabilityKit` · `UpdateKit` 은 리다이렉트 없음 → `buildRedirect()` 를 override 하지 않아 기본 구현이 null 반환 → `redirectRules` 에서 빠짐. 현재 템플릿에서 체인에 남는 건 `AuthKit` · `OnboardingKit` 둘뿐이에요.
+우선순위는 각 Kit가 정수로 선언하고, Kit 등록 순서와 별도로 읽을 수 있게 해요. 첫 non-null은 한 번의 평가를 끝내는 조건이지 이후 경로의 재평가를 막는 조건은 아니에요. 선택적 `buildRedirect()`가 null이면 규칙 수집에서 제외돼요.
 
 ## 이 선택이 가져온 것
 
 ### 긍정적 결과
 
-- **순서 명시성**: Kit 파일 열면 `redirectPriority: 10` 한 줄로 파악.
-- **Kit 독립**: Kit 간 참조 없음. 각자 선언.
-- **확장 용이**: 새 Kit 추가 시 "내 우선순위는?" 결정만.
-- **결정론적**: 동일 환경에서 동일 순서. 재현 가능한 동작.
-- **`null` 폴스루**: 개입 안 할 땐 null → 자연스러운 옵트아웃.
+각 Kit 에서 우선순위를 읽을 수 있고, 같은 값은 설치 순서로 평가해요. 규칙이 필요 없으면 buildRedirect 가 null 을 반환해 수집에서 빠질 수 있어요. 새 게이트는 순서뿐 아니라 기존 규칙과 경로가 어떻게 맞물리는지도 설계해야 해요.
 
 ### 부정적 결과
 
-- **숫자 선택 피로**: "이 게이트 priority 30? 40?" 결정. 권장 범위 표가 있지만 여전히 판단.
-- **충돌 디버깅**: "OnboardingKit 의 `/onboarding` 리다이렉트가 왜 발동 안 하지?" 를 찾으려면 우선순위가 앞선 AuthKit 이 null 아닌 값을 먼저 반환했는지 확인. flow 추적 비용.
-- **Kit 파생 관리**: 파생 레포에서 새 Kit 추가 시 "이 게이트 우선순위 얼마?" 를 템플릿 값과 조율 필요.
-- **숫자 낭비**: 1~100 범위에 실제 규칙은 2개 (10 · 50) 뿐이고 나머지는 비어있음. 의도된 여유 공간이지만 "이 숫자가 맞나?" 혼란 가능.
+앞 규칙이 먼저 경로를 반환하면 뒤 규칙은 그 평가에서 실행되지 않아요. 이후 새 경로에서 GoRouter 가 다시 평가할 수 있으므로 두 규칙이 서로 되돌리는지 확인해야 해요. 현재 미인증·온보딩 미완료 상태의 AuthKit+OnboardingKit 조합은 루프가 재현돼요. 비어 있는 우선순위 값은 허용되며 숫자 범위 자체가 자원 낭비는 아니에요.
 
 ## 교훈
 
-### 교훈 1 — 순서가 의미인 집합은 **정수 우선순위** 가 효율적
+<a id="교훈-1-순서가-의미인-집합은-정수-우선순위-가-효율적"></a>
+<a id="교훈-1--순서가-의미인-집합은-정수-우선순위-가-효율적"></a>
 
-처음엔 위상 정렬 (`runAfter: [...]`) 을 시도했어요. 하지만 의존 관계를 선언하는 비용이 크고, **순환 감지** 코드까지 필요. 정수 priority 하나로 모든 케이스 커버 + 단순.
+### 교훈 1 — 우선순위와 규칙의 상호작용을 함께 확인해요
 
-**교훈**: 단순한 순서는 **단순한 표현** 으로. 위상 정렬은 진짜 그래프 구조일 때만.
+현재 규칙은 정수 우선순위로 정렬해요. 간단한 순서를 표현하기 위한 선택이며 모든 조합의 안전성을 해결하는 장치는 아니에요. 실제로 선행·후행 의존성이 복잡해지면 별도 모델의 필요를 검토할 수 있어요.
+
+<a id="교훈-2--숫자-사이를-비워둬야-확장-가능"></a>
 
 ### 교훈 2 — 숫자 사이를 비워둬야 확장 가능
 
-초기엔 `1, 2, 3, 4` 순차 할당. 나중에 "Update 와 Auth 사이" 에 Maintenance 게이트 추가 필요 → **전체 재할당**. `1, 10, 50, 100` 처럼 띄워두면 `5` 삽입 쉬움.
+우선순위를 10·50·100 처럼 띄우면 중간 순서를 추가하기 편해요. 반드시 특정 배수를 써야 하거나 빈 번호 때문에 동작이 바뀌는 것은 아니에요. UpdateKit 은 별도 화면 게이트이므로 redirect 체인의 선행 규칙으로 설명하지 않아요.
 
-**교훈**: 우선순위 숫자는 **미래 삽입 공간** 을 남김. 배수 단위로 띄우기.
+<a id="교훈-3--개입-안-함--null-관용이-깔끔"></a>
 
 ### 교훈 3 — "개입 안 함 = null" 관용이 깔끔
 
-초기엔 `buildRedirect()` 가 필수 + 내부 분기로 "개입 여부". 그러면 모든 Kit 이 `buildRedirect` 를 구현해야 해서 보일러플레이트. **nullable 반환 + null = 옵트아웃** 으로 네트워크 Kit · 관측성 Kit 같이 라우팅과 무관한 Kit 은 아예 구현 안 함.
-
-**교훈**: 선택적 hook 은 nullable 반환으로 "참여 여부" 표현. 필수 메서드로 만들면 빈 구현이 쌓여요.
+buildRedirect 는 선택적 기여예요. 기본 구현이 null 이므로 라우팅 규칙이 없는 Kit 는 빈 함수를 작성할 필요가 없어요. 규칙을 제공한 뒤 그 함수가 null 을 반환하는 경우는 해당 경로에서 이동하지 않겠다는 뜻으로 구분해요.
 
 ## 관련 사례 (Prior Art)
 
-- [Android OkHttp Interceptor `Priority`](https://square.github.io/okhttp/interceptors/) — 인터셉터 순서 개념
+- [OkHttp 인터셉터 등록 순서](https://lysine.dev/okhttp/features/interceptors/) — 인터셉터 순서 개념
 - [Express middleware 순서](https://expressjs.com/en/guide/using-middleware.html) — 등록 순서 = 실행 순서
 - [React Router `guards`](https://reactrouter.com/start/framework/route-module#route-guards) — 라우팅 가드 체인
 - [Vue Router `beforeEach` 체인](https://router.vuejs.org/guide/advanced/navigation-guards.html) — 우선순위 없이 순서대로
-- [Servlet Filter `@Priority`](https://jakarta.ee/specifications/platform/10/apidocs/jakarta/annotation/priority) — JVM 진영의 정수 우선순위
+- [Jakarta `@Priority`](https://jakarta.ee/specifications/annotations/3.0/apidocs/jakarta.annotation/jakarta/annotation/Priority.html) — 우선순위를 표현하는 애너테이션. 실제 순서 적용은 이를 읽는 프레임워크에 따라 달라요
 
 ## Code References
 

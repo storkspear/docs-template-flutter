@@ -1,6 +1,8 @@
+<a id="nav_shell_kit"></a>
+
 # nav_shell_kit
 
-하단 네비게이션 셸 (`BottomNavigationBar`) 과 선택적 중앙 FAB 을 제공하는 kit 이에요. 2 ~ 5 개 메인 탭 구조 앱에 적합해요.
+하단 탭 화면을 `ShellRoute`로 묶고, 필요한 경우 중앙 FAB를 함께 표시해요. 각 탭의 경로·아이콘·문자열 라벨·화면 빌더는 앱 조립에서 지정해요. 라벨은 `String`이므로 런타임 언어 변경까지 지원하려면 파생 앱에서 다시 구성하는 방법도 정해야 해요.
 
 ---
 
@@ -51,6 +53,8 @@ await AppKits.install([
 
 ---
 
+<a id="파생-레포에서-탭--fab-추가"></a>
+
 ## 파생 레포에서 탭 · FAB 추가
 
 ```dart
@@ -97,4 +101,4 @@ NavShellKit(
 
 ## 관련 문서
 
-- [go_router ShellRoute](https://pub.dev/documentation/go_router/latest/topics/Shell%20routes-topic.html)
+- [go_router ShellRoute](https://pub.dev/documentation/go_router/latest/go_router/ShellRoute-class.html)

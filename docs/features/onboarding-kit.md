@@ -1,6 +1,8 @@
+<a id="onboarding_kit"></a>
+
 # onboarding_kit
 
-다단계 온보딩 위자드와 완료 플래그 영속, 라우팅 게이트를 제공하는 kit 이에요. 첫 실행 시 사용자에게 온보딩 화면을 보여 주고, `redirectPriority: 50` 으로 동작해요.
+온보딩 단계 UI와 완료 여부 저장, 미완료 사용자를 온보딩 경로로 보내는 규칙을 제공해요. 규칙의 우선순위는 50이에요. 현재 AuthKit 과 함께 설치하고 미인증·온보딩 미완료 상태로 진입하면 `/login` 과 `/onboarding` 사이의 리다이렉트 루프가 재현돼요. 이 조합은 인증 상태와 진입 조건을 함께 설계하고 검증해야 해요. [ADR-018](../philosophy/adr-018-redirect-priority.md) 에 현행 제약을 정리했어요.
 
 ---
 
@@ -68,7 +70,7 @@ class WelcomeStep extends OnboardingStep {
 
 ## 파생 레포 체크리스트
 
-- [ ] `OnboardingStep` 구현체들 작성 (최소 3 ~ 5개)
+- [ ] 앱에 필요한 OnboardingStep 을 작성해요. 단계 수는 안내할 내용에 맞춰 정해요.
 - [ ] `main.dart` 의 `OnboardingKit(prefs: prefsStorage, steps: [...])` 등록
 - [ ] 완료 플래그 리셋 방법 고민 (예: 개발자 설정 메뉴)
 - [ ] (선택) 다크모드 대응 · 애니메이션

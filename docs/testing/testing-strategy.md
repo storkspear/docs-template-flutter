@@ -27,7 +27,7 @@
 
 ┌─────────────────────────────────────────┐
 │  4. 마이그레이션 지문                       │
-│     Drift 스키마 변경 자동 감지             │
+│     과거 앱의 Kit 조합 재현 검증             │
 └─────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────┐
@@ -46,6 +46,9 @@
 가짜 `HttpClientAdapter`(`MockDioAdapter`)를 **실제 `ApiClient`/Dio 에 주입**해요. 별도 fake 서비스를 만들지 않고 진짜 인터셉터·파싱 경로를 태우는 게 이 레포 컨벤션이에요. 조립은 `test/helpers/auth_test_harness.dart`(`buildAuthTestHarness`)가 한 번에 해줘요.
 
 ```dart
+// test/kits/auth_kit/auth_service_test.dart 기준 상대 경로
+import '../../helpers/test_jwt.dart';
+
 void main() {
   group('AuthService', () {
     late MockDioAdapter adapter;
@@ -71,7 +74,10 @@ void main() {
         MockResponse.ok({
           'data': {
             'user': {'id': 42, 'email': 'x@y.com', 'emailVerified': true},
-            'tokens': {'accessToken': 'a', 'refreshToken': 'r'},
+            'tokens': {
+              'accessToken': buildTestJwt(userId: 42, email: 'x@y.com'),
+              'refreshToken': 'r',
+            },
           },
           'error': null,
         }),
@@ -280,7 +286,7 @@ flutter test test/contract/
 | Service · ViewModel | 80%+ |
 | Kit 계약 | 핵심 Kit (현재 `auth_kit` · `backend_api_kit` · `payment_kit` · `file_kit`) 우선. SDK 를 직접 부르는 Kit (`ads_kit` · `permissions_kit`) 은 이음매나 플랫폼 인터페이스 가짜로 분기를 덮어요. 메타가 단순한 Kit 은 통합 테스트로 흡수 |
 | 조립 통합 | 1개 유효 (smoke test 수준 — `test/integration/main_assembly_test.dart`) |
-| 마이그레이션 지문 | 전 스키마 버전 (Drift 사용 시) |
+| 마이그레이션 지문 | 보존하려는 과거 앱의 Kit 조합과 동작 |
 | 백엔드 계약 스냅샷 | 클라가 호출하는 전 경로·전 ErrorCode |
 | Widget (golden) | 주요 화면만 (선택) |
 
@@ -291,6 +297,8 @@ flutter test --coverage
 ```
 
 ---
+
+<a id="테스트-데이터--헬퍼"></a>
 
 ## 테스트 데이터 · 헬퍼
 
@@ -326,5 +334,5 @@ flutter test --coverage
 ## 관련 문서
 
 - [`contract-testing.md`](./contract-testing.md) — Kit 계약 테스트 상세
-- [`conventions/architecture.md`](../conventions/architecture.md) — MVVM · 의존 방향 (테스트 대상 패턴 출처)
+- [`conventions/architecture.md`](../conventions/viewmodel-mvvm.md) — MVVM · 의존 방향 (테스트 대상 패턴 출처)
 - [`ADR-003 · FeatureKit`](../philosophy/adr-003-featurekit-registry.md)

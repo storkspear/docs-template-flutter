@@ -1,8 +1,10 @@
 # Glossary
 
-이 문서는 프로젝트 특유의 용어 사전이에요. 검색 · 치환 · 문서 일관성을 위해 표기를 고정해요.
+프로젝트에서 반복해서 사용하는 용어를 모았어요. 같은 개념을 문서마다 다른 말로 부르지 않도록 표기를 맞추고, 자세한 동작은 각 계약·기능 문서에서 설명해요.
 
 ---
+
+<a id="레포--조직"></a>
 
 ## 레포 · 조직
 
@@ -44,6 +46,8 @@
 
 ---
 
+<a id="네트워크--인증"></a>
+
 ## 네트워크 · 인증
 
 | 용어 | 표기 | 설명 |
@@ -51,7 +55,7 @@
 | ApiClient | `ApiClient` | Dio 래퍼 |
 | ApiResponse · PageResponse | 영문 유지 | 응답 래퍼 |
 | ApiException | `ApiException` | 표준 예외 |
-| ErrorCode | `ErrorCode.*` 상수 | 서버 enum 1:1 매핑 |
+| ErrorCode | `ErrorCode.*` 상수 | 클라이언트에서 사용하는 서버 코드와 로컬 오류 코드 |
 | safeErrorCode · safeErrorMessage | — | UI 안전 에러 추출 |
 | AuthInterceptor · ErrorInterceptor · LoggingInterceptor | 영문 | 3층 인터셉터 |
 | `appSlug` | 단일 문자열 | JWT · URL 경로의 앱 식별자 |
@@ -63,7 +67,7 @@
 
 | 용어 | 표기 | 설명 |
 |------|------|------|
-| SecureStorage | `SecureStorage` | Keychain · EncryptedSharedPreferences 래퍼 |
+| SecureStorage | `SecureStorage` | iOS Keychain · Android KeyStore 기반 암호화 저장소 래퍼 |
 | PrefsStorage | `PrefsStorage` | SharedPreferences 래퍼 |
 | TokenStorage | `TokenStorage` | access · refresh 원자 저장 |
 | CachedRepository | `CachedRepository` | 5가지 캐시 정책 |
@@ -71,6 +75,8 @@
 | `repairIfPartial` | — | 반쪽 토큰 상태 복구 |
 
 ---
+
+<a id="ui--테마"></a>
 
 ## UI · 테마
 
@@ -100,6 +106,8 @@
 | ICU format | — | 복수형 · 성별 · 날짜 포맷 표준 |
 
 ---
+
+<a id="배포--운영"></a>
 
 ## 배포 · 운영
 

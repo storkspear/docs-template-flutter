@@ -58,8 +58,7 @@ Content-Type: application/json
     "deviceName": "iPhone 15",
     "lastSeenAt": "2026-04-15T03:21:00Z",
     "createdAt": "2026-04-15T03:21:00Z"
-  },
-  "error": null
+  }
 }
 ```
 
@@ -86,7 +85,7 @@ Authorization: Bearer <access_token>
 204 No Content
 ```
 
-본문은 없어요. 본인 소유 디바이스가 아니면 `403 Forbidden` (또는 `404 Not Found` — 백엔드 정책에 따라요) 을 받아요.
+본문은 없어요. 현재 서버는 기기가 없거나 본인 소유가 아니면 모두 404 (`CMN_002`)를 반환해요.
 
 ---
 
@@ -111,11 +110,10 @@ await deviceRegistration.unregister(savedDeviceId);
 디바이스가 등록돼야 백엔드가 푸시를 보낼 대상을 결정해요. 알림 채널 (push/email) 별 toggle 은 [`notification-settings.md`](./notification-settings.md) 참조.
 
 ```text
-NotificationsKit.init()
-  → FCM 토큰 획득
-    → DeviceRegistration.register(pushToken)        ← 본 문서
-      → 알림 발송 시 백엔드가 device.pushToken 로 발송
-        → kind 별 NotificationSettings 가 ON 일 때만 발송
+파생 앱의 Firebase 초기화 및 FCM 토큰 획득
+  → DeviceRegistration.register(pushToken)
+    → 토큰이 바뀌면 다시 등록
+      → 백엔드가 등록된 기기와 알림 설정을 확인해 발송
 ```
 
 ---

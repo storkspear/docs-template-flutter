@@ -1,6 +1,6 @@
 # User Profile
 
-이 문서는 현재 로그인 유저의 **자신의 프로필** 조회/수정 계약을 다뤄요. 짝 백엔드의 `UserController` ([`/api/apps/{slug}/users/me`](https://github.com/storkspear/template-spring/blob/main/core/core-user-impl/src/main/java/com/factory/core/user/impl/controller/UserController.java)) 와 1:1 로 결합돼요.
+이 문서는 로그인한 사용자의 프로필 조회·수정 계약을 다뤄요. 서버의 `UserProfile` 응답에는 프로필 필드가 있지만, Flutter 템플릿에는 이를 담는 `UserProfile` DTO가 아직 없어요. 아래 호출 예제는 파생 앱에서 DTO를 정의한 뒤 사용할 수 있어요. 현재 `CurrentUser`는 JWT에서 읽은 사용자 정보만 보관해요.
 
 > **경로 — 앱별 endpoint** : auth·device 와 동일하게 `/api/apps/{slug}/users/...` 아래에 있어요. 백엔드 `AppSlugVerificationFilter` 가 path slug ↔ JWT slug 일치를 강제해 cross-app 접근을 막아요.
 >
@@ -43,14 +43,15 @@ Authorization: Bearer <access_token>
     "isPremium": false,
     "createdAt": "2026-04-15T03:21:00Z",
     "updatedAt": "2026-04-15T03:21:00Z"
-  },
-  "error": null
+  }
 }
 ```
 
 > 정확한 필드는 짝 백엔드의 `UserProfile` record 를 진실 출처로 봐요. 프론트가 임의로 필드 추가/삭제하지 않아요 (계약 변경은 백엔드 리드).
 
 ---
+
+<a id="수정-patch--partial-update"></a>
 
 ## 수정 (PATCH — partial update)
 
@@ -90,8 +91,7 @@ Content-Type: application/json
     "isPremium": false,
     "createdAt": "2026-04-15T03:21:00Z",
     "updatedAt": "2026-04-16T09:10:00Z"
-  },
-  "error": null
+  }
 }
 ```
 
@@ -143,7 +143,7 @@ final profile = response.data; // UserProfile
 
 ## 계약 변경 시
 
-- 짝 백엔드의 `UserProfile.java` 와 Flutter 의 `UserProfile.fromJson` 을 동시에 수정해요.
+- 서버의 `UserProfile` 계약이 바뀌면 파생 앱에서 정의한 DTO와 파싱 코드가 영향을 받는지 확인해요. 템플릿에 없는 모델을 이미 제공되는 타입으로 가정하지 않아요.
 - 필드 **추가** 는 하위 호환이에요 (Flutter 가 모르는 필드는 무시). **삭제** / **이름 변경** 은 양쪽 동시 배포 + 마이그레이션이 필요해요.
 
 ---

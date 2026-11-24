@@ -1,8 +1,10 @@
 # Response Schema
 
-이 문서는 API 응답 스키마 계약을 다뤄요. 모든 API 응답은 **`{data, error}`** 상호 배타적 구조를 따르고, 페이지네이션은 **`PageResponse<T>`** 가 표준이에요.
+본문이 있는 앱 API 응답은 `data` 또는 `error`를 담아요. 서버는 값이 `null`인 필드를 생략하므로 성공은 `{"data": ...}`, 실패는 `{"error": ...}`로 전송해요. 빈 성공을 HTTP 200으로 반환하면 `{}`이고, HTTP 204에는 본문이 없어요. 페이지 응답은 `PageResponse<T>`를 사용해요. 외부 스토리지의 파일 업로드 응답은 이 봉투 계약에 포함되지 않아요.
 
 ---
+
+<a id="apiresponse"></a>
 
 ## ApiResponse<T>
 
@@ -13,8 +15,7 @@
   "data": {
     "id": 42,
     "title": "..."
-  },
-  "error": null
+  }
 }
 ```
 
@@ -22,7 +23,6 @@
 
 ```json
 {
-  "data": null,
   "error": {
     "code": "ATH_001",
     "message": "이메일 또는 비밀번호가 올바르지 않습니다",
@@ -53,7 +53,7 @@ Content-Type: application/json
 ### 규칙
 
 - `data` 와 `error` 는 **동시에 존재하지 않아요**
-- 성공 시 `error: null`, 실패 시 `data: null` 이에요
+- 서버는 값이 없는 `data`, `error`, `details` 필드를 생략해요. Dart의 `ApiResponse.fromJson`과 `ApiError.fromJson`은 해당 키가 없거나 `null`이어도 동일하게 처리해요.
 - **본문 없는 성공(204)은 바디 자체가 없어요** — `ApiClient` 가 `ApiResponse.empty()` 로 정규화해요
 - `details` 는 선택이에요 — 검증 에러 · 부가 정보에 써요
 
@@ -83,9 +83,11 @@ class ApiError {
 
 ---
 
+<a id="pageresponse"></a>
+
 ## PageResponse<T>
 
-Spring Boot `Page<T>` 와의 1:1 매핑이에요.
+짝 백엔드가 정의한 `PageResponse` DTO와 필드를 맞춰요. Spring Data의 `Page<T>`를 그대로 직렬화한 형식은 아니에요.
 
 ### JSON
 
@@ -93,15 +95,20 @@ Spring Boot `Page<T>` 와의 1:1 매핑이에요.
 {
   "data": {
     "content": [
-      { "id": 1, "title": "..." },
-      { "id": 2, "title": "..." }
+      {
+        "id": 1,
+        "title": "..."
+      },
+      {
+        "id": 2,
+        "title": "..."
+      }
     ],
     "page": 0,
     "size": 20,
     "totalElements": 153,
     "totalPages": 8
-  },
-  "error": null
+  }
 }
 ```
 
@@ -161,6 +168,8 @@ if (page.data!.hasNextPage) {
   "created_at": "..."
 }
 ```
+
+<a id="날짜--시간"></a>
 
 ### 날짜 · 시간
 

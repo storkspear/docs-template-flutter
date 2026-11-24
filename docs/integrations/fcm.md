@@ -91,15 +91,18 @@ class FcmNotificationService implements NotificationService {
 }
 ```
 
-override 는 `lib/main.dart` 의 `_bootstrap()` 에서 ProviderContainer 생성 시 추가해요 (기본 Debug 구현은 `lib/common/providers.dart` 의 `notificationServiceProvider` 에 정의돼 있어요):
+먼저 `Firebase.initializeApp`을 실행하고 프로젝트에 맞는 Firebase 옵션을 전달해요. 그 뒤 `FcmNotificationService` 인스턴스를 만들고 `init()`을 기다린 후 provider에 넣어요. provider override만으로 `init()`이 실행되지는 않아요. SDK의 메시지 구독은 보관했다가 `dispose()`에서 취소하고, 콜드 스타트의 알림 탭 처리도 연결해야 해요. 아래 서비스 클래스는 인터페이스 일부를 보여주는 골격이며 나머지 멤버를 구현해야 실행할 수 있어요.
 
 ```dart
-// lib/main.dart _bootstrap() 발췌 — overrides 에 한 줄 추가
+// Firebase.initializeApp(...) 이후, _bootstrap()에서 실행하는 발췌예요.
+final notificationService = FcmNotificationService();
+await notificationService.init();
+
 final container = ProviderContainer(
   overrides: [
     ...AppKits.allProviderOverrides,
     prefsStorageProvider.overrideWithValue(prefsStorage),
-    notificationServiceProvider.overrideWithValue(FcmNotificationService()),
+    notificationServiceProvider.overrideWithValue(notificationService),
   ],
 );
 ```
@@ -129,6 +132,8 @@ if (token != null) {
 ### 6-1. Foreground 수신
 
 Firebase 콘솔 → **Cloud Messaging → New campaign** → device token 직접 입력 → 전송 → 앱 화면 가시 상태에서 알림 콜백 수신.
+
+<a id="6-2-background--killed"></a>
 
 ### 6-2. Background / Killed
 

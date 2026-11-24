@@ -78,12 +78,14 @@ final req = SearchRequestBuilder()
   .build();
 ```
 
+<a id="기간-필터--정렬-between-대용"></a>
+
 ### 기간 필터 + 정렬 (between 대용)
 
 ```dart
 final req = SearchRequestBuilder()
-  .gte('expenseDate', DateTime(2026, 4, 1))
-  .lte('expenseDate', DateTime(2026, 4, 30))
+  .gte('expenseDate', '2026-04-01')
+  .lte('expenseDate', '2026-04-30')
   .sortBy('expenseDate', SortDirection.desc)
   .build();
 ```
@@ -119,7 +121,7 @@ final req = SearchRequestBuilder()
 ### 페이지네이션 파라미터
 
 - `page: 0-based`
-- `size`: 기본 20, 최대 200 — 백엔드 `PageListRequest` 가 `[1, 200]` 으로 자동 clamp 해요
+- `size`: 기본값은 20이에요. 이 DSL의 크기 제한은 파생 백엔드에서 정해야 해요. 별도 `PageListRequest`를 받는 서버 목록 API의 1~200 보정과 구분하세요.
 
 ---
 

@@ -1,10 +1,12 @@
+<a id="palette_registry"></a>
+
 # Palette_Registry
 
 **Status**: Accepted. 현재 유효. 2026-04-24 작성 / 2026-05-07 line 수 갱신. `lib/core/theme/app_palette.dart` (88줄, 추상 + DefaultPalette) + `app_palette_registry.dart` (68줄, 중앙 레지스트리 + ValueNotifier). Material 3 `ColorScheme.fromSeed` 기반.
 
 ## 결론부터
 
-브랜드 색상은 **시드 색상 하나** (`Color seed`) 와 최소 추가 색상 (`accent`, semantic) 만 선언하면 돼요. Material 3 의 `ColorScheme.fromSeed` 가 Light / Dark 스키마를 자동 생성. 여러 팔레트를 **`AppPaletteRegistry`** 에 등록하고 `ValueNotifier` 로 런타임 교체 가능. 파생 레포는 `MyAppPalette` 하나만 정의 → `AppPaletteRegistry.install(...)` 한 줄로 전체 테마 완료.
+파생 앱은 `AppPalette`의 식별자·표시 이름·시드 색상을 정의하고 `AppPaletteRegistry`에 등록해요. `AppTheme`이 팔레트로 밝은 테마와 어두운 테마를 만들고, `app.dart`가 교체 알림을 구독해요. `supportsDarkMode`와 고대비 변형은 현재 기본 앱에서 자동 적용하는 설정이 아니라 파생 앱이 사용할 수 있는 확장점이에요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -28,6 +30,8 @@ Material 3 에 `ColorScheme.fromSeed(seedColor: ...)` 가 있어 **시드 하나
 
 ## 고민했던 대안들
 
+<a id="option-1--파생-레포가-themedata-를-직접-만들기"></a>
+
 ### Option 1 — 파생 레포가 `ThemeData` 를 직접 만들기
 
 `MaterialApp.theme = ThemeData(primary: ..., secondary: ..., ...)` 로 모든 색 개별 지정.
@@ -38,6 +42,8 @@ Material 3 에 `ColorScheme.fromSeed(seedColor: ...)` 가 있어 **시드 하나
 - **단점 3**: 런타임 교체 시 전체 `ThemeData` 재구성 → MaterialApp 리빌드 트리거 수동 관리.
 - **탈락 이유**: 상황 B · C 위반. 파생 레포 비용이 커요.
 
+<a id="option-2--완전-정적-팔레트-const-appcolors"></a>
+
 ### Option 2 — 완전 정적 팔레트 (`const AppColors`)
 
 `static const primary = Color(0xFF...);` 로 중앙 상수 파일. 교체 필요 시 컴파일 타임에만.
@@ -46,6 +52,8 @@ Material 3 에 `ColorScheme.fromSeed(seedColor: ...)` 가 있어 **시드 하나
 - **단점 1**: **런타임 교체 불가**. 사용자 "테마 전환" 기능 안 됨.
 - **단점 2**: 파생 레포에서 `AppColors.primary` 값만 바꾸려면 **template 의 파일 수정** 필요 → cherry-pick 전파 시 충돌.
 - **탈락 이유**: 상황 D 위반.
+
+<a id="option-3--apppalette-추상--apppaletteregistry--채택"></a>
 
 ### Option 3 — AppPalette 추상 + AppPaletteRegistry ★ (채택)
 
@@ -183,40 +191,32 @@ Riverpod 의 Provider 는 `AppPaletteRegistry` 자체의 상태가 아니라 "�
 
 ### 긍정적 결과
 
-- **파생 레포 한 줄**: `AppPaletteRegistry.install(MyAppPalette())` 만. 나머지 자동.
-- **Material 3 tonal palette 공짜**: 시드 하나로 `primary`, `primaryContainer`, `onPrimary`, ... 수십 개 자동 생성.
-- **런타임 교체**: 설정 화면의 "테마 선택" 이 `use(id)` 한 줄로 작동.
-- **다크모드 자동**: `supportsDarkMode = true` 면 `darkScheme()` 이 시드에서 자동 생성.
-- **접근성 확장점**: `highContrastVariant` 로 고대비 버전 제공 가능 (향후).
-- **파생 레포 확장점**: `supportsDarkMode` · `cardBackground` / `cardBackgroundDark` 게터도 같은 성격. 템플릿은 직접 소비하지 않고, 파생 레포가 라이트 전용 팔레트나 자체 카드 위젯을 만들 때 토큰으로 활용 — 살아있지만 잠재적인 약속.
-- **테스트 격리**: `resetForTest()` 로 각 테스트가 독립 상태.
+팔레트를 등록하면 공통 색상 접근과 Material 테마에 반영할 수 있어요. ColorScheme.fromSeed 가 기본 색상을 만들고, 여러 팔레트는 register·use 로 선택해요. 기본 앱은 darkScheme 도 사용하지만 supportsDarkMode 를 읽어 다크 모드를 끄지는 않아요. highContrastVariant 와 카드 색 게터는 앱에서 따로 연결할 수 있는 확장점이에요. 테스트에서는 레지스트리를 초기화해요.
 
 ### 부정적 결과
 
-- **Material 3 tonal palette 의 한계**: 시드 색상이 **극단적** (검은색에 가까운 회색 등) 이면 `fromSeed` 결과가 예상 밖. 대부분 브랜드 색상은 적절한 채도라 문제 없지만, edge case 있음.
-- **접근성 · 디자인 시스템 완전 제어 불가**: 극도의 커스텀 (예: 기업 브랜드 가이드라인 준수) 필요 시 `seed` + 기본값만으론 부족. `lightScheme()` 을 override 해서 직접 `ColorScheme(primary: ..., ...)` 지정 필요.
-- **ColorScheme 외 색 (success 등) 은 `Theme.of(context).extension` 쓰지 않음**: Flutter 공식 권장은 `ThemeExtension` 으로 커스텀 색. 본 ADR 은 `palette.success` 같이 직접 접근하는 관용 — 단순하지만 Flutter 표준은 아님.
-- **팔레트 여러 개 등록의 실수**: 같은 id 두 번 `register` 하면 StateError. 실수로 중복하면 빌드 깨짐.
+생성된 색상이 브랜드와 대비 요구를 충족하는지는 확인해야 해요. 추가 색상은 ThemeExtension 대신 팔레트 게터로 접근하며, 파생 앱은 이 규약을 이해해야 해요. 같은 ID 를 중복 등록하면 런타임 오류가 나므로 테스트에서 확인해요. seed 하나만 지정하면 모든 디자인 검토가 끝나는 것은 아니에요.
 
 ## 교훈
 
-### 교훈 1 — "시드 하나" 의 위력
+<a id="교훈-1-시드-하나-의-위력"></a>
+<a id="교훈-1--시드-하나-의-위력"></a>
 
-Material 2 시절엔 `primary`, `primaryLight`, `primaryDark`, `accent`, ... 개별 지정. Material 3 의 `ColorScheme.fromSeed` 는 하나의 시드에서 **색상 체계 전체를 알고리즘 생성** — 디자이너가 각 tone 을 수동으로 뽑을 필요 없음. 이 기능을 기본 전제로 두니 파생 레포 onboarding 비용이 극적으로 감소.
+### 교훈 1 — 생성한 색상도 화면에서 검토해요
 
-**교훈**: 최신 Material 3 · iOS 17 같은 플랫폼의 **자동 생성 기능** 을 활용. "완전 수동 제어" 를 기본으로 두지 말기.
+ColorScheme.fromSeed 로 기본 색상 체계를 만들면 개별 색상을 모두 지정하는 작업을 줄일 수 있어요. 생성 결과의 대비와 앱 고유 색상은 실제 화면에서 확인해요.
+
+<a id="교훈-2--런타임-교체는-valuenotifier-로-충분"></a>
 
 ### 교훈 2 — 런타임 교체는 `ValueNotifier` 로 충분
 
-Riverpod Provider 로 팔레트를 감싸볼까 고민했어요. 하지만 **팔레트는 앱 전체에서 딱 하나** 라 Provider 트리 전체를 재구성하는 건 과해요. `ValueNotifier` + `Listenable` 구독(`AnimatedBuilder`) 이 가볍고 Flutter 공식 API — 외부 의존 없음.
+현재 팔레트 선택은 ValueNotifier 와 이를 구독하는 앱 위젯으로 연결해요. 작은 전역 선택 상태를 처리하기에 맞는 구성으로 채택했으며, Provider 를 쓰면 전체 트리를 반드시 재생성한다거나 언제나 더 무겁다는 뜻은 아니에요.
 
-**교훈**: "글로벌 단일 상태 교체" 는 Provider 아닌 `ValueNotifier` 가 낫습니다. Provider 는 다양한 타입의 DI 에 쓰는 게 맞음.
+<a id="교훈-3--install-편의-메서드의-가치"></a>
 
 ### 교훈 3 — `install` 편의 메서드의 가치
 
-단일 팔레트 케이스가 대다수. `register` + `use` 를 매번 쓰면 피로. `install` 한 줄로 끝나는 편의 메서드가 **"파생 레포에서 가장 자주 쓰는 API"** 가 됐어요. 복수 팔레트는 여전히 `register` · `use` 로 제어 가능.
-
-**교훈**: 자주 쓰는 시나리오엔 **편의 메서드** 를 제공. 고급 시나리오 API 는 유지.
+팔레트가 하나일 때 install 로 등록과 선택을 묶을 수 있어요. 여러 팔레트가 필요하면 register 와 use 를 사용해요.
 
 ## 관련 사례 (Prior Art)
 

@@ -1,29 +1,30 @@
 # Error Handling
 
-모든 에러는 **`ApiException` 으로 표준화** 되어 ViewModel 에 도달해요. ViewModel 은 `safeErrorCode` · `safeErrorMessage` 로 안전하게 추출하고, UI 는 code 기반으로 i18n 번역해요. 이 규약의 근거는 [`ADR-009`](../philosophy/adr-009-backend-contract.md) · [`ADR-010`](../philosophy/adr-010-queued-interceptor.md) · [`ADR-011`](../philosophy/adr-011-interceptor-chain.md) 을 참조하세요.
+HTTP 통신 오류는 `ErrorInterceptor`와 `ApiClient`를 거쳐 `ApiException`으로 전달돼요. JWT 파싱 오류나 플러그인 오류 등은 다른 타입으로 도달할 수도 있어요. ViewModel은 오류 코드와 필요한 서버 메시지를 상태에 저장하고, 화면이 사용자에게 보여줄 문구를 정해요. `safeErrorMessage`는 `ApiException.message`를 꺼내는 함수이며, 메시지 안의 민감한 정보를 제거하지는 않아요.
 
 ---
 
 ## 에러 흐름 (High-Level)
 
+일반 요청의 오류 경로예요. refresh·재시도용 Dio는 AuthInterceptor를 다시 거치지 않아요.
+
 ```text
-서버 응답 / 네트워크 실패
+서버 오류 응답 / 네트워크 실패 → DioException
   ↓
-Dio 의 DioException
+AuthInterceptor: 인증 요청의 401이면 토큰 갱신 또는 새 토큰으로 재시도
+  ├─ 갱신 실패: 원래 요청의 오류 전달
+  ├─ 재시도 실패: 재시도에서 받은 오류 전달
+  └─ 재시도 성공: 정상 응답 반환
   ↓
-AuthInterceptor → 401 이면 refresh 시도 (성공 시 재시도, 실패 시 원 에러)
+ErrorInterceptor: ApiException을 DioException.error에 넣음
   ↓
-ErrorInterceptor → ApiException 으로 변환
+LoggingInterceptor: AppConfig.isDev일 때만 콘솔 기록
   ↓
-LoggingInterceptor → `AppConfig.isDev` (dev 만) 콘솔 출력 (staging/prod 무음)
+ApiClient._send: DioException에서 ApiException을 꺼내 throw
   ↓
-ViewModel 의 try/catch 블록에서 수신
+ViewModel: safeErrorCode / safeErrorMessage로 오류 상태 갱신
   ↓
-safeErrorCode(e) / safeErrorMessage(e) 로 추출
-  ↓
-state = copyWith(errorCode: ..., errorMessage: ...)
-  ↓
-Screen 이 state.errorCode 보고 i18n 번역 표시
+Screen: 코드와 메시지를 표시 정책에 맞게 변환
 ```
 
 ---
@@ -33,8 +34,8 @@ Screen 이 state.errorCode 보고 i18n 번역 표시
 ```dart
 // lib/kits/backend_api_kit/api_exception.dart 발췌
 class ApiException implements Exception {
-  final String code;             // ← 서버 ErrorCode enum 문자열
-  final String message;          // ← 서버 제공 메시지 (사용자 노출 가능)
+  final String code;             // 서버 코드 또는 클라이언트가 만든 로컬 코드
+  final String message;          // 서버·클라이언트 메시지. 표시 정책은 화면에서 결정해요.
   final int? statusCode;         // ← HTTP 상태 코드 (401, 500 등)
   final Map<String, dynamic>? details;
 
@@ -66,9 +67,11 @@ class ApiException implements Exception {
 
 ---
 
+<a id="safeerrorcode--safeerrormessage"></a>
+
 ## safeErrorCode / safeErrorMessage
 
-ViewModel 이 catch 블록에서 사용해요. raw exception 의 stack · 내부 경로가 UI 로 유출되는 걸 차단해요.
+ViewModel의 catch 블록에서 사용해요. 임의의 예외를 `toString()`으로 노출하지 않고, `ApiException`인 경우에만 코드와 메시지를 꺼내요. 다만 그 메시지 자체의 민감 정보나 내부 경로를 제거하지는 않으므로 화면의 표시 정책을 함께 적용해야 해요.
 
 ```dart
 // lib/kits/backend_api_kit/api_exception.dart 발췌
@@ -85,21 +88,20 @@ String? safeErrorMessage(Object e) {
 
 ### ViewModel 사용 패턴
 
+비동기 작업의 catch 블록에서는 먼저 `ref.mounted`를 확인하고 오류 상태를 갱신해요.
+
 ```dart
-Future<void> signInWithEmail(String email, String password) async {
-  state = state.copyWith(isLoading: true, errorCode: null, errorMessage: null);
-  try {
-    await _ref.read(authServiceProvider).signInWithEmail(email: email, password: password);
-    state = state.copyWith(isLoading: false);
-  } catch (e) {
-    state = state.copyWith(
-      isLoading: false,
-      errorCode: safeErrorCode(e, fallbackCode: 'LOGIN_FAILED'),  // ← code
-      errorMessage: safeErrorMessage(e),                            // ← message (nullable)
-    );
-  }
+catch (e) {
+  if (!ref.mounted) return;
+  state = state.copyWith(
+    isLoading: false,
+    errorCode: safeErrorCode(e, fallbackCode: AuthLocalErrorCode.login),
+    errorMessage: safeErrorMessage(e),
+  );
 }
 ```
+
+로그인 성공에는 일반 인증과 2FA 대기 분기가 있으므로 반환값을 버리면 안 돼요. 전체 로그인 예제는 [ViewModel 문서](./viewmodel-mvvm.md#viewmodel-클래스)에서 관리해요.
 
 ### fallbackCode 선택 가이드
 
@@ -147,13 +149,13 @@ if (state.errorCode == ErrorCode.invalidCredentials) {
 }
 ```
 
-switch 를 쓰지 않는 이유는 이 값들이 Dart enum 이 아니라 static const String 이기 때문이에요. switch 도 컴파일 타임 constant 비교라 가능하지만 `if` 가 관용이에요.
+이 값은 `static const String`이므로 `if`와 `switch` 모두 사용할 수 있어요. 실제 `resolveAuthErrorCode`는 switch 표현식으로 코드를 매핑하고, 일치하지 않으면 `errorUnknown`을 반환해요.
 
 ---
 
 ## Screen 에서 i18n 변환
 
-ViewModel 은 code 만 넘기고, Screen 이 번역해요. [`ADR-016 · i18n 처음부터`](../philosophy/adr-016-i18n-from-start.md) 를 참조하세요.
+ViewModel은 오류 코드와 필요한 서버 메시지를 넘기고, Screen이 표시 문구를 정해요. 다음은 코드별 번역의 기본 형태예요. 실제 인증 화면은 아래 서버 메시지 우선순위까지 처리하는 `resolveAuthErrorText`를 사용해요. [ADR-016](../philosophy/adr-016-i18n-from-start.md)도 함께 참고해요.
 
 ```dart
 // Screen 의 helper — 케이스를 세분화하려면 ARB 양쪽에 키부터 추가 (i18n.md 참조)
@@ -172,61 +174,34 @@ String _localizedError(BuildContext context, String code) {
 
 ### 서버 `message` 를 직접 쓸 vs i18n 번역
 
-옵션은 두 가지예요:
+파생 앱에서는 서버 메시지를 직접 표시할지, 코드에 맞는 번역을 표시할지 정해요. 현재 인증 화면은 `resolveAuthErrorText(errorMessage, errorCode, s)`로 다음 순서를 적용해요.
 
-**Option A — 서버 message 그대로** (간단):
+1. 클라이언트 로컬 코드(`NETWORK_ERROR`, `TIMEOUT`, `UNKNOWN_ERROR`)는 메시지 대신 번역을 표시해요.
+2. 이메일 중복(`USR_002`)과 인증 코드 만료·무효(`ATH_002`, `ATH_003`)는 다음 행동을 알려주는 번역을 우선해요.
+3. 그 밖에는 서버 메시지가 있으면 표시하고, 없으면 코드별 번역을 사용해요.
+4. 둘 다 없으면 `null`을 반환해 오류 문구를 표시하지 않아요.
+
 ```dart
-Text(state.errorMessage ?? s.errorUnknown)
+final errorText = resolveAuthErrorText(
+  state.errorMessage,
+  state.errorCode,
+  S.of(context),
+);
 ```
-- 장점: Screen 의 `_localizedError` 가 필요 없어요.
-- 단점: 서버 메시지가 **한국어 고정** 이라 다국어 지원이 안 돼요.
 
-**Option B — code 기반 i18n** (다국어):
-```dart
-Text(state.errorCode != null ? _localizedError(context, state.errorCode!) : '')
-```
-- 장점: 영어 · 일본어 · 스페인어에 대응할 수 있어요.
-- 단점: ARB 에 에러 키를 추가해야 해요.
-
-**권장**: 단일 언어 앱은 Option A, 다국어 앱은 Option B 가 맞아요. 템플릿은 Option B 를 기본 관용으로 해두되 Option A 도 허용해요.
+따라서 현재 템플릿의 인증 오류가 모두 ARB 번역으로 표시되는 것은 아니에요. 파생 앱에서 모든 서버 오류를 다국어로 안내하려면 필요한 코드를 매핑하고 각 언어 ARB를 함께 추가해요.
 
 ---
 
 ## 401 자동 refresh (AuthInterceptor 의 동작)
 
-[`ADR-010`](../philosophy/adr-010-queued-interceptor.md) 을 참조하세요.
+`AuthInterceptor`는 인증이 필요한 요청의 401을 받으면 `AuthService.refreshToken()`을 호출해요. 다른 요청이 이미 access token을 갱신했다면 그 토큰으로 바로 재시도해요.
 
-```text
-ApiClient.get('/users/me')
-  ↓ Authorization: Bearer <access>
-  ↓ 서버 응답 401
-  ↓
-AuthInterceptor.onError 가 감지
-  ↓ (요청 때 토큰 ≠ 지금 저장된 토큰이면 → 이미 다른 401 이 refresh 함 → 재시도로 건너뜀)
-  ↓
-onTokenRefresh() 호출 → authService.refreshToken() 실행
-  ↓ 성공: 새 access token 저장 → 원 요청 재시도 → 200
-  ↓ 실패: 원 401 전파 → ViewModel 이 수신
-```
+- 갱신 성공: 새 토큰으로 원래 요청을 한 번 재시도해요. 이 재시도가 실패하면 재시도에서 받은 오류를 전달해요.
+- 갱신 거절(`ATH_002`, `ATH_003` 또는 refresh 응답의 HTTP 401): `AuthService`가 토큰을 지우고 미인증 상태를 알려요.
+- 네트워크 오류·시간 초과 등 그 밖의 갱신 실패: 토큰을 보존하고 원래 요청의 오류를 호출자에게 전달해요.
 
-ViewModel 은 **401 과 refresh 실패를 구분하지 않아요** — `e.isUnauthorized` 가 true 인 `ApiException` 으로 받으면 signOut 을 결정해요.
-
-```dart
-// 일반 API 호출은 토큰 걱정 없음 — 인터셉터가 자동
-Future<void> loadProfile() async {
-  try {
-    final user = await _ref.read(userRepositoryProvider).getCurrentUser();
-    state = state.copyWith(user: user);
-  } catch (e) {
-    if (e is ApiException && e.isUnauthorized) {
-      // refresh 마저 실패 → 강제 로그아웃
-      await _ref.read(authServiceProvider).signOut();
-    } else {
-      state = state.copyWith(errorCode: safeErrorCode(e));
-    }
-  }
-}
-```
+ViewModel이 원래 요청의 401만 보고 무조건 `signOut()`을 호출하면 일시적인 통신 실패에서도 로그아웃될 수 있어요. 세션 정리는 갱신 거절을 확인하는 인증 서비스에 맡기고, 화면은 해당 작업의 실패를 안내해요. 비밀번호 재설정이나 이메일 인증에서도 `ATH_002`·`ATH_003`을 사용할 수 있으므로 코드만으로 세션 만료를 판단하지 않아요.
 
 ---
 
@@ -249,7 +224,7 @@ _dio.interceptors.addAll([
 
 ## skipAuth 플래그 (비로그인 요청)
 
-로그인 · 가입 · 비번 찾기 요청은 **토큰 우회** 가 필요해요. `ApiClient.postRaw` 같은 API 가 내부적으로 `skipAuth: true` 를 설정해요.
+로그인·가입·비밀번호 찾기는 인증 토큰 없이 호출해요. `ApiClient.postRaw`는 기본으로 `skipAuth: true`를 설정하므로 토큰 첨부와 401 갱신을 모두 건너뛰어요. 2FA 설정처럼 인증이 필요한 raw 요청은 호출부에서 `skipAuth: false`를 지정해요.
 
 ```dart
 // ApiClient 의 API
@@ -265,6 +240,8 @@ await api.postRaw(
 
 ## 자주 하는 실수
 
+<a id="-raw-exception-을-stateerrormessage-에-넣기"></a>
+
 ### ❌ raw exception 을 state.errorMessage 에 넣기
 
 ```dart
@@ -279,6 +256,8 @@ state = state.copyWith(
   errorMessage: safeErrorMessage(e),
 );
 ```
+
+<a id="-서버-메시지-하드코딩-번역"></a>
 
 ### ❌ 서버 메시지 하드코딩 번역
 
@@ -296,6 +275,8 @@ if (state.errorCode == ErrorCode.invalidCredentials) {
 }
 ```
 
+<a id="-인터셉터가-signout-직접-호출"></a>
+
 ### ❌ 인터셉터가 signOut 직접 호출
 
 ```dart
@@ -305,7 +286,9 @@ if (refreshFailed) {
 }
 ```
 
-**올바르게**: 원 401 을 그대로 전파하고, ViewModel 이 상황을 판단한 뒤 signOut 해요.
+**현재 책임 분리**: 인터셉터는 갱신을 인증 서비스에 위임해요. 인증 서비스가 서버의 갱신 거절을 확인했을 때 세션을 정리하고, 화면은 원래 요청의 오류를 안내해요.
+
+<a id="-switch-의-default-누락"></a>
 
 ### ❌ switch 의 default 누락
 
@@ -313,7 +296,7 @@ if (refreshFailed) {
 // 금지
 switch (errorCode) {
   case ErrorCode.invalidCredentials: return '...';
-  // default 없음 → 새 코드 추가 시 빈 문자열
+  // 일치하는 코드가 없으면 이 switch에서 반환하지 못해요.
 }
 ```
 

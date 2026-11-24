@@ -55,17 +55,18 @@ void main() {
 
   // 4. routes — 조건부 기여는 on/off 두 케이스 모두 고정한다.
   group('AuthKit.routes', () {
-    test('기본(2FA 관리 off): 4개 — 로그인 흐름 + 로그인 2단계', () {
+    test('기본(2FA 관리 off): 5개 — 로그인 흐름 + 비밀번호 변경 + 로그인 2단계', () {
       final routes = AuthKit().routes.whereType<GoRoute>().toList();
       expect(routes.map((r) => r.path), [
         '/login',
         '/forgot-password',
         '/verify-email',
+        '/settings/password',
         '/login/2fa',
       ]);
     });
 
-    test('twoFactorEnabled: true → 관리 라우트 4개 추가 (총 8개)', () {
+    test('twoFactorEnabled: true → 관리 라우트 4개 추가 (총 9개)', () {
       final routes = AuthKit(
         twoFactorEnabled: true,
       ).routes.whereType<GoRoute>().toList();
@@ -73,6 +74,7 @@ void main() {
         '/login',
         '/forgot-password',
         '/verify-email',
+        '/settings/password',
         '/login/2fa',
         '/settings/2fa',
         '/settings/2fa/setup',

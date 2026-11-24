@@ -1,6 +1,6 @@
 # Loading UX Conventions
 
-로딩 상황은 **4가지 패턴** 중 하나로 처리해요. 풀스크린 블로킹 스피너는 금지예요. 규약 근거는 [`ADR-017 · 4가지 로딩 UX 패턴`](../philosophy/adr-017-loading-ux.md) 을 참조하세요.
+일반 화면의 로딩은 첫 조회의 Skeleton, 새로고침의 `RefreshIndicator`, 액션 버튼의 스피너, 백그라운드 작업의 `TopProgressBar`로 표현해요. 진행 중인 작업과 관련 없는 화면 조작까지 막지 않도록 해요. 부팅용 `LoadingView`는 일반 화면에 덧씌우는 블로킹 오버레이와 구분해요.
 
 ---
 
@@ -20,22 +20,25 @@
 
 ---
 
+<a id="1-skeleton--첫-진입"></a>
+
 ## 1. Skeleton — 첫 진입
 
 `SkeletonLoading(enabled: isLoading, child: 실제위젯)` 으로 감싸요. 로딩 중엔 shimmer 효과가 자동으로 붙어요. `skeletonizer` 패키지 기반이에요.
 
+아래 지출 목록은 파생 앱의 가상 예제예요. `Expense`, `Expense.dummy()`, provider는 앱에서 정의해야 해요. 더미 데이터는 첫 조회 중에만 사용하고, 조회가 끝난 빈 목록에는 표시하지 않아요.
+
 ```dart
 Widget build(BuildContext context, WidgetRef ref) {
   final state = ref.watch(expenseListViewModelProvider);
+  final showPlaceholders = state.isLoading && state.items.isEmpty;
 
   return SkeletonLoading(
-    enabled: state.isLoading,
+    enabled: showPlaceholders,
     child: ListView.builder(
-      itemCount: state.items.isEmpty ? 6 : state.items.length,  // ← 로딩 중 더미 6개
+      itemCount: showPlaceholders ? 6 : state.items.length,
       itemBuilder: (context, i) {
-        final item = state.items.isEmpty
-          ? Expense.dummy()  // 더미 데이터
-          : state.items[i];
+        final item = showPlaceholders ? Expense.dummy() : state.items[i];
         return ListTile(
           title: Text(item.title),
           subtitle: Text(item.date.toString()),
@@ -62,9 +65,11 @@ Widget build(BuildContext context, WidgetRef ref) {
 
 - **실제 위젯 레이아웃을 유지해요** — 별도 Skeleton 위젯을 만들지 않아요
 - **더미 데이터는 `Expense.dummy()` 같은 factory 로 만들어요** — `Text('Placeholder')` 보다 자연스러워요
-- **`skeletonizer` 가 알아서 블러 처리해요** — 개발자가 shimmer 색상 · 애니메이션을 지정할 필요 없어요
+- **Skeleton 표현은 `SkeletonLoading`에 맡겨요** — 기본 위젯이 `Skeletonizer`를 사용하므로 화면마다 색상·애니메이션을 따로 지정하지 않아요.
 
 ---
+
+<a id="2-pull-to-refresh--새로고침"></a>
 
 ## 2. Pull-to-refresh — 새로고침
 
@@ -74,6 +79,7 @@ Widget build(BuildContext context, WidgetRef ref) {
 RefreshIndicator(
   onRefresh: () => ref.read(expenseListViewModelProvider.notifier).refresh(),
   child: ListView.builder(
+    physics: const AlwaysScrollableScrollPhysics(),
     itemCount: state.items.length,
     itemBuilder: (context, i) => ExpenseTile(expense: state.items[i]),
   ),
@@ -82,28 +88,29 @@ RefreshIndicator(
 
 ### ViewModel 측
 
-```dart
-class ExpenseListViewModel extends Notifier<ExpenseListState> {
-  // 첫 진입
-  Future<void> load() async {
-    state = state.copyWith(isLoading: true);
-    try {
-      final items = await _repository.list();
-      state = state.copyWith(isLoading: false, items: items);
-    } catch (e) {
-      state = state.copyWith(isLoading: false, errorCode: safeErrorCode(e));
-    }
-  }
+가상의 지출 목록 ViewModel에서 조회 메서드만 발췌한 예제예요. `build()`, repository 주입, 상태 클래스는 생략했어요. 목록이 짧아도 당겨서 갱신할 수 있도록 위 ListView에는 `AlwaysScrollableScrollPhysics`를 지정했어요.
 
-  // 당겨서 갱신
-  Future<void> refresh() async {
-    // ← isLoading 플래그 안 씀. RefreshIndicator 가 자체 스피너.
-    try {
-      final items = await _repository.list();
-      state = state.copyWith(items: items);
-    } catch (e) {
-      state = state.copyWith(errorCode: safeErrorCode(e));
-    }
+```dart
+Future<void> load() async {
+  state = state.copyWith(isLoading: true);
+  try {
+    final items = await _repository.list();
+    if (!ref.mounted) return;
+    state = state.copyWith(isLoading: false, items: items);
+  } catch (e) {
+    if (!ref.mounted) return;
+    state = state.copyWith(isLoading: false, errorCode: safeErrorCode(e));
+  }
+}
+
+Future<void> refresh() async {
+  try {
+    final items = await _repository.list();
+    if (!ref.mounted) return;
+    state = state.copyWith(items: items);
+  } catch (e) {
+    if (!ref.mounted) return;
+    state = state.copyWith(errorCode: safeErrorCode(e));
   }
 }
 ```
@@ -116,13 +123,15 @@ class ExpenseListViewModel extends Notifier<ExpenseListState> {
 
 ---
 
+<a id="3-버튼-스피너--버튼-액션"></a>
+
 ## 3. 버튼 스피너 — 버튼 액션
 
 로그인 · 저장 · 제출 같은 CTA 버튼에 쓰는 패턴이에요. `PrimaryButton(isLoading: state.isLoading)` 만으로 끝나요.
 
 ```dart
 PrimaryButton(
-  text: S.of(context).save,
+  text: S.of(context).confirm,
   isLoading: state.isLoading,          // ← state 구독
   onPressed: () => vm.save(),          // ← action 호출
 )
@@ -156,10 +165,12 @@ Column(
 ### 규칙
 
 - **스피너는 버튼 내부에만 둬요** — 별도 CircularProgressIndicator 는 금지예요
-- **다른 버튼도 비활성화해요** — `onPressed: isLoading ? null : callback`
+- **같은 작업을 중복 실행하거나 충돌하는 버튼도 비활성화해요** — `onPressed: isLoading ? null : callback`을 사용해요. 관련 없는 화면 조작은 계속할 수 있게 해요.
 - **TextField 비활성화는 선택이에요** — 단순 폼은 그대로 두고, 복잡한 multi-step 은 `IgnorePointer` 를 써요
 
 ---
+
+<a id="4-topprogressbar--백그라운드"></a>
 
 ## 4. TopProgressBar — 백그라운드
 
@@ -169,7 +180,7 @@ Column(
 TopProgressBar(
   isLoading: state.isSyncing,
   child: Scaffold(
-    appBar: AppBar(title: Text(s.home)),
+    appBar: AppBar(title: Text(s.homeStubTitle)),
     body: ...,
   ),
 )
@@ -196,14 +207,22 @@ TopProgressBar(
 
 로딩과 "데이터 없음" 은 다른 상태예요. 별도 위젯으로 구분해요.
 
+아래도 같은 지출 목록의 가상 예제예요. `emptyExpenses`·`addFirstExpense`는 파생 앱의 한국어·영어 ARB에 추가한 뒤 생성해야 해요. 첫 조회 실패는 빈 목록 안내보다 먼저 처리해요.
+
 ```dart
 Widget _body() {
-  if (state.isLoading) {
-    return SkeletonLoading(enabled: true, child: _buildList());
-  }
   if (state.items.isEmpty) {
+    if (state.isLoading) {
+      return SkeletonLoading(enabled: true, child: _buildPlaceholderList());
+    }
+    if (state.errorCode != null) {
+      return ErrorView(
+        message: _localizedError(context, state.errorCode!),
+        onRetry: vm.load,
+      );
+    }
     return EmptyView(
-      icon: Icons.receipt_long,
+      icon: AppIcons.folder,
       title: s.emptyExpenses,
       action: TextButton(
         onPressed: vm.addFirst,
@@ -211,21 +230,17 @@ Widget _body() {
       ),
     );
   }
-  if (state.errorCode != null) {
-    return ErrorView(
-      message: _localizedError(context, state.errorCode!),
-      onRetry: vm.load,
-    );
-  }
   return _buildList();
 }
 ```
+
+`_buildPlaceholderList()`는 첫 예제처럼 실제 목록 위젯에 더미 데이터를 넣는 함수예요. 별도 Skeleton 위젯을 만들지는 않아요. 이미 목록이 있는 새로고침 실패에서는 목록을 유지하고, 오류를 인라인 안내나 스낵바로 알려요.
 
 ---
 
 ## 6. 스플래시 (부팅)
 
-앱 시작 시 `SplashController` + `BootStep` 이 실행되는 구간이에요. 전용 `LoadingView` 를 사용해요.
+현재 `main.dart`는 `SplashController.run()`을 기다린 뒤 `runApp`을 호출해요. 따라서 오래 걸리는 BootStep의 진행 상황을 아래 Dart `LoadingView`가 표시하는 구조는 아니에요. 아래 위젯은 앱 실행 후 라우터의 `/splash` 경로가 그려질 때 사용해요.
 
 ```dart
 // lib/common/router/app_router.dart 발췌
@@ -236,11 +251,13 @@ GoRoute(
 ),
 ```
 
-네이티브 스플래시 (`flutter_native_splash`) → Dart 스플래시 → 첫 라우트 순으로 흘러요. 이 구간엔 **풀스크린 `CircularProgressIndicator` 를 허용해요** (특수 예외).
+`runApp` 전에는 Dart 화면이 그려지지 않고, 실행 후에는 라우터가 인증 상태와 설치된 규칙에 따라 첫 화면으로 이동해요. 이때 `/splash`가 잠깐 보이거나 바로 다른 경로로 전환될 수 있어요. 부팅 전용 화면에는 풀스크린 `CircularProgressIndicator`를 허용해요.
 
 ---
 
 ## 자주 하는 실수
+
+<a id="-풀스크린-오버레이"></a>
 
 ### ❌ 풀스크린 오버레이
 
@@ -252,9 +269,11 @@ Stack(children: [
 ])
 ```
 
-"앱 멈춤" UX 가 돼요. 대신 이렇게 해요:
+화면 전체를 가리고 관련 없는 조작까지 막을 수 있어요. 작업 범위에 맞게 표시해요:
 - 버튼 액션이면 → `PrimaryButton(isLoading: true)`
 - 데이터 로딩이면 → `SkeletonLoading(enabled: true)`
+
+<a id="-별도-스켈레톤-위젯"></a>
 
 ### ❌ 별도 스켈레톤 위젯
 
@@ -269,6 +288,8 @@ class SkeletonListItem extends StatelessWidget {
 
 실제 UI 와 다른 별도 코드를 유지해야 해요. 대신 `SkeletonLoading(enabled: true, child: 실제ListTile())` 을 써요.
 
+<a id="-버튼-옆-스피너"></a>
+
 ### ❌ 버튼 옆 스피너
 
 ```dart
@@ -280,6 +301,8 @@ Row(children: [
 ```
 
 버튼 크기가 왔다갔다 해요. 대신 `PrimaryButton(isLoading: true)` 으로 내부에 통합해요.
+
+<a id="-topprogressbar-를-child-없이-body-안에-배치"></a>
 
 ### ❌ TopProgressBar 를 child 없이 body 안에 배치
 
@@ -293,7 +316,7 @@ Scaffold(
 )
 ```
 
-대신 Scaffold 전체를 감싸세요: `TopProgressBar(isLoading: ..., child: Scaffold(...))`.
+대신 Scaffold 전체를 감싸요: `TopProgressBar(isLoading: ..., child: Scaffold(...))`.
 
 ---
 

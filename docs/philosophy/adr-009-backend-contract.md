@@ -1,12 +1,12 @@
+<a id="backend_contract"></a>
+
 # Backend_Contract
 
 **Status**: Accepted. 현재 유효. 2026-04-24 기준 `lib/kits/backend_api_kit/api_response.dart` + `api_exception.dart` + `error_code.dart` 3개 파일로 구현. 짝이 되는 백엔드 [`template-spring`](https://github.com/storkspear/template-spring) 의 `common-web` 모듈과 스키마가 동일.
 
 ## 결론부터
 
-이 프론트엔드 템플릿은 **짝이 되는 백엔드 템플릿과 응답 스키마를 글자 단위로 맞춰놓아요**. 백엔드가 내려주는 `{data, error}` 래퍼와 `PageResponse`, 그리고 `ErrorCode` enum 값이 **양쪽 레포에서 완전히 동일** 해요. 그래서 클라이언트가 직접 스키마를 설계하거나 mapper 를 쓸 필요가 없고, 서버 변경 시에는 두 레포의 동일 이름 파일만 동기화하면 끝나요.
-
-> **한 사람이 프론트 + 백엔드를 둘 다 운영한다는 전제** 덕분에 가능한 설계예요. 팀이 나뉘어 있다면 이 수준의 결합은 위험했을 거예요. 프롤로그 참조.
+Flutter는 짝 백엔드의 응답 DTO를 직접 파싱해요. 값이 없는 필드는 서버에서 생략하므로 정상 응답에는 `data`, 오류 응답에는 `error`가 들어가요. HTTP 204에는 본문이 없어요. `PageResponse`는 서버가 정의한 DTO이고, Flutter의 `ErrorCode`는 클라이언트에서 쓰는 서버 코드와 로컬 오류 코드만 담아요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -36,6 +36,8 @@
 
 ## 고민했던 대안들
 
+<a id="option-1--openapi--코드-생성"></a>
+
 ### Option 1 — OpenAPI + 코드 생성
 
 백엔드가 OpenAPI 스펙을 내보내고, 클라이언트는 `openapi_generator` 로 Dart 코드 생성.
@@ -46,6 +48,8 @@
 - **단점 3**: 커스텀 필드 (`@JsonKey`, union type 등) 변환 시 spec 수정 러닝 커브.
 - **탈락 이유**: 한 사람이 두 템플릿을 운영하는 맥락에선 **코드 생성의 자동화 이득보다 유지 오버헤드가 더 큼**.
 
+<a id="option-2--graphql--trpc-같은-type-safe-rpc"></a>
+
 ### Option 2 — GraphQL / tRPC 같은 type-safe RPC
 
 `graphql_codegen` 등으로 쿼리 단위에 정확히 맞는 타입 생성.
@@ -55,6 +59,8 @@
 - **단점 2**: 모바일 앱의 단순한 CRUD 에는 과한 도구. "해머로 압정 박기" 수준.
 - **탈락 이유**: 앱 공장의 scope 를 벗어남.
 
+<a id="option-3--클라이언트-자체-dto--mapper-층"></a>
+
 ### Option 3 — 클라이언트 자체 DTO + mapper 층
 
 클라이언트가 서버 스키마와 독립된 자기 DTO 를 정의하고, `UserMapper.fromJson` 같은 변환기로 도메인 모델 생성.
@@ -63,6 +69,8 @@
 - **단점 1**: 서버에 이미 DTO 가 있는데 클라이언트에서 또 DTO → mapper → 도메인 3중 구조. 한 사람이 관리 시 중복 극심.
 - **단점 2**: template-spring 의 ADR-016 (DTO Mapper 금지) 철학과 정면 충돌. 백엔드는 이미 mapper 를 없앤 상태인데 클라이언트만 도입하면 방향성 불일치.
 - **탈락 이유**: 팀이 나뉘어 있을 때의 패턴을 솔로 환경에 끌어오는 셈.
+
+<a id="option-4--백엔드-스키마-11-미러링--apiresponset-제네릭--채택"></a>
 
 ### Option 4 — 백엔드 스키마 1:1 미러링 + `ApiResponse<T>` 제네릭 ★ (채택)
 
@@ -75,6 +83,8 @@
 ## 결정
 
 3개 파일 + 3가지 타입으로 계약을 고정해요.
+
+<a id="apiresponse--표준-응답-래퍼"></a>
 
 ### ApiResponse — 표준 응답 래퍼
 
@@ -122,6 +132,8 @@ class ApiError {
 
 `data` 와 `error` 는 **항상 상호 배타적**. 이 불변량이 `isSuccess` / `isError` getter 의 근거예요.
 
+<a id="pageresponse--페이지네이션-래퍼"></a>
+
 ### PageResponse — 페이지네이션 래퍼
 
 ```dart
@@ -168,6 +180,8 @@ class PageResponse<T> {
 
 Spring Boot 의 `Page<T>` 가 직렬화될 때의 포맷을 그대로 따라요.
 
+<a id="errorcode--enum-11-매핑-prefix-형식"></a>
+
 ### ErrorCode — enum 1:1 매핑 (prefix 형식)
 
 > **변경 이력**: 초기 결정 시점엔 `VALIDATION_ERROR` 같은 raw UPPER_SNAKE 형식이었으나, Spring 측 도메인 분리 (`CommonError` / `AuthError` / `UserError` 등) 와 함께 prefix 형식 (`CMN_*`, `ATH_*`) 으로 진화했어요. 본 ADR 은 결정의 본질 (1:1 매핑) 을 기록하고, 현재 코드 상태는 아래 발췌가 정확.
@@ -196,6 +210,8 @@ class ErrorCode {
 ```
 
 이 값들은 **template-spring 의 `CommonError` / `AuthError` enum 의 `getCode()` 반환값과 1:1 매핑** 돼요. 전체 매핑 + 동기화 의무는 [`api-contract/error-codes.md`](../api-contract/error-codes.md) 참조.
+
+<a id="apiexception--safeerrorcode--safeerrormessage"></a>
 
 ### ApiException + safeErrorCode / safeErrorMessage
 
@@ -249,39 +265,34 @@ Dart enum 을 쓰면 `ErrorCode.invalidCredentials.name` 같은 방식이 가능
 
 ### 긍정적 결과
 
-- **Mapper 층 전무**: 서버 DTO 가 클라이언트 DTO 에 그대로 도달. 파일 수가 대략 절반 수준.
-- **서버-클라이언트 동시 추적**: 에러 코드를 추가할 때 두 레포의 `ErrorCode.java` · `error_code.dart` 를 동시에 수정하는 관행이 자연스럽게 형성됨. PR 리뷰에서 한쪽만 수정됐으면 바로 눈에 띔.
-- **IDE 타입 추론 완벽**: `final user = response.data!; // User` 처럼 제네릭이 제대로 흐름. `as User` 캐스트 거의 필요 없음.
-- **테스트 시 JSON 고정 가능**: 서버 쪽의 실제 응답 JSON 을 그대로 복사해서 `ApiResponse.fromJson(sample)` 로 테스트 픽스처 제작. 스키마 표류가 즉시 발견.
-- **페이지네이션 관용**: `PageResponse<T>.hasNextPage` / `isLastPage` 로 무한 스크롤 로직이 짧아져요.
+서버 응답 규약과 Dart 모델을 맞추면 변환 책임을 찾기 쉬워요. 에러 코드와 필드 변경은 두 레포에서 함께 확인해요. 실제 응답 형태로 파싱 테스트를 만들고 PageResponse 의 페이지 상태를 사용할 수 있어요. DTO 변환과 제네릭 파싱이 완전히 없어지는 것은 아니며
 
 ### 부정적 결과
 
-- **두 레포 수동 동기화**: 에러 코드 추가 · 스키마 변경 시 양쪽 파일을 사람이 맞춰야 해요. 결정 당시엔 자동화 없음. 단기 실수 위험.
-  - **갱신 (2026-07)**: 이후 계약 스냅샷 자동화가 도입돼 이 리스크는 완화됐어요 — backend 가 소스에서 `contract-snapshot.json` 을 생성(CI staleness 게이트)하고, 본 레포의 `test/contract/contract_test.dart` 가 "클라 참조 ⊆ 스냅샷" 을 `flutter test` 에서 검증하며, `contract-sync.yml` 이 매일 스냅샷 변경을 auto-PR 로 가져와요 (자동 머지 없음 — 사람 리뷰 필수). 수동 동기화 원칙 자체는 유지.
-- **`ApiResponse` 의 nullable 혼란**: `data` 는 nullable, `error` 도 nullable 이라 **논리적으로 4가지 조합** (둘 다 있음 / 둘 다 없음 등) 이 컴파일러 입장에선 가능해 보여요. 불변량은 설계 문서에만 명시됨. 방어적 체크가 관용적으로 들어가요.
-- **generic parsing 의 cold start 감각**: 매 DTO 에 `fromJson` · `fromItem` 콜백 넘기는 관용이 처음엔 번잡하게 느껴져요. `freezed` 에 익숙한 개발자가 특히 그래요.
-- **팀이 커지면 재고 필요**: 백엔드팀이 분리되는 순간 이 수준의 결합은 깨져요. 그때는 mapper 층(DTO ↔ 도메인 분리) 도입을 재고해야 해요.
+계약 스냅샷과 contract-sync PR 이 변경 발견을 돕지만 의미와 동작까지 자동으로 맞춰 주지는 않아요. nullable 필드와 빈 응답은 별도 조건으로 다뤄요. 모델마다 파싱 콜백을 작성해야 하며, 서버와 클라이언트의 변경 주기가 달라지면 호환성·변환 계층의 필요를 다시 검토해요. 스냅샷 PR 은 자동 머지하지 않아요.
 
 ## 교훈
 
-### 교훈 1 — "스키마 결합 = 나쁨" 은 팀 시나리오 한정
+<a id="교훈-1-스키마-결합-나쁨-은-팀-시나리오-한정"></a>
+<a id="교훈-1--스키마-결합--나쁨-은-팀-시나리오-한정"></a>
 
-업계 통념상 "클라이언트가 서버 스키마에 결합되는 건 나쁘다" 고 해요. 이건 **팀이 나뉘어 있고 변경 속도가 비대칭일 때** 맞는 말이에요. 한 사람이 양쪽을 운영하면 결합이 **오히려 비용 절감** 이에요. 통념을 상황에 맞춰 역으로 뒤집은 결정이에요.
+### 교훈 1 — 함께 관리해도 배포 버전은 다를 수 있어요
 
-**교훈**: 아키텍처 통념은 "누가 얼마나 큰 조직에서 쓰는가?" 맥락을 내포해요. 솔로 인디 환경에선 같은 결정이 완전히 다른 의미가 돼요.
+이 프로젝트는 프론트엔드와 백엔드를 함께 관리하므로 공통 응답 규약을 맞추는 방식을 선택했어요. 혼자 개발한다는 이유만으로 배포 버전 차이와 이전 앱의 호환성 문제가 없어지지는 않아요. 변경 주체와 배포 주기를 함께 고려해요.
 
-### 교훈 2 — 생성 코드 (codegen) 는 조직 규모와 비례 비용
+<a id="교훈-2-생성-코드-codegen-는-조직-규모와-비례-비용"></a>
+<a id="교훈-2--생성-코드-codegen-는-조직-규모와-비례-비용"></a>
 
-OpenAPI / freezed / json_serializable 같은 코드 생성 도구는 **수십 명이 동일 DTO 를 만지는 환경** 에서 빛나요. 솔로가 쓰면 "어 내가 DTO 한 줄 수정하려는데 3초 기다려야 하네" 가 매일 반복. 코드 생성의 가치는 변화의 빈도 × 참여 인원에 비례해요.
+### 교훈 2 — 코드 생성의 반복 작업 감소와 유지 비용을 비교해요
 
-**교훈**: 도구 도입 결정 시 **코드 생성이 주는 이득 / 생성 파이프라인의 유지비** 비율을 계산하세요. 솔로 환경에선 이 비율이 놀랄 만큼 자주 마이너스예요.
+생성 도구는 반복되는 파싱 코드를 줄일 수 있지만 생성 파이프라인과 결과물 관리가 필요해요. 현재 방식에서 수동 코드의 양과 실수 비용이 커지는지 살펴보고 도입을 판단해요. 도구의 가치를 팀원 수에만 비례한다고 단정하지 않아요.
 
-### 교훈 3 — `safeErrorCode` 는 보안 경계
+<a id="교훈-3-safeerrorcode-는-보안-경계"></a>
+<a id="교훈-3--safeerrorcode-는-보안-경계"></a>
 
-초기엔 ViewModel 에서 `state.errorMessage = e.toString()` 을 썼어요. 그러면 `ApiException($code): $message` 이나 `DioException: connection timeout at https://internal-api.../users/...` 같은 스택 정보가 UI 에 노출됐어요. `safeErrorCode` / `safeErrorMessage` 를 도입하면서 **"ViewModel 은 반드시 이 두 함수를 거친다"** 는 관용이 생겼어요.
+### 교훈 3 — 진단 정보와 사용자 오류를 구분해요
 
-**교훈**: 에러 포매팅은 로깅 (개발자용) 과 UI (사용자용) 을 다른 함수로 분리. 섞이면 사고.
+개발자용 진단 정보와 사용자에게 보여줄 오류를 구분해요. `safeErrorCode` 는 알려진 오류 코드를 꺼내고, `safeErrorMessage` 는 ApiException 의 메시지나 기본 문구를 사용해요. 서버 메시지를 자동 정제하는 보안 필터는 아니므로, 신뢰할 수 없는 내부 메시지를 그대로 사용자에게 전달하지 않도록 화면의 표시 정책도 확인해요.
 
 ## 관련 사례 (Prior Art)
 

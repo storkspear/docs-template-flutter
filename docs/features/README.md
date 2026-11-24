@@ -1,6 +1,6 @@
 # FeatureKit 가이드
 
-15 개의 **FeatureKit** 이 `lib/kits/` 에 있어요. 각 Kit 은 **독립 플러그인** 으로, `app_kits.yaml` + `lib/main.dart` 에서 활성화를 선택해요. 이 문서는 전체 목록 · 의존 관계 · 활성화 방법의 한눈 인덱스예요.
+`lib/kits/`에는 앱에 필요한 기능을 조립하는 Kit들이 있어요. 실제 조립은 `main.dart`에서 하고, `app_kits.yaml`에는 같은 선택을 기록해요. 각 Kit의 제공 기능과 의존성, 별도로 필요한 플랫폼 설정은 아래 문서에서 확인할 수 있어요.
 
 > **왜 선택 조립?** → [`ADR-003 · FeatureKit 동적 레지스트리`](../philosophy/adr-003-featurekit-registry.md)
 
@@ -8,42 +8,40 @@
 
 ## Kit 목록 (15개)
 
-| Kit | 목적 | 의존 | 바이너리 크기 영향 |
-|-----|------|------|----------------|
-| [`backend_api_kit`](./backend-api-kit.md) | Dio HTTP 클라이언트 + 3 인터셉터 | 없음 | +1MB |
-| [`auth_kit`](./auth-kit.md) | JWT + 소셜 로그인 4종 (Google·Apple·Kakao·Naver) | `backend_api_kit` | +3MB |
-| [`file_kit`](./file-kit.md) | 파일 업로드(presigned POST policy) + 조회 | `backend_api_kit` | +0MB (dio 공유) |
-| [`payment_kit`](./payment-kit.md) | 결제 (Stripe 통합 골격, 의도적 SDK 미주입) | `backend_api_kit` | +0MB (template), derived 시 +SDK |
-| [`observability_kit`](./observability-kit.md) | Sentry 크래시 + PostHog 분석 | 없음 | +4MB |
-| [`notifications_kit`](./notifications-kit.md) | 로컬 알림 · 푸시 · 타임존 | 없음 | +2MB |
-| [`local_db_kit`](./local-db-kit.md) | Drift (SQLite ORM) + 마이그레이션 | 없음 | +3MB |
-| [`update_kit`](./update-kit.md) | 강제 업데이트 감지 · Dialog | 없음 | +0.5MB |
-| [`onboarding_kit`](./onboarding-kit.md) | 다단계 위자드 + 완료 플래그 | 없음 | +0.2MB |
-| [`nav_shell_kit`](./nav-shell-kit.md) | 하단 탭 셸 + 중앙 FAB | 없음 | +0.3MB |
-| [`charts_kit`](./charts-kit.md) | fl_chart 래핑 (라인 · 도넛 · 파이) | 없음 | +1MB |
-| [`ads_kit`](./ads-kit.md) | AdMob 배너 + UMP 동의 + ATT | 없음 | +5MB |
-| [`background_kit`](./background-kit.md) | workmanager 주기 · 1회성 태스크 | 없음 | +1MB |
-| [`permissions_kit`](./permissions-kit.md) | 런타임 권한 요청 + 설정 유도 | 없음 | +0.5MB |
-| [`device_info_kit`](./device-info-kit.md) | 앱 버전 + 기기 정보 | 없음 | +0.3MB |
+| Kit | 목적 | 의존 |
+|-----|------|------|
+| [`backend_api_kit`](./backend-api-kit.md) | Dio HTTP 클라이언트 + 3 인터셉터 | 없음 |
+| [`auth_kit`](./auth-kit.md) | JWT + 소셜 로그인 4종 (Google·Apple·Kakao·Naver) | `backend_api_kit` |
+| [`file_kit`](./file-kit.md) | 파일 업로드(presigned POST policy) + 조회 | `backend_api_kit` |
+| [`payment_kit`](./payment-kit.md) | 결제 (Stripe 통합 골격, 의도적 SDK 미주입) | `backend_api_kit` |
+| [`observability_kit`](./observability-kit.md) | Sentry 크래시 + PostHog 분석 | 없음 |
+| [`notifications_kit`](./notifications-kit.md) | 로컬 알림 · 일정 예약 · 타임존 | 없음 |
+| [`local_db_kit`](./local-db-kit.md) | Drift (SQLite ORM) + 마이그레이션 | 없음 |
+| [`update_kit`](./update-kit.md) | 강제 업데이트 감지 · Dialog | 없음 |
+| [`onboarding_kit`](./onboarding-kit.md) | 다단계 위자드 + 완료 플래그 | 없음 |
+| [`nav_shell_kit`](./nav-shell-kit.md) | 하단 탭 셸 + 중앙 FAB | 없음 |
+| [`charts_kit`](./charts-kit.md) | fl_chart 래핑 (라인 · 도넛 · 파이) | 없음 |
+| [`ads_kit`](./ads-kit.md) | AdMob 배너 + UMP 동의 + ATT | 없음 |
+| [`background_kit`](./background-kit.md) | workmanager 주기 · 1회성 태스크 | 없음 |
+| [`permissions_kit`](./permissions-kit.md) | 런타임 권한 요청 + 설정 유도 | 없음 |
+| [`device_info_kit`](./device-info-kit.md) | 앱 버전 + 기기 정보 | 없음 |
 
-**크기 영향** 은 대략적인 추정이에요. 실제는 플랫폼 · 빌드 설정에 따라 달라요.
-
-> ⚠️ **Tree-shaking 은 Dart 코드만 제거해요**. 미활성 Kit 의 Dart 코드는 빌드에서 빠지지만, **네이티브 플러그인(.aar / CocoaPods)은 `pubspec.yaml` 에 선언되어 있는 한 APK/IPA 에 항상 포함**돼요. 사이즈를 진짜 줄이려면 비활성 Kit 의 패키지를 `pubspec.yaml` 에서도 제거하세요. (예시: 31MB APK 측정 중 `sqlite3`/`sentry-android-ndk` 등이 ABI 별로 ~5MB 차지)
+Kit 선택은 초기화와 조립 범위를 정해요. 사용하지 않는 Dart 코드가 제거될 수 있지만, Kit 를 설치하지 않았다는 이유만으로 native SDK 가 빌드에서 빠지지는 않아요. 용량을 줄이려면 관련 import·패키지·플랫폼 설정을 확인하고 실제 산출물을 측정해요.
 
 ---
 
 ## Core 모듈 목록 (10개)
 
-`lib/core/` 의 항상 포함되는 기반 모듈이에요. Kit 활성화와 무관하게 모든 앱이 사용해요.
+`lib/core/` 는 Kit 에 공통 기반을 제공해요. 각 모듈을 모든 앱에서 직접 호출해야 한다는 뜻은 아니에요.
 
 | 모듈 | 역할 | 주요 진입점 |
 |------|------|------------|
 | `analytics` | 크래시·이벤트 인터페이스 (Debug 폴백 포함) | `CrashService`, `AnalyticsService` |
-| `cache` | 메모리 + SharedPrefs 2단 캐시 + stale-while-revalidate | `CachedRepository` |
+| `cache` | 기본 메모리 저장소와 다섯 캐시 정책 | `CachedRepository` |
 | `config` | 앱 슬러그·baseUrl·환경 등 런타임 설정 | `AppConfig` |
-| `i18n` | gen_l10n + ARB (ko / en) | `AppLocalizations` |
+| `i18n` | gen_l10n + ARB (ko / en) | `S` |
 | `kits` | AppKit 계약 + 부트 단계 + 의존성 검증 | `AppKit`, `BootStep`, `AppKits` |
-| `review` | In-app 리뷰 트리거 (signal 5회 + 60일 쿨다운 + 연 3회) | `ReviewTrigger` |
+| `review` | 기본 5회 signal 이후, 60일 간격과 365일 내 최대 3회 정책으로 리뷰를 요청해요. 실제 표시는 OS 가 결정해요 | `ReviewTrigger` |
 | `storage` | Secure / Prefs / Token 3종 저장소 | `TokenStorage`, `PrefsStorage` |
 | `theme` | 디자인 토큰 (Palette·Typeface Registry) | `AppPalette`, `AppTypeface` |
 | `utils` | 폼 검증·디바운스·날짜 유틸 | `FormValidators`, `Debouncer` |
@@ -84,6 +82,8 @@ device_info_kit (독립)
 ---
 
 ## 활성화 방법
+
+<a id="1-app_kitsyaml-에-선언"></a>
 
 ### 1. `app_kits.yaml` 에 선언
 

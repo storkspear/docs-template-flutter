@@ -1,6 +1,8 @@
+<a id="build-first-app--첫-기능-완성-walkthrough"></a>
+
 # Build First App — 첫 기능 완성 walkthrough
 
-파생 레포를 만들고 **첫 도메인 기능** 을 하나 구현하는 전체 흐름을 따라가는 문서예요. 예제로 **아이템 목록 앱** 을 만들고, 약 2~3시간이 걸려요.
+이 문서는 아이템 목록 조회 기능을 모델·Repository·ViewModel·화면·테스트로 나누어 구현하는 과정을 다뤄요. 목록은 첫 페이지까지 조회하고 새로고침·빈 상태·오류를 처리해요. 추가·수정·삭제는 후속 확장 과제로 구분해요.
 
 > **가정**: [`Onboarding`](./onboarding.md) 을 마쳐서 시뮬레이터에 템플릿 홈이 떠 있는 상태예요. 앱 유형은 `backend-auth-app` recipe 를 선택했다고 가정할게요.
 
@@ -26,7 +28,7 @@
 | 앱 이름 | My Items |
 | 유형 | backend-auth (서버 연동 + 로그인) |
 | 키 컬러 | `#FF6B35` (오렌지) |
-| 첫 기능 | 아이템 CRUD (목록 · 추가 · 수정 · 삭제) |
+| 첫 기능 | 아이템 목록 조회 (추가·수정·삭제는 후속 확장 과제) |
 
 ---
 
@@ -34,7 +36,7 @@
 
 ```bash
 ./factory install                                  # 1회 — symlink 등록
-<repo> local init my_items com.example.myitems     # rename + .env + pub get
+<repo> local init my-items com.example.myitems     # rename + .env + pub get
 ```
 
 `app_kits.yaml` recipe 복사:
@@ -43,24 +45,15 @@
 cp recipes/backend-auth-app.yaml app_kits.yaml
 ```
 
-`lib/main.dart` 동기화:
+`lib/main.dart`의 Kit 설치 목록과 YAML을 수동으로 맞춰요. `BackendApiKit`과 `AuthKit`은 목록 조회에 필요한 기본 조합이에요. 다른 Kit도 사용할 때는 해당 생성자와 플랫폼 설정을 함께 준비해요.
 
-```dart
-await AppKits.install([
-  BackendApiKit(),
-  AuthKit(),
-  NotificationsKit(service: LocalScheduledAlertService()),
-  DeviceInfoKit(),
-  UpdateKit(service: BackendAppUpdateService(/* GET /app-version — lib/main.dart 기본 조립 그대로 */)),  // 템플릿 기본 (backend_api_kit 필요)
-  // backend 없는 recipe는 NoUpdateAppUpdateService — lib/kits/update_kit/README.md 참고
-]);
-```
+기존 `UpdateKit`의 `BackendAppUpdateService` 콜백과 `ApiClient.onUpgradeRequired` 연결은 유지하세요. 콜백이 `ProviderContainer`를 읽는 시점까지 포함한 조립 예제는 [현재 main.dart](https://github.com/storkspear/template-flutter/blob/main/lib/main.dart)에 있어요. 목록만 복사하면서 필수 인자를 생략하지 않아요.
 
-검증:
 ```bash
-dart run tool/configure_app.dart
-# Status: OK
+dart run tool/configure_app.dart --audit
 ```
+
+이 검사는 YAML 안의 이름·의존성을 확인해요. 실제 Dart 설치 목록과의 일치는 별도로 대조해야 해요.
 
 ---
 
@@ -126,13 +119,13 @@ environment: Environment.values.byName(
 <repo> local start
 
 # dev (Firebase dev project + 실 OAuth — <repo> dev init 후)
-<repo> dev start                # APP_ENV=dev 자동 주입, BASE_URL 은 .env.dev 에서
+<repo> dev start --dart-define-from-file=.env.dev
 
 # prod release
-<repo> prod start --release     # mock 자동 주입 비활성, AppConfig 가드 발동
+<repo> prod start --release --dart-define-from-file=.env.prod
 ```
 
-`.env.{dev,prod}` 에 `BASE_URL` / `APP_ENV` 입력. release 빌드는 AppConfig 가드가 default(localhost / `Environment.dev`) 를 자동 차단해요.
+환경 파일은 명시적으로 전달해야 해요. 예를 들어 `<repo> dev start --dart-define-from-file=.env.dev`로 실행해요. release에서는 실제 서버 주소·지원 이메일·개인정보처리방침 URL과 staging/prod 환경을 설정해야 `AppConfig` 검증을 통과해요.
 
 ---
 
@@ -143,16 +136,11 @@ environment: Environment.values.byName(
 ```dart
 // lib/features/item/models/item.dart
 class Item {
-  final int id;
-  final String title;
-  final String? description;
-  final DateTime createdAt;
-
   const Item({
     required this.id,
     required this.title,
-    this.description,
     required this.createdAt,
+    this.description,
   });
 
   factory Item.fromJson(Map<String, dynamic> json) => Item(
@@ -161,6 +149,11 @@ class Item {
     description: json['description'] as String?,
     createdAt: DateTime.parse(json['createdAt'] as String),
   );
+
+  final int id;
+  final String title;
+  final String? description;
+  final DateTime createdAt;
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -175,150 +168,137 @@ class Item {
 
 ## §6 Repository (15분)
 
+이 단계에서는 목록의 첫 페이지를 조회해요. `/items`는 템플릿 백엔드에 기본 제공되지 않으므로 파생 백엔드에 먼저 구현하거나 §12의 개발용 목록 저장소를 주입해야 해요. 응답의 `data`는 `content`, `page`, `size`, `totalElements`, `totalPages`를 포함하는 `PageResponse<Item>` 형식이어야 해요.
+
 ```dart
 // lib/features/item/item_repository.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_items/common/providers.dart';
+import 'package:my_items/features/item/models/item.dart';
 import 'package:my_items/kits/backend_api_kit/api_client.dart';
 import 'package:my_items/kits/backend_api_kit/api_response.dart';
 
-import 'models/item.dart';
-
 class ItemRepository {
+  ItemRepository(this._api);
   final ApiClient _api;
-  ItemRepository({required ApiClient api}) : _api = api;
 
   Future<PageResponse<Item>> list({int page = 0}) async {
-    final res = await _api.get<PageResponse<Item>>(
+    final response = await _api.get<PageResponse<Item>>(
       '/items',
       queryParameters: {'page': page, 'size': 20},
-      fromData: (data) => PageResponse.fromJson(data, Item.fromJson),
+      fromData: (data) => PageResponse<Item>.fromJson(
+        data as Map<String, dynamic>,
+        Item.fromJson,
+      ),
     );
-    return res.data!;
-  }
-
-  Future<Item> create(String title, String? description) async {
-    final res = await _api.post<Item>(
-      '/items',
-      data: {'title': title, 'description': description},
-      fromData: Item.fromJson,
-    );
-    return res.data!;
-  }
-
-  Future<void> delete(int id) async {
-    await _api.delete('/items/$id');
+    final result = response.data;
+    if (result == null) {
+      throw const FormatException('Expected an item page');
+    }
+    return result;
   }
 }
 
-final itemRepositoryProvider = Provider<ItemRepository>((ref) {
-  return ItemRepository(api: ref.watch(apiClientProvider));
-});
+final itemRepositoryProvider = Provider<ItemRepository>(
+  (ref) => ItemRepository(ref.watch(apiClientProvider)),
+);
 ```
+
+추가·수정·삭제는 후속 과제로 남겨요. 추가 폼의 입력 검증, 삭제 실패 시 화면 복구, 변경 후 목록 갱신까지 함께 구현한 뒤 UI에 액션을 노출하세요.
 
 ---
 
+<a id="7-viewmodel--state-20분"></a>
+
 ## §7 ViewModel + State (20분)
+
+첫 조회와 새로고침은 같은 목록 조회를 사용해요. 동시에 같은 요청을 시작하지 않고, 완료 전에 화면 provider가 정리되면 상태를 갱신하지 않아요. 새로고침 실패 시에는 기존 목록을 유지해요.
 
 ```dart
 // lib/features/item/item_list_view_model.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:my_items/features/item/item_repository.dart';
+import 'package:my_items/features/item/models/item.dart';
 import 'package:my_items/kits/backend_api_kit/api_exception.dart';
 
-import 'item_repository.dart';
-import 'models/item.dart';
-
 class ItemListState {
-  final bool isLoading;
-  final List<Item> items;
-  final String? errorCode;
-  final String? errorMessage;
-
   const ItemListState({
     this.isLoading = false,
+    this.hasLoaded = false,
     this.items = const [],
     this.errorCode,
-    this.errorMessage,
   });
+  final bool isLoading;
+  final bool hasLoaded;
+  final List<Item> items;
+  final String? errorCode;
 
   ItemListState copyWith({
     bool? isLoading,
+    bool? hasLoaded,
     List<Item>? items,
     String? errorCode,
-    String? errorMessage,
-  }) {
-    return ItemListState(
-      isLoading: isLoading ?? this.isLoading,
-      items: items ?? this.items,
-      errorCode: errorCode,
-      errorMessage: errorMessage,
-    );
-  }
+  }) => ItemListState(
+    isLoading: isLoading ?? this.isLoading,
+    hasLoaded: hasLoaded ?? this.hasLoaded,
+    items: items ?? this.items,
+    errorCode: errorCode,
+  );
 }
 
 class ItemListViewModel extends Notifier<ItemListState> {
   @override
   ItemListState build() => const ItemListState();
 
-  Ref get _ref => ref;
-
   Future<void> load() async {
-    state = state.copyWith(isLoading: true, errorCode: null, errorMessage: null);
+    if (state.isLoading) return;
+    state = state.copyWith(isLoading: true);
     try {
-      final page = await _ref.read(itemRepositoryProvider).list();
-      state = state.copyWith(isLoading: false, items: page.content);
-    } catch (e) {
+      final page = await ref.read(itemRepositoryProvider).list();
+      if (!ref.mounted) return;
       state = state.copyWith(
         isLoading: false,
-        errorCode: safeErrorCode(e, fallbackCode: 'FETCH_FAILED'),
-        errorMessage: safeErrorMessage(e),
+        hasLoaded: true,
+        items: page.content,
+      );
+    } catch (error) {
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        isLoading: false,
+        hasLoaded: true,
+        errorCode: safeErrorCode(error, fallbackCode: 'FETCH_FAILED'),
       );
     }
   }
 
-  Future<void> refresh() async {
-    try {
-      final page = await _ref.read(itemRepositoryProvider).list();
-      state = state.copyWith(items: page.content);
-    } catch (e) {
-      state = state.copyWith(errorCode: safeErrorCode(e));
-    }
-  }
-
-  Future<void> delete(int id) async {
-    try {
-      await _ref.read(itemRepositoryProvider).delete(id);
-      state = state.copyWith(items: state.items.where((i) => i.id != id).toList());
-    } catch (e) {
-      state = state.copyWith(errorCode: safeErrorCode(e, fallbackCode: 'DELETE_FAILED'));
-    }
-  }
+  Future<void> refresh() => load();
 }
 
-final itemListViewModelProvider = NotifierProvider<ItemListViewModel, ItemListState>(
-  ItemListViewModel.new,
-  // 화면 단위 ViewModel 은 필수 — riverpod 3 기본값이 non-autoDispose 예요.
-  isAutoDispose: true,
-);
+final itemListViewModelProvider =
+    NotifierProvider<ItemListViewModel, ItemListState>(
+      ItemListViewModel.new,
+      isAutoDispose: true,
+    );
 ```
 
 ---
 
 ## §8 Screen (20분)
 
+처음에는 실제 목록과 같은 형태의 더미 행을 Skeleton으로 보여줘요. 조회가 끝나면 오류·빈 목록·목록을 구분해요. 짧거나 빈 목록에서도 당겨서 새로고침할 수 있게 스크롤 물리를 지정해요.
+
 ```dart
 // lib/features/item/item_list_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_items/core/i18n/app_localizations.dart';
-import 'package:my_items/core/widgets/skeleton_loading.dart';
 import 'package:my_items/core/widgets/empty_view.dart';
-
-import 'item_list_view_model.dart';
+import 'package:my_items/core/widgets/error_view.dart';
+import 'package:my_items/core/widgets/skeleton_loading.dart';
+import 'package:my_items/features/item/item_list_view_model.dart';
 
 class ItemListScreen extends ConsumerStatefulWidget {
   const ItemListScreen({super.key});
-
   @override
   ConsumerState<ItemListScreen> createState() => _ItemListScreenState();
 }
@@ -328,6 +308,7 @@ class _ItemListScreenState extends ConsumerState<ItemListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       ref.read(itemListViewModelProvider.notifier).load();
     });
   }
@@ -337,74 +318,73 @@ class _ItemListScreenState extends ConsumerState<ItemListScreen> {
     final state = ref.watch(itemListViewModelProvider);
     final vm = ref.read(itemListViewModelProvider.notifier);
     final s = S.of(context);
+    ref.listen(itemListViewModelProvider, (previous, next) {
+      if (next.errorCode != null &&
+          next.errorCode != previous?.errorCode &&
+          next.items.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(s.errorGeneric)),
+        );
+      }
+    });
 
-    return Scaffold(
-      appBar: AppBar(title: Text(s.myItems)),
-      body: _buildBody(state, vm, s),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openAddDialog(context, vm),
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  Widget _buildBody(ItemListState state, ItemListViewModel vm, S s) {
-    if (state.errorCode != null) {
-      return Center(child: Text(s.errorGeneric));
-    }
-    if (state.isLoading) {
-      return SkeletonLoading(enabled: true, child: _buildList(state, vm));
-    }
-    if (state.items.isEmpty) {
-      return EmptyView(
-        icon: Icons.inbox,
-        title: s.noItems,
-        action: TextButton(
-          onPressed: () => _openAddDialog(context, vm),
-          child: Text(s.addFirstItem),
+    Widget body;
+    if (!state.hasLoaded || (state.isLoading && state.items.isEmpty)) {
+      body = SkeletonLoading(
+        enabled: true,
+        child: ListView.builder(
+          itemCount: 6,
+          itemBuilder: (_, _) => const ListTile(
+            title: Text('Placeholder'),
+            subtitle: Text('Placeholder description'),
+          ),
         ),
       );
+    } else if (state.errorCode != null && state.items.isEmpty) {
+      body = ErrorView(message: s.errorGeneric, onRetry: vm.load);
+    } else {
+      body = RefreshIndicator(
+        onRefresh: vm.refresh,
+        child: state.items.isEmpty
+            ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  SizedBox(height: 300, child: EmptyView(title: s.noItems)),
+                ],
+              )
+            : ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                itemCount: state.items.length,
+                itemBuilder: (_, index) {
+                  final item = state.items[index];
+                  return ListTile(
+                    title: Text(item.title),
+                    subtitle: item.description == null
+                        ? null
+                        : Text(item.description!),
+                  );
+                },
+              ),
+      );
     }
-    return RefreshIndicator(
-      onRefresh: vm.refresh,
-      child: _buildList(state, vm),
-    );
-  }
-
-  Widget _buildList(ItemListState state, ItemListViewModel vm) {
-    return ListView.builder(
-      itemCount: state.items.length,
-      itemBuilder: (context, i) {
-        final item = state.items[i];
-        return Dismissible(
-          key: ValueKey(item.id),
-          onDismissed: (_) => vm.delete(item.id),
-          background: Container(color: Colors.red),
-          child: ListTile(
-            title: Text(item.title),
-            subtitle: Text(item.description ?? ''),
-          ),
-        );
-      },
-    );
-  }
-
-  void _openAddDialog(BuildContext context, ItemListViewModel vm) {
-    // 추가 dialog 구현 (생략)
+    return Scaffold(appBar: AppBar(title: Text(s.myItems)), body: body);
   }
 }
 ```
 
+추가 버튼과 스와이프 삭제는 아직 노출하지 않아요. `Dismissible`을 도입할 때는 삭제가 실패하면 항목이 화면에 어떻게 남거나 복구될지도 먼저 정해야 해요.
+
 ---
 
 ## §9 i18n 키 추가 (10분)
+
+기존 ARB 파일에 아래 키를 합쳐요. `errorGeneric`처럼 이미 있는 키는 재사용하고 파일 전체를 덮어쓰지 않아요.
 
 ```json
 // lib/core/i18n/app_ko.arb
 {
   "myItems": "내 아이템",
   "noItems": "아이템이 없어요",
-  "addFirstItem": "첫 아이템 추가하기",
   "errorGeneric": "오류가 발생했어요"
 }
 ```
@@ -414,7 +394,6 @@ class _ItemListScreenState extends ConsumerState<ItemListScreen> {
 {
   "myItems": "My Items",
   "noItems": "No items yet",
-  "addFirstItem": "Add your first item",
   "errorGeneric": "Something went wrong"
 }
 ```
@@ -427,101 +406,147 @@ flutter gen-l10n
 
 ## §10 라우팅 추가 (10분)
 
+화면 import와 조립은 `lib/app.dart`에서 해요. 기존 `AppRouter`를 만드는 곳의 `stubRoutes`에 다음 라우트를 추가하세요. `common/router/app_router.dart`가 `features/` 화면을 직접 import하게 만들지 않아요.
+
 ```dart
-// lib/common/router/app_router.dart (파생 레포에서 확장)
+// lib/app.dart의 AppRouter(stubRoutes: [...]) 목록에 추가
 GoRoute(
   path: '/items',
   builder: (context, state) => const ItemListScreen(),
 ),
 ```
 
-또는 `NavShellKit` 의 탭으로:
-
-```dart
-NavShellKit(tabs: [
-  NavTab(
-    path: '/items',
-    icon: Icons.list,
-    label: s.myItems,
-    builder: (context, state) => const ItemListScreen(),
-  ),
-  NavTab(
-    path: '/settings',
-    icon: Icons.settings,
-    label: s.settings,
-    builder: (context, state) => const SettingsScreen(),
-  ),
-]),
-```
+기존 홈 화면에 `context.push('/items')`로 진입하는 버튼을 연결하세요. `ItemListScreen`과 `go_router`의 import도 추가해요. 탭 화면으로 확장하려면 [NavShellKit](../features/nav-shell-kit.md)에 이 화면을 등록할 수 있어요. `NavTab.label`은 문자열이므로 `main.dart`에서 정의되지 않은 `s.myItems`를 그대로 사용하지 않아요.
 
 ---
 
+<a id="viewmodel-테스트"></a>
+
 ## §11 테스트 (20분)
 
-### ViewModel 테스트
+Mockito 없이 실제 프로젝트처럼 작은 fake를 작성해요. 화면용 provider가 테스트 중 자동 정리되지 않도록 구독을 유지하고, 테스트가 끝나면 닫아요.
 
 ```dart
 // test/features/item/item_list_view_model_test.dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:my_items/features/item/item_list_view_model.dart';
+import 'package:my_items/features/item/item_repository.dart';
+import 'package:my_items/features/item/models/item.dart';
+import 'package:my_items/kits/backend_api_kit/api_response.dart';
+
+class FakeItemRepository implements ItemRepository {
+  @override
+  Future<PageResponse<Item>> list({int page = 0}) async => PageResponse<Item>(
+    content: [
+      Item(id: 1, title: 'Test', createdAt: DateTime.utc(2026)),
+    ],
+    page: page,
+    size: 20,
+    totalElements: 1,
+    totalPages: 1,
+  );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      super.noSuchMethod(invocation);
+}
+
 void main() {
-  group('ItemListViewModel', () {
-    late ProviderContainer container;
-    late MockItemRepository repo;
-
-    setUp(() {
-      repo = MockItemRepository();
-      container = ProviderContainer(overrides: [
-        itemRepositoryProvider.overrideWithValue(repo),
-      ]);
+  test('load populates items', () async {
+    final container = ProviderContainer(overrides: [
+      itemRepositoryProvider.overrideWithValue(FakeItemRepository()),
+    ]);
+    final subscription = container.listen(itemListViewModelProvider, (_, _) {});
+    addTearDown(() {
+      subscription.close();
+      container.dispose();
     });
 
-    tearDown(() => container.dispose());
+    await container.read(itemListViewModelProvider.notifier).load();
 
-    test('load populates items', () async {
-      when(repo.list()).thenAnswer((_) async => PageResponse(
-        content: [Item(id: 1, title: 'Test', createdAt: DateTime.now())],
-        page: 0,
-        size: 20,
-        totalElements: 1,
-        totalPages: 1,
-      ));
-
-      await container.read(itemListViewModelProvider.notifier).load();
-
-      expect(container.read(itemListViewModelProvider).items, hasLength(1));
-    });
+    final state = container.read(itemListViewModelProvider);
+    expect(state.items.single.title, 'Test');
+    expect(state.isLoading, isFalse);
+    expect(state.errorCode, isNull);
   });
 }
 ```
 
+실패 후 오류 상태, 새로고침 실패 시 기존 목록 유지, 요청 도중 화면을 닫았을 때의 완료 처리도 이어서 검증하세요. 저장소 테스트에서는 `MockDioAdapter`로 실제 `ApiClient`의 응답 파싱을 확인할 수 있어요.
+
 ---
+
+<a id="12-실행--검증"></a>
 
 ## §12 실행 · 검증
 
+실제 목록을 보려면 `/items`를 구현한 파생 백엔드를 실행하고 `BASE_URL`을 명시적으로 전달해요.
+
 ```bash
-<repo> local start                    # mock 모드 (백엔드/OAuth 없이 시연)
-# 또는
-<repo> dev start                      # Firebase dev 셋업 (<repo> dev init) 후 실 OAuth
+<repo> dev start --dart-define-from-file=.env.dev
 ```
 
-- [ ] 로그인 화면 (auth_kit) 자동 리다이렉트
-- [ ] 로그인 후 홈 · 아이템 목록 탭 접근
-- [ ] 초기 로딩 Skeleton 표시
-- [ ] 빈 상태 시 EmptyView
-- [ ] 아이템 추가 · 삭제 동작
-- [ ] 에러 시 메시지 표시
-- [ ] Pull-to-refresh 동작
-- [ ] i18n 키 정상 표시 (한국어 · 영어 전환)
+`start` 래퍼는 `.env.dev`를 자동으로 읽지 않아요. `.env.dev`에는 필요한 `BASE_URL` 등 개발 설정을 두고 Git에서 제외하세요. 로컬 인증 mock은 인증 흐름만 제공하며 `/items` 응답을 만들어주지 않아요. 서버 없이 화면을 확인할 때는 테스트와 같은 `ItemRepository` fake를 개발용 파일에 정의해 `ProviderContainer`의 `itemRepositoryProvider` override로 넣을 수 있어요. 테스트 파일을 앱에서 import하지 말고, 이 override는 개발 모드에서만 사용하세요.
+
+- [ ] 로그인 후 `/items` 진입
+- [ ] 첫 조회에서 Skeleton 표시
+- [ ] 빈 응답에서 EmptyView 표시
+- [ ] 첫 조회 실패에서 오류와 재시도 표시
+- [ ] 새로고침 실패 시 기존 목록 유지와 메시지 표시
+- [ ] 짧거나 빈 목록에서도 Pull-to-refresh 동작
+- [ ] 한국어·영어 문구 표시
+- [ ] 요청 도중 화면을 닫아도 상태 갱신 오류 없음
+
+이 예제는 첫 페이지 조회까지 구현해요. 추가·수정·삭제, 다음 페이지 로드, 캐시 정책은 아래 확장 과제로 진행하세요.
+
+---
+
+## 가계부 모델로 바꾸기
+
+아이템 목록 예제를 가계부에 적용한다면 `lib/features/expense/` 아래에 `models/`, `list/`, `detail/`을 나눌 수 있어요. 화면 수가 적을 때부터 빈 디렉터리나 상세 화면을 만들 필요는 없어요.
+
+```dart
+class Expense {
+  const Expense({
+    required this.id,
+    required this.amount,
+    required this.category,
+    required this.createdAt,
+  });
+  factory Expense.fromJson(Map<String, dynamic> json) => Expense(
+    id: (json['id'] as num).toInt(),
+    amount: (json['amount'] as num).toInt(),
+    category: json['category'] as String,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+  );
+  final int id;
+  final int amount;
+  final String category;
+  final DateTime createdAt;
+}
+```
+
+이 예제의 `amount`는 원 단위 정수라는 서버 계약을 가정해요. 다른 통화나 결제 API의 `amountCents`까지 같은 단위로 해석하지 않아요. 시각 필드는 UTC 표현을 받고 날짜 전용 필드는 별도 날짜 계약을 따라요.
+
+Repository에서는 `/expenses`에 `page: 0`, `size: 50`을 전달하고 `PageResponse<Expense>.fromJson(data as Map<String, dynamic>, Expense.fromJson)`으로 파싱할 수 있어요. 응답에 페이지가 있는지 확인한 뒤 `content`를 반환해요. 이 엔드포인트도 파생 서버가 구현해야 해요.
+
+State의 일회성 오류 필드는 새 작업 때 지우고, 비동기 완료 뒤 `ref.mounted`를 확인해요. 라우트는 `app.dart`의 `AppRouter.stubRoutes`에서 조립하고, `expenseListTitle`·`expenseAddButton` 같은 번역 키는 두 ARB에 함께 추가해요. 모델 파싱과 ViewModel의 성공·오류·수명 종료를 검증한 뒤 기기에서 화면 진입을 확인하세요.
 
 ---
 
 ## 다음 단계
 
+- 추가·수정·삭제와 실패 시 화면 복구
+- 다음 페이지 조회와 캐시 정책
 - 더 많은 화면 추가
 - 인증 후 자동 redirect · 토큰 refresh 확인
 - PostHog 이벤트 트래킹
 - 배포 ([`Deployment`](./deployment.md))
 
 ---
+
+<a id="-책-목차--journey-5단계"></a>
 
 ## 📖 책 목차 — Journey 5단계
 

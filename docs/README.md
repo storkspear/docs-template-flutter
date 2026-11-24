@@ -1,8 +1,10 @@
+<a id="template-flutter--docs"></a>
+
 # template-flutter — Docs
 
-이 폴더의 문서는 `template-flutter` 을 기반으로 **파생 레포를 만들고 운영하는 개발자** 를 위한 가이드예요. 폴더 구조는 독자의 여정에 맞게 정리되어 있고, 각 문서는 단일 목적에 집중합니다.
+이 문서는 `template-flutter` 로 파생 레포를 만들고 운영하는 개발자를 위한 안내예요. 처음에는 개발 여정을 따라 읽고, 작업 중에는 필요한 규약과 기능 문서를 찾아볼 수 있도록 나눴어요.
 
-> **짝이 되는 백엔드 템플릿**: 이 프론트엔드 템플릿은 [`template-spring`](https://github.com/storkspear/template-spring) 과 쌍으로 작동해요. 백엔드 API 계약 · 에러 코드 · JWT 구조가 서로 1:1 대응되며, 같은 솔로 인디 개발자가 "앱 공장 전략" 으로 두 레포를 함께 운영하는 것을 전제로 합니다.
+> 이 템플릿은 [`template-spring`](https://github.com/storkspear/template-spring) 과 함께 쓰도록 API 응답, 에러 코드, 인증 흐름을 맞추고 있어요. 두 레포를 함께 운영하는 앱 공장 전략이 기준이며, 서버가 필요 없는 앱은 로컬 전용 recipe 를 사용할 수 있어요.
 
 ---
 
@@ -12,13 +14,15 @@
 
 - [`Developer Journey — 전체 읽기 순서`](./journey/README.md)
 
-그다음부터는 필요한 영역만 골라서 들어가면 됩니다.
+그다음에는 작업에 필요한 영역을 골라 읽으면 돼요.
 
 ---
 
+<a id="철학--설계-결정-philosophy"></a>
+
 ## 철학 & 설계 결정 (philosophy/)
 
-이 템플릿이 **왜 이런 구조가 되었는지** 를 담은 ADR (Architecture Decision Record) 카드 모음이에요. 추상적인 이론이 아니라, 솔로 인디 개발자가 여러 앱을 찍어낼 때 마주치는 구체적인 고통에 대한 답변으로 만들어졌어요.
+ADR 은 설계 당시의 문제, 선택한 방법, 대안을 기록해요. 여러 앱을 혼자 개발하고 운영할 때 공통으로 필요한 구조와 각 앱에서 따로 결정할 부분을 설명해요.
 
 - [`Philosophy — ADR 전체 인덱스`](./philosophy/README.md)
 - 테마별 ADR 카드 — 테마 1 (레포 구조) · 테마 2 (상태관리) · 테마 3 (네트워크) · 테마 4 (저장소) · 테마 5 (UI·UX) · 테마 6 (운영·배포)
@@ -29,10 +33,12 @@
 
 - [`Architecture`](./journey/architecture.md) — 모듈 구조 한눈 요약
 - [`Onboarding`](./journey/onboarding.md) — 파생 레포 최초 셋업
-- [`Build First App`](./journey/build-first-app.md) — 첫 앱 완성 walkthrough
+- [`Build First App`](./journey/build-first-app.md) — 목록 조회 기능을 만드는 단계별 예제
 - [`Deployment`](./journey/deployment.md) — 파생 레포 첫 운영 배포
 - [`Dogfood FAQ`](./journey/dogfood-faq.md) — 자주 묻는 질문
 - [`Dogfood Pitfalls`](./journey/dogfood-pitfalls.md) — 자주 막히는 함정 모음
+
+<a id="아키텍처-architecture--시스템-구조"></a>
 
 ## 아키텍처 (architecture/) — 시스템 구조
 
@@ -42,10 +48,12 @@
 - [`FeatureKit Contract`](./architecture/featurekit-contract.md) — AppKit 인터페이스 전체 명세
 - [`Boot Sequence`](./architecture/boot-sequence.md) — 앱 시작 시 순서도
 
+<a id="컨벤션-conventions--코드-작성-규약"></a>
+
 ## 컨벤션 (conventions/) — 코드 작성 규약
 
 - [`Overview`](./conventions/README.md)
-- [`Architecture`](./conventions/architecture.md) — MVVM · 모듈 의존 방향 · 에러 처리 한눈
+- [`Architecture`](conventions/viewmodel-mvvm.md) — MVVM · 모듈 의존 방향 · 에러 처리 한눈
 - [`Naming`](./conventions/naming.md) — 파일 · 클래스 · Provider 명명
 - [`ViewModel + MVVM`](./conventions/viewmodel-mvvm.md) — Notifier · ConsumerWidget 패턴
 - [`Error Handling`](./conventions/error-handling.md) — ApiException · safeErrorCode/Message · 인터셉터 순서
@@ -53,8 +61,10 @@
 - [`i18n`](./conventions/i18n.md) — ARB · gen_l10n 원칙
 - [`Theme Tokens`](./conventions/theme-tokens.md) — Spacing · Typography · Palette 디자인 토큰
 - [`Kits`](./conventions/kits.md) — FeatureKit 작성 · manifest · 의존 관계 룰
-- [`API Contract`](./conventions/api-contract.md) — 백엔드 응답 · 검색 · 에러 코드 계약
+- [`API Contract`](api-contract/README.md) — 백엔드 응답 · 검색 · 에러 코드 계약
 - [`Figma Handoff`](./conventions/figma-handoff.md) — Figma 디자인 핸드오프
+
+<a id="기능-가이드-features--개별-kit-상세"></a>
 
 ## 기능 가이드 (features/) — 개별 Kit 상세
 
@@ -75,10 +85,13 @@
 - [`background_kit`](./features/background-kit.md) — workmanager
 - [`permissions_kit`](./features/permissions-kit.md) — 런타임 권한
 - [`device_info_kit`](./features/device-info-kit.md) — 기기 정보
+- [`file_kit`](./features/file-kit.md) — 파일 선택 · 업로드 · 다운로드
+
+<a id="api-계약-api-contract--template-spring-과의-쌍"></a>
 
 ## API 계약 (api-contract/) — template-spring 과의 쌍
 
-백엔드 템플릿과 1:1 로 맞물리는 약속들입니다. 스키마가 어긋나면 양쪽이 동시에 안 돌아가요.
+백엔드와 클라이언트가 함께 지키는 요청·응답 규약이에요. 필드나 의미를 바꿀 때는 양쪽 구현과 계약 문서를 함께 확인해요.
 
 - [`Response Schema`](./api-contract/response-schema.md) — `{data, error}` 구조
 - [`Search Request`](./api-contract/search-request.md) — SearchRequestBuilder 연산자
@@ -86,7 +99,10 @@
 - [`Auth Flow`](./api-contract/auth-flow.md) — JWT · appSlug 흐름
 - [`User Profile`](./api-contract/user-profile.md) — `/users/me` 조회 · PATCH
 - [`Devices`](./api-contract/devices.md) — 푸시 기기 등록 / 해제
-- [`Notification Settings`](./api-contract/notification-settings.md) — kind 별 채널 toggle
+- [`Notification Settings`](./api-contract/notification-settings.md) — 알림 종류별 채널 설정
+- [`File API`](./api-contract/file-api.md) — 파일 업로드 · 조회 · 삭제 계약
+
+<a id="인프라--운영-infra"></a>
 
 ## 인프라 / 운영 (infra/)
 
@@ -114,7 +130,7 @@
 
 이 레포의 `docs/` 는 [`STYLE_GUIDE.md`](./STYLE_GUIDE.md) 의 컨벤션을 따라요. 새 문서를 추가하거나 기존 문서를 수정할 때는 해당 가이드를 먼저 확인해주세요.
 
-특히 **ADR 카드** 는 8섹션 구조가 엄격하게 정해져 있고, 어느 문서든 해요체 일관성과 상대경로 링크 규칙이 적용돼요.
+문서의 목적에 맞는 구조를 사용하고, 사실과 적용 조건을 먼저 분명히 해요. 문체와 링크 표기는 스타일 가이드의 공통 규칙을 따라요.
 
 ---
 
@@ -140,4 +156,4 @@ firebase login
 <repo> dev start
 ```
 
-상세 단계는 [`Build First App`](./journey/build-first-app.md) 와 [`Onboarding`](./journey/onboarding.md) 참고.
+자세한 단계는 [`Build First App`](./journey/build-first-app.md) 과 [`Onboarding`](./journey/onboarding.md) 에서 확인해요.

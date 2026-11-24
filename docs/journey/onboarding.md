@@ -1,6 +1,8 @@
+<a id="onboarding--파생-레포-최초-셋업"></a>
+
 # Onboarding — 파생 레포 최초 셋업
 
-파생 레포를 만들고 로컬에서 **앱이 시뮬레이터에 뜨기** 까지를 순서대로 안내하는 문서예요. 그대로 따라 하면 약 1시간이 걸려요.
+파생 레포를 만들고 로컬 기기나 시뮬레이터에서 앱을 실행하는 순서를 안내해요. 개발 도구 설치와 외부 서비스 설정 상태에 따라 필요한 시간이 달라져요.
 
 ---
 
@@ -75,6 +77,8 @@ git fetch template
 
 ---
 
+<a id="3-앱-정체성-설정--로컬-셋업-repo-local-init"></a>
+
 ## §3 앱 정체성 설정 + 로컬 셋업 (`<repo> local init`)
 
 `factory` CLI 의 `local init` verb 가 다음 4단계를 한 번에 처리해요:
@@ -148,7 +152,7 @@ cp recipes/social-auth-app.yaml app_kits.yaml
 
 ### main.dart 동기화
 
-선택한 recipe 에 맞게 `lib/main.dart` 의 `AppKits.install([...])` 수정.
+선택한 recipe 에 맞게 `lib/main.dart` 의 설치 목록과 필요한 import·Provider 연결을 함께 수정해요. 아래 코드는 조립 형태만 보여주므로 앱의 DB·온보딩 단계·탭 구현으로 채워야 해요.
 
 예 (local-only-tracker):
 
@@ -168,7 +172,7 @@ await AppKits.install([
 dart run tool/configure_app.dart
 ```
 
-Status: OK 확인.
+`Status: OK` 를 확인한 뒤 Dart 설치 목록도 같은 구성인지 대조해요. 이 도구는 YAML 과 main.dart 를 직접 비교하지 않아요.
 
 ---
 
@@ -191,7 +195,7 @@ Status: OK 확인.
 6. Tests (flutter test)
 7. Backend ping (`$BASE_URL/actuator/health`)
 
-마지막 출력이 "🎉 개발할 준비가 완료되었습니다" 면 코딩 시작 가능.
+모든 검사가 성공하면 개발을 시작해요. `--skip-tests` 등으로 생략한 검사가 있다면 완료 메시지가 그 검증까지 대신하지는 않아요.
 
 ### 옵션
 
@@ -208,6 +212,8 @@ Status: OK 확인.
 
 `<repo> local init` 단계에서 `flutter pub get` 까지 끝났으니 바로 빌드/실행으로 갑니다.
 
+<a id="ios-만--pod-install-필요-시"></a>
+
 ### iOS 만 — pod install (필요 시)
 
 대부분 `local init` 후 첫 빌드 시 자동 실행되지만 명시적으로:
@@ -221,6 +227,8 @@ cd ios && pod install && cd ..
 `local_db_kit` 사용 시 `dart run build_runner build --delete-conflicting-outputs`.
 i18n 추가 시 `flutter gen-l10n`.
 
+<a id="시뮬레이터--에뮬레이터-준비"></a>
+
 ### 시뮬레이터 / 에뮬레이터 준비
 
 ```bash
@@ -230,6 +238,8 @@ open -a Simulator
 # Android — AVD 부팅
 flutter emulators --launch <AVD_ID>
 ```
+
+<a id="앱-실행--local-start-mock-자동-폴백"></a>
 
 ### 앱 실행 — `local start` (Mock 자동 폴백)
 
@@ -245,7 +255,9 @@ flutter emulators --launch <AVD_ID>
 | `GoogleService-Info-{dev,prod}.plist` + `android/app/src/{dev,prod}/google-services.json` 모두 없음 | `--flavor=prod` | `--dart-define=AUTH_DEV_MOCK=true` 자동 주입 → 백엔드/OAuth 없이 keyless 시연 |
 | 위 중 하나라도 있음 | `--flavor=prod` | 실 SDK 경로 (flutter run 그대로) |
 
-처음 실행이면 빌드에 1~2분. 이후엔 hot reload.
+첫 빌드를 마친 뒤에는 지원되는 코드 변경을 hot reload 로 확인할 수 있어요. native 설정이나 일부 초기화 변경에는 다시 빌드하거나 실행해야 해요.
+
+<a id="auth_dev_mock-모드-동작-선택--mock-폴백-진입-시"></a>
 
 ### `AUTH_DEV_MOCK` 모드 동작 (선택 — Mock 폴백 진입 시)
 
@@ -258,13 +270,13 @@ template-spring 백엔드를 안 띄웠어도 인증 흐름 끝까지 keyless �
 
 자세한 메커니즘: [`auth_kit/README.md` Dev Mock 섹션](https://github.com/storkspear/template-flutter/blob/main/lib/kits/auth_kit/README.md#dev-mock-백엔드-없이-시연).
 
-> ⚠️ **release 빌드 금지**: `<repo> local start --release` 는 `start.sh` 가 mock 자동 주입을 비활성화해요. 추가로 Dart 사이드의 `kReleaseMode + isDevMockEnabled` 가드가 startup 시 `StateError` throw — 이중 방어.
+> release 실행에서는 래퍼가 개발용 mock을 자동으로 켜지 않아요. `AUTH_DEV_MOCK=true`를 명시해도 소셜 인증 coordinator를 생성할 때 release 가드가 오류를 던져요. release 부팅에는 `AppConfig`의 실제 서버·연락처·정책 URL과 staging/prod 환경 설정도 필요해요.
 
 ### 확인 포인트
 
 - [ ] 시뮬레이터에 앱이 떠요
 - [ ] 앱 이름이 `<slug>` 로 표시돼요
-- [ ] 스플래시 → 홈 화면으로 이어져요
+- [ ] 설치한 인증·온보딩 규칙에 맞는 첫 화면으로 이동해요. 기본 인증 구성이면 미인증 상태에서 로그인 화면이 나타날 수 있어요.
 - [ ] `flutter run` 콘솔에 에러가 없어요
 
 ---
@@ -317,7 +329,7 @@ firebase login                                  # 인터랙티브 인증 1회
 ```bash
 <repo> dev start                                # dev flavor, com.<base>.dev Bundle ID
 <repo> prod start                               # prod flavor, com.<base>
-<repo> dev start --release                      # release 빌드 (mock 자동 주입 비활성)
+<repo> prod start --release --dart-define-from-file=.env.prod  # 실제 prod 설정을 전달해요.
 ```
 
 ---
@@ -339,7 +351,7 @@ firebase login                                  # 인터랙티브 인증 1회
 
 ### `flutter pub get` 실패
 
-- `pubspec.lock` 삭제 후 재시도
+- 오류 로그에서 SDK 버전·의존성 충돌·네트워크 실패를 구분해요. 잠금 파일은 유지하고, 갱신이 필요할 때 변경 내용을 검토해요.
 - Flutter 버전 확인 (`flutter --version`)
 - 네트워크 / VPN 이슈
 
@@ -358,6 +370,8 @@ flutter doctor --android-licenses
 # y 여러 번 눌러 수락
 ```
 
+<a id="dart-run-toolconfigure_appdart-가-issues-found"></a>
+
 ### `dart run tool/configure_app.dart` 가 ISSUES FOUND
 
 - `app_kits.yaml` 의 Kit 이름이 `lib/kits/` 실제 폴더명과 일치하는지 확인 (오타 시 `not found in lib/kits/`)
@@ -368,6 +382,8 @@ flutter doctor --android-licenses
 더 많은 함정: [`Pitfalls`](./dogfood-pitfalls.md)
 
 ---
+
+<a id="-책-목차--journey-2단계"></a>
 
 ## 📖 책 목차 — Journey 2단계
 

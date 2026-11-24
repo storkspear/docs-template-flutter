@@ -4,7 +4,7 @@
 
 Flutter 측 호출은 [`lib/kits/backend_api_kit/notification_settings.dart`](../../lib/kits/backend_api_kit/notification_settings.dart) 의 `NotificationSettings` 클래스가 담당해요.
 
-> **백엔드 노출 방식**: 짝 백엔드의 `NotificationSettingController` 는 `BillingAutoConfiguration` 이 `@Import` 로 **자동 등록**해요 (`{appSlug}` path variable 라우팅이라 per-app heredoc 불필요). 즉 **template 단계에서도 endpoint 가 동작**하고, Flutter 호출이 바로 실효화돼요.
+> 서버의 `BillingAutoConfiguration`이 `NotificationSettingController`를 등록해요. 컨트롤러가 URL의 `{appSlug}`를 처리하므로 앱마다 같은 컨트롤러를 추가할 필요는 없어요. Flutter에서는 `NotificationSettings`로 호출하고, 각 설정을 `NotificationPreference`로 받아요.
 
 ---
 
@@ -65,16 +65,25 @@ Authorization: Bearer <access_token>
 ```json
 {
   "data": [
-    { "kind": "RENEWAL_SUCCEEDED", "pushEnabled": true, "emailEnabled": false },
-    { "kind": "IAP_REFUND",         "pushEnabled": true, "emailEnabled": true }
-  ],
-  "error": null
+    {
+      "kind": "RENEWAL_SUCCEEDED",
+      "pushEnabled": true,
+      "emailEnabled": false
+    },
+    {
+      "kind": "IAP_REFUND",
+      "pushEnabled": true,
+      "emailEnabled": true
+    }
+  ]
 }
 ```
 
 > **미등록 kind 는 응답에 미포함** — default 값은 **enabled (push/email 둘 다 on)** 으로 간주해요. 즉, "응답에 없는 kind" = "기본 ON". 이 규약은 짝 백엔드 listener 의 dispatch 분기와 일치해요.
 
 ---
+
+<a id="변경-patch--upsert"></a>
 
 ## 변경 (PATCH — upsert)
 

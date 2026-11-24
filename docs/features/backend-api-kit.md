@@ -1,12 +1,14 @@
+<a id="backend_api_kit"></a>
+
 # backend_api_kit
 
-Dio 기반 HTTP 클라이언트에 JWT 인증 · 에러 변환 · 로깅 3개 인터셉터를 얹은 kit 이에요. 백엔드 연동 앱이면 반드시 활성화해요 — `auth_kit` · `file_kit` · `payment_kit` 이 전부 이 kit 위에서 동작해요.
+앱 API 요청에 인증·오류 변환·개발용 로깅을 연결하는 Kit예요. `AuthKit`과 `FileKit`처럼 이 클라이언트를 사용하는 기능을 설치할 때 함께 조립해요.
 
 ---
 
 ## 개요
 
-모든 HTTP 요청은 Dio 클라이언트 하나 (`ApiClient`) 로 나가요. 여기에 Auth (토큰) · Error (예외 변환) · Logging (`AppConfig.isDev` — dev 만) 3개 인터셉터가 자동으로 설치돼요. 응답 스키마는 백엔드의 `{data, error}` envelope 과 1:1 로 대응하고 ([`ADR-009`](../philosophy/adr-009-backend-contract.md)), SSL pinning 은 opt-in 이에요 (`--dart-define=SSL_PINS=...`, [`ADR-020`](../philosophy/adr-020-security-hardening.md)).
+`ApiClient`는 일반 요청용 Dio와 토큰 갱신용 Dio를 따로 사용해요. 일반 요청에는 인증·오류 변환·개발 환경 로깅 인터셉터가 있고, 갱신 요청은 인증 인터셉터를 우회해 재진입을 피해요. 파일 바이트 업로드처럼 앱 API 밖의 요청은 별도 클라이언트를 사용할 수 있어요. 응답은 서버의 `data`·`error` 계약에 맞춰 파싱하며 SSL pinning은 선택 기능이에요.
 
 ---
 
@@ -48,7 +50,7 @@ AppConfig.init(
 | `LoggingInterceptor` | `AppConfig.isDev` 분기로 dev 만 콘솔 로깅 (staging · prod 무음) |
 | `ApiResponse<T>` · `PageResponse<T>` | 응답 래퍼 |
 | `ApiException` | 표준 예외 + `safeErrorCode` · `safeErrorMessage` |
-| `ErrorCode` 상수 | 서버 enum 1:1 매핑 (Spring `CommonError` CMN_*, `AuthError` ATH_*) |
+| `ErrorCode` 상수 | 클라이언트가 사용하는 서버 코드와 로컬 오류 코드 |
 | `SearchRequest` · `SearchRequestBuilder` | 검색 · 페이지네이션 DSL |
 | `SslPinning` | opt-in SHA-256 핀 검증 |
 | `DeviceRegistration` · `DeviceInfo` | push token 백엔드 등록 (`/devices` 호출 래퍼) — 이전엔 notifications_kit 에 있었음 |
@@ -59,53 +61,56 @@ AppConfig.init(
 
 ### ApiClient
 
+아래 `User`와 `Expense`는 파생 앱에서 정의하는 모델이에요. `/expenses`도 파생 서버에 구현해야 해요. 일반 메서드는 `/api/apps/{appSlug}` 접두사를 붙이고, `postRaw`는 이미 완성된 경로를 받아요.
+
 ```dart
-// GET
-final response = await api.get<User>(
+final userResponse = await api.get<User>(
   '/users/me',
-  fromData: User.fromJson,
-);
-final user = response.data!;  // User 타입
-
-// POST
-final created = await api.post<Expense>(
-  '/expenses',
-  data: expense.toJson(),
-  fromData: Expense.fromJson,
+  fromData: (data) => User.fromJson(data as Map<String, dynamic>),
 );
 
-// 페이지네이션
-final page = await api.get<PageResponse<Expense>>(
+final pageResponse = await api.get<PageResponse<Expense>>(
   '/expenses',
   queryParameters: {'page': 0, 'size': 20},
-  fromData: (data) => PageResponse.fromJson(data, Expense.fromJson),
+  fromData: (data) => PageResponse<Expense>.fromJson(
+    data as Map<String, dynamic>, Expense.fromJson,
+  ),
 );
-page.data!.hasNextPage  // bool
 
-// 인증 우회 (로그인 · 가입 · 비번 찾기 — Authorization 헤더 미부착)
+final created = await api.post<Expense>(
+  '/expenses',
+  data: {'amount': 1500, 'category': 'food'},
+  fromData: (data) => Expense.fromJson(data as Map<String, dynamic>),
+);
+
 await api.postRaw(
-  ApiEndpoints.emailSignIn,  // '/api/apps/{slug}/auth/email/signin'
+  ApiEndpoints.emailSignIn,
   data: {'email': email, 'password': password},
 );
-// → AuthInterceptor 가 SKIP_AUTH 옵션 인식, refresh 시도 안 함
 ```
 
+데이터가 없는 성공 응답도 있으므로 엔드포인트 계약에 맞춰 `response.data`를 처리해요. 이 예시의 금액은 원 단위 정수를 가정하며, 다른 API의 금액 단위까지 동일하다는 뜻은 아니에요.
+
 ### SearchRequestBuilder
+
+검색 DSL을 받는 엔드포인트는 파생 백엔드에서 구현해야 해요. `search()`에는 `/expenses`처럼 기본 경로를 넘겨요. 메서드가 `/search`를 붙이므로 `/expenses/search`를 넘기면 경로가 중복돼요.
 
 ```dart
 final request = SearchRequestBuilder()
   .eq('categoryId', 5)
   .gte('amount', 10000)
-  .like('title', '커피')  // ← 서버가 자동으로 %커피% 래핑 (% 직접 붙이면 이중 래핑)
+  .like('title', '커피')
   .isIn('status', ['active', 'pending'])
   .build();
 
-final results = await api.post<PageResponse<Expense>>(
-  '/expenses/search',
-  data: request.toJson(),
-  fromData: (data) => PageResponse.fromJson(data, Expense.fromJson),
+final results = await api.search<Expense>(
+  '/expenses',
+  request: request,
+  fromItem: Expense.fromJson,
 );
 ```
+
+조건값은 해당 서버 필드의 JSON 형식에 맞춰요. 날짜 전용 값은 `2026-04-01`, UTC 시각은 `toUtc().toIso8601String()`처럼 직렬화한 문자열로 전달해요. 검색 연산자와 서버의 별도 목록 요청 형식은 [검색 계약](../api-contract/search-request.md)을 확인하세요.
 
 ---
 
@@ -113,59 +118,17 @@ final results = await api.post<PageResponse<Expense>>(
 
 ### Repository 패턴
 
+객체 조회·목록 조회·생성은 위의 API 예제를 Repository 메서드에서 호출해요. 삭제처럼 데이터가 없는 응답은 `data!`로 읽지 않아요.
+
 ```dart
-// features/expense/expense_repository.dart
-class ExpenseRepository {
-  final ApiClient _api;
-  ExpenseRepository({required ApiClient api}) : _api = api;
-
-  Future<Expense> getById(int id) async {
-    final res = await _api.get<Expense>('/expenses/$id', fromData: Expense.fromJson);
-    return res.data!;
-  }
-
-  Future<PageResponse<Expense>> list({int page = 0}) async {
-    final res = await _api.get<PageResponse<Expense>>(
-      '/expenses',
-      queryParameters: {'page': page, 'size': 20},
-      fromData: (data) => PageResponse.fromJson(data, Expense.fromJson),
-    );
-    return res.data!;
-  }
-
-  Future<void> delete(int id) async {
-    await _api.delete('/expenses/$id');
-  }
-}
-
-final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
-  return ExpenseRepository(api: ref.watch(apiClientProvider));
-});
+await api.delete('/expenses/$id');
 ```
+
+모델, 응답 파싱과 Repository를 연결한 전체 예제는 [첫 앱 만들기](../journey/build-first-app.md#6-repository-15분)에 있어요.
 
 ### ViewModel 에서
 
-```dart
-class ExpenseListViewModel extends Notifier<ExpenseListState> {
-  @override
-  ExpenseListState build() => const ExpenseListState();
-
-  Ref get _ref => ref;
-
-  Future<void> load() async {
-    state = state.copyWith(isLoading: true);
-    try {
-      final page = await _ref.read(expenseRepositoryProvider).list();
-      state = state.copyWith(isLoading: false, items: page.content);
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        errorCode: safeErrorCode(e, fallbackCode: 'FETCH_FAILED'),
-      );
-    }
-  }
-}
-```
+ViewModel은 Repository를 호출하고 로딩·오류·조회 결과를 상태로 관리해요. `await` 뒤에는 `ref.mounted`를 확인하고, 새로고침에 실패해도 기존 목록은 유지해요. [목록 ViewModel과 테스트](../journey/build-first-app.md#7-viewmodel-state-20분)에서 실제 코드를 확인하세요.
 
 ---
 

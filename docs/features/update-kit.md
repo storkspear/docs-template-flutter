@@ -1,16 +1,28 @@
+<a id="update_kit"></a>
+
 # update_kit
 
-강제(hard)/경고(soft) 2단계로 업데이트를 감지하는 kit 이에요. Firebase Remote Config 나 자체 API 와 연계할 수 있고, `redirectPriority: 1` 이라 모든 게이트 중 최우선으로 평가돼요.
+업데이트 정보를 조회해 필수 업데이트와 권장 업데이트를 구분해요. 현재 구현은 `app.dart`의 다이얼로그 게이트로 화면 위에 안내를 표시해요. `redirectPriority: 1`은 선언되어 있지만 `buildRedirect`가 없어 라우팅 규칙에는 참여하지 않아요. 업데이트 정보 제공 방식은 `AppUpdateService` 구현으로 바꿀 수 있어요.
 
 ---
 
 ## 개요
 
-- **오버레이 게이트**: 부팅 시 `check()` 결과가 null이 아니면 `forceUpdateInfoNotifier` 방출 → `MaterialApp.builder` 의 `_ForceUpdateGate` (`lib/app.dart`) 가 전체 화면 위에 덮어씌워요(별도 라우트 없음). `info.isForce`로 분기: `true` → 닫기 불가 `ForceUpdateDialog`, `false` → 닫을 수 있는 `UpdateAvailableDialog`(경고)
-- **서비스 교체 가능**: **템플릿 기본 `main.dart`는 `BackendAppUpdateService`를 써요** — 스플래시에서 `GET /app-version`으로 게이트 마스터 스위치 `enabled`(bool)와 2단계 임계값 `forceMinVersion`/`warnMinVersion`(둘 다 nullable)을 조회해요. `enabled` 가 true 가 아니면(누락·malformed 포함) 임계값이 있어도 게이트 없음(null). enabled 일 때 클라가 **이하(≤)** 로 tier 를 계산해요 — 현재 버전 ≤ `forceMinVersion`(설정 시) → 강제(`isForce:true`), `forceMinVersion` < 현재 버전 ≤ `warnMinVersion`(설정 시) → 경고(`isForce:false`), 그 외 → 게이트 없음(`isAtOrBelow` 로 semver 비교). 불확실한 상황은 전부 **fail-open**이에요 — 조회 실패·응답 null·`enabled` 누락·임계값 malformed 는 물론, **현재 앱 버전 문자열이 파싱되지 않을 때도 게이트를 걸지 않아요**(잘못 걸면 전 사용자가 강제 업데이트로 잠기니까요). 세션 도중엔 `ApiClient.onUpgradeRequired`(426/`CMN_010`) 콜백이 항상 강제 다이얼로그로 안전망을 걸어요(서버는 426을 forceMin 미달에만 내려요). 이 기본 조립은 `backend_api_kit`이 필요해요. backend_api_kit 없는 recipe(`local-notifier-app` 등)는 `NoUpdateAppUpdateService`(`check()` 가 항상 null)로 되돌려야 해요 — 아래 "활성화" 참고
-- **Dialog**: 두 다이얼로그 모두 사용자에게 "업데이트" 버튼(스토어 이동)을 제공해요. 경고 다이얼로그는 추가로 X/"나중에" 닫기 버튼을 제공해요
-- **`url_launcher`**: 스토어 URL 오픈에 사용해요
-- **kit 자체는 backend_api_kit 을 몰라요**: `kit_manifest.yaml`의 `requires: []`는 정확해요. 위 결합은 kit 소스가 아니라 `main.dart`가 두 kit을 엮는 조립 지점에만 있어요.
+부팅 단계가 UpdateInfo 를 반환하면 `forceUpdateInfoNotifier` 가 값을 전달하고, `app.dart` 의 `_ForceUpdateGate` 가 화면 위에 다이얼로그를 표시해요. 별도 redirect 경로는 없어요.
+
+- `isForce: true` 면 바깥 탭과 뒤로가기로 닫을 수 없는 ForceUpdateDialog 를 표시해요.
+- `isForce: false` 면 닫을 수 있는 UpdateAvailableDialog 를 표시해요.
+- 두 화면은 스토어 이동 버튼을 제공하고, 경고 화면은 X 와 ‘나중에’ 버튼도 제공해요. 스토어 URL 은 url_launcher 로 열어요.
+
+기본 main.dart 는 BackendAppUpdateService 에 `GET /app-version` 조회 함수를 연결해요. 응답의 `enabled` 가 bool true 인 경우에만 다음 순서로 판정해요.
+
+1. 현재 버전이 유효한 `forceMinVersion` 이하이면 강제 업데이트를 표시해요.
+2. 강제 조건에 해당하지 않고 유효한 `warnMinVersion` 이하이면 권장 업데이트를 표시해요.
+3. 나머지는 null 을 반환해 게이트를 표시하지 않아요.
+
+조회 실패·빈 응답·enabled 누락 또는 잘못된 타입에서는 앱을 막지 않아요. 각 임계값은 파싱할 수 없으면 해당 조건만 제외하고, 현재 버전을 파싱할 수 없으면 두 조건 모두 적용하지 않아요. 비교는 숫자 버전의 앞 세 요소를 사용하며 prerelease·build suffix 를 제외하므로 완전한 SemVer 우선순위 비교와는 달라요.
+
+사용 중 API 에서 426/CMN_010 을 받으면 `ApiClient.onUpgradeRequired` 연결이 강제 업데이트 정보로 전달해요. 이 연결과 조회 함수는 main.dart 에서 조립하며 UpdateKit 자체의 필수 의존성은 아니에요. BackendApiKit 이 없는 앱은 NoUpdateAppUpdateService 로 교체하고 해당 API 연결도 제거해요.
 
 ---
 
@@ -21,6 +33,8 @@
 kits:
   update_kit: {}
 ```
+
+<a id="템플릿-기본값-backend_api_kit-활성-시"></a>
 
 ### 템플릿 기본값 (backend_api_kit 활성 시)
 
@@ -52,9 +66,11 @@ await AppKits.install([
 ]);
 ```
 
+<a id="backend_api_kit-이-없는-앱-예-local-notifier-app-recipe"></a>
+
 ### backend_api_kit 이 없는 앱 (예: `local-notifier-app` recipe)
 
-`backend_api_kit`을 켜지 않는 recipe는 위 기본 조립을 그대로 두면 `ApiClient`/`ForceUpgradeInfo`를 찾을 수 없어 컴파일이 깨져요. `NoUpdateAppUpdateService()`로 되돌리고 글루 블록 + 관련 import 2개(`backend_api_kit.dart`, `upgrade_required.dart`)를 지워야 해요.
+백엔드를 쓰지 않는 앱은 `UpdateKit(service: NoUpdateAppUpdateService())`로 조립하고 `ApiClient.onUpgradeRequired` 연결도 제거해요. 관련 import와 의존 패키지는 사용 여부를 확인한 뒤 정리해요. YAML이나 설치 목록에서 `BackendApiKit`만 뺐다고 Dart 타입이 곧바로 사라지는 것은 아니에요.
 
 ```dart
 // lib/main.dart — backend 없는 앱
@@ -76,7 +92,7 @@ await AppKits.install([
 | `AppUpdateService` | 추상. `init()` · `check()` → `UpdateInfo?` (null 이면 업데이트 불필요) |
 | `UpdateInfo` | `isForce` · `minVersion` · `latestVersion` · `message?` · `iosStoreUrl?` · `androidStoreUrl?` |
 | `NoUpdateAppUpdateService` | `appUpdateServiceProvider`의 fallback 더미. `check()` 가 항상 null (업데이트 없음). backend_api_kit 없는 앱에서 실사용 |
-| `BackendAppUpdateService` | **템플릿 기본 `main.dart`가 실제로 설치하는 구현체**. 스플래시에서 `GET /app-version` 조회 + `isAtOrBelow`(이하 ≤)로 semver 비교. 응답의 `enabled`(bool — 누락·비-bool 이면 false = 게이트 없음)가 마스터 스위치이고, `forceMinVersion`/`warnMinVersion`(2단계, 둘 다 nullable, is-String 가드로 파싱)으로 클라가 tier 계산(누락/malformed 는 안전하게 해당 tier 미판정 → 결국 null). `backend_api_kit` 필요 |
+| `BackendAppUpdateService` | 기본 앱이 조회 함수를 주입하는 구현체예요. enabled 와 두 임계값을 위 개요의 순서로 판정해요. Kit 자체가 ApiClient 에 직접 의존하지는 않아요 |
 | `ForceUpdateDialog` | 강제(`isForce:true`) 다이얼로그 — `_ForceUpdateGate` 오버레이로 표시. 닫기 차단은 게이트가 담당해요(스크림 `ModalBarrier(dismissible:false)` + `BackButtonListener` 소비). 스토어 링크가 없거나 열기에 실패하면 안내 문구를 띄우고 CTA 를 비활성화해요 |
 | `UpdateAvailableDialog` | 경고(`isForce:false`) 다이얼로그 (X · "나중에" · 바깥 탭 · 뒤로가기로 닫기 가능) — `_ForceUpdateGate` 오버레이로 표시 |
 | `forceUpdateInfoNotifier` | `ValueNotifier<UpdateInfo?>` — BootStep 이 `isForce` 무관하게 값 방출, `_ForceUpdateGate` 가 구독해 분기 |
@@ -147,7 +163,7 @@ class BackendUpdateService implements AppUpdateService {
 
 - [ ] `backend_api_kit`을 켜는 recipe인지 먼저 확인 — 켜면 템플릿 기본(`BackendAppUpdateService`)을 그대로 쓰고, 안 켜면 `NoUpdateAppUpdateService()` + 글루 삭제(위 "backend_api_kit 이 없는 앱" 참고)
 - [ ] 스토어 URL 확인 (App Store · Play Store 각각) — `/app-version` 응답의 `storeUrl` 또는 자체 구현체 안
-- [ ] 버전 비교 로직 확인 (semver 비교, `BackendAppUpdateService.isAtOrBelow` 또는 자체 구현)
+- [ ] `BackendAppUpdateService.isAtOrBelow` 의 숫자 비교와 suffix 제외 규칙이 앱의 버전 정책에 맞는지 확인해요.
 - [ ] (선택) Firebase Remote Config 설정 or 서버 `/app-version` 엔드포인트 실배포 확인
 - [ ] `main.dart` 의 `UpdateKit(service: ...)` 가 recipe 성격과 맞는지 확인 (백엔드 유무에 따라 교체)
 - [ ] 테스트: `check()` 가 `UpdateInfo(isForce: true, ...)` 반환 시 `ForceUpdateDialog`(닫기 불가), `isForce: false` 반환 시 `UpdateAvailableDialog`(닫기 가능) 오버레이가 화면을 덮는지 확인

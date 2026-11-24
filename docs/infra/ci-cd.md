@@ -1,3 +1,5 @@
+<a id="ci--cd"></a>
+
 # CI / CD
 
 이 문서는 GitHub Actions 기반 **CI (분석 · 테스트 · 빌드)** 와 **CD (스토어 배포)** 를 다뤄요.
@@ -71,11 +73,14 @@ jobs:
       - run: flutter build ios --debug --no-codesign --flavor dev
 ```
 
-### `CI_ON_PUSH` 게이트 — push CI 는 기본적으로 꺼두는 스위치
+<a id="cionpush-게이트-push-ci-는-기본적으로-꺼두는-스위치"></a>
+<a id="ci_on_push-게이트--push-ci-는-기본적으로-꺼두는-스위치"></a>
 
-세 job 전부에 `if: github.event_name != 'push' || vars.CI_ON_PUSH != 'false'` 가 걸려 있어요. Repo Variable `CI_ON_PUSH` 를 `false` 로 설정하면 push 트리거일 때 job 이 skip 되고, skip 된 job 은 러너를 잡지 않아 Actions 분을 전혀 소비하지 않아요. PR 과 `workflow_dispatch` 는 게이트와 무관하게 항상 실행돼요.
+### `CI_ON_PUSH` — push CI 실행 제어
 
-이렇게 꺼두는 이유는 러너 분 소모예요. private 레포는 러너별 분 배수가 달라 (Linux 1x / macOS 10x) ci.yml 1회 실행이 약 62분어치이고, 그중 macOS 러너의 Build iOS 가 약 78% 를 차지해요. Free 티어 월 2000분 기준 32회면 소진돼요. 그래서 push 시 CI 는 꺼두고, 같은 검증을 로컬 pre-push 훅 (아래 [Git Hooks](#git-hooks-로컬)) 이 대신해요.
+세 job 모두 `github.event_name != 'push' || vars.CI_ON_PUSH != 'false'` 조건을 사용해요. `CI_ON_PUSH` 를 설정하지 않으면 push CI 가 실행되고, 값을 `false` 로 설정했을 때만 건너뛰어요. PR 과 수동 실행에는 이 설정이 적용되지 않아요.
+
+push CI 를 끄면 러너 사용량을 줄일 수 있어요. 로컬 pre-push 훅은 분석·테스트 검사를 대신하지만 Android·iOS 빌드는 실행하지 않아요. 네이티브 설정이나 의존성을 변경했다면 CI 를 수동으로 실행해 빌드도 확인해요. 실제 실행 시간과 요금은 사용한 러너와 계정 정책에 따라 달라요.
 
 ```bash
 # 끄기
@@ -90,15 +95,15 @@ gh workflow run ci.yml --repo <owner>/<repo>
 
 1. **analyze-and-test** 를 먼저 통과해야 해요
 2. 그다음 **build-android** / **build-ios** 가 병렬 실행돼요
-3. 실패 시 PR 머지가 차단돼요
+3. 실패한 검사는 PR 에 표시돼요. 이 검사를 필수 상태 검사로 설정한 브랜치 보호 규칙이 있어야 머지가 차단돼요.
 
 ### 핵심 검증
 
-- **`dart format --set-exit-if-changed lib/ test/`** — 포매팅 강제 (lib/test 한정)
+- **`dart format --output=none --set-exit-if-changed lib/ test/`** — `lib/` 와 `test/` 의 포맷을 검사해요. 파일은 수정하지 않아요.
 - **`dart run tool/configure_app.dart --audit`** — Kit 조합 정합성 ([`ADR-004`](../philosophy/adr-004-manual-sync-ci-audit.md)). `app_kits.yaml` 의 미존재 kit · `kit_manifest.requires` 미충족 · `auth_kit.providers` 의 unknown 이름을 PR 머지 전에 차단해요.
-- **`bash tools/docs-check/docs-contract-test.sh`** — Docs contract guard. `docs/api-contract/*.md` 의 claim 이 코드와 어긋나면 (죽은 심볼 참조, `ErrorCode` 상수의 문서화 누락) CI 에서 잡아요.
+- **`bash tools/docs-check/docs-contract-test.sh`** — 목록에 등록된 옛 심볼이 남아 있는지, Dart `ErrorCode` 상수가 문서에 모두 나오는지 검사해요. 문서의 모든 설명이나 예제 동작을 검증하는 도구는 아니에요.
 - **`flutter analyze`** — 정적 분석 ([`very_good_analysis`](https://pub.dev/packages/very_good_analysis) 룰셋 + 큐레이션, [`ADR-022`](../philosophy/adr-022-very-good-analysis.md))
-- **`flutter test`** — 단위 · 위젯 · 통합 · fingerprint(recipe 재구성) 테스트 (golden 테스트는 현재 없음)
+- **`flutter test`** — `test/` 의 단위·위젯·Kit 조립·recipe fingerprint 테스트를 실행해요. 기기에서 수행하는 별도 통합 테스트까지 자동 실행하는 명령은 아니에요.
 
 ### CI 게이트 아님 (로컬 권장)
 
@@ -170,10 +175,9 @@ updates:
 # → git config core.hooksPath .githooks
 ```
 
-훅 내용:
-- **commit-msg**: `Co-Authored-By: Claude` 트레일러를 차단해요 (AI 공동저자 표기 금지). ⚠️ Conventional Commits 포맷 자동 검증은 **하지 않아요** — 컨벤션 준수는 작성자 책임이에요.
-- **pre-commit**: `dart format` 을 체크해요 (빠름, 1초 내) — 포맷 누락 시 commit 을 차단해요
-- **pre-push**: ci.yml 의 analyze-and-test job 과 동일한 5개 검사를 순서대로 실행해요 (약 35초) — ① `dart format` 재확인 ② `dart run tool/configure_app.dart --audit` ③ `bash tools/docs-check/docs-contract-test.sh` ④ `flutter analyze` ⑤ `flutter test`. `.fvmrc` 가 있고 fvm 이 설치돼 있으면 `fvm flutter` / `fvm dart` 를 경유해 `.fvmrc` 핀 버전으로 검사해요 — push CI 를 `CI_ON_PUSH` 게이트로 꺼둔 상태에서 이 훅이 CI 검증을 대신해요.
+- **commit-msg**: `Co-Authored-By: Claude` 트레일러를 차단해요. AI 공동저자 표기는 금지하며, Conventional Commits 형식은 작성자가 확인해요.
+- **pre-commit**: `dart format` 검사에 실패하면 커밋을 차단해요.
+- **pre-push**: 먼저 `flutter pub get` 으로 의존성을 맞춘 뒤 CI 의 `analyze-and-test` 와 같은 순서로 format, configure audit, docs contract, analyze, test 를 실행해요. `.fvmrc` 와 설치된 FVM 이 있으면 핀 버전으로 검사해요. Android·iOS 빌드는 별도로 확인해야 해요.
 
 ---
 
@@ -184,6 +188,8 @@ updates:
 - 월 1회 내외
 - semver: `v1.0.0 → v2.0.0`
 - changelog 수동 작성 or `conventional-changelog` 자동
+
+<a id="마이너--패치"></a>
 
 ### 마이너 · 패치
 
@@ -206,6 +212,7 @@ flutter pub get
 dart format --output=none --set-exit-if-changed lib/ test/
 flutter analyze
 dart run tool/configure_app.dart --audit
+bash tools/docs-check/docs-contract-test.sh
 flutter test
 
 # Android 빌드 (dev/prod 플레이버 구성이라 --flavor 필수)

@@ -1,14 +1,18 @@
+<a id="-template-flutter--책-목차-developer-journey"></a>
+
 # 📚 template-flutter — 책 목차 (Developer Journey)
 
 이 문서는 `docs/` 안의 모든 문서를 **읽는 순서** 로 안내해요.
 
-레포 루트의 `README.md` 빠른 시작만으로도 첫 앱은 실행돼요. 이 책은 그 이후, 레포의 정체와 사용 흐름을 차근차근 이해하고 싶을 때 읽는 안내서예요.
+레포 루트의 `README.md` 로 앱을 실행한 뒤 구조와 개발 흐름을 익힐 때 읽는 안내예요.
 
-각 단계 끝에는 다음 단계로 넘어가는 링크가 있어요. 책처럼 위에서 아래로 한 번 흐르듯 읽으면 자연스럽게 전체 그림이 잡혀요.
+각 단계에서 필요한 문서를 읽고 설정을 확인한 뒤 다음 단계로 넘어가요. 이미 끝낸 단계는 건너뛰고 필요한 절차부터 볼 수 있어요.
 
 > 💡 막히면: [`도그푸딩 함정 모음`](./dogfood-pitfalls.md) / [`도그푸딩 FAQ`](./dogfood-faq.md) 부터 검색해보세요.
 
 ---
+
+<a id="0-시작-전--readme-의-빠른-시작-10분"></a>
 
 ## 0. 시작 전 — README 의 빠른 시작 (10분)
 
@@ -27,7 +31,7 @@
 
 ## 1. 이 레포가 뭐야? (15분)
 
-이 레포의 **정체** 를 이해해요. 어떤 종류의 템플릿인지, 왜 이렇게 설계되었는지 큰 그림을 잡습니다.
+이 템플릿이 어떤 앱을 만들기 위한 도구인지, 공통 기능과 앱 고유 코드를 어떻게 나누는지 알아봐요.
 
 읽을 문서:
 
@@ -41,6 +45,8 @@
 여기까지 읽으면 "이 템플릿이 뭘 하려는 도구인지" 감이 잡혀요. 더 깊은 ADR 카드들은 나중에 필요할 때 돌아오세요.
 
 ---
+
+<a id="2-어떻게-써--로컬-개발-환경-1시간"></a>
 
 ## 2. 어떻게 써? — 로컬 개발 환경 (1시간)
 
@@ -61,6 +67,8 @@
 여기까지 마치면 시뮬레이터에 본인 앱 이름으로 첫 화면이 떠요. dev/prod flavor 분리 인프라 (Bundle ID `.dev` suffix + xcconfig 변수 substitution) 는 [`architecture.md § 환경 분리 인프라`](./architecture.md#환경-분리-인프라-devprod-flavor) 에서 깊이 설명해요.
 
 ---
+
+<a id="3-kit-조립은-어떻게--앱-유형-결정-30분"></a>
 
 ## 3. Kit 조립은 어떻게? — 앱 유형 결정 (30분)
 
@@ -88,28 +96,38 @@ dart run tool/configure_app.dart   # 정합성 검증
 
 ---
 
+<a id="4-발급은-어디서--외부-서비스-자격-증명-1--2시간"></a>
+
 ## 4. 발급은 어디서? — 외부 서비스 자격 증명 (1 ~ 2시간)
 
 운영 배포로 넘어가려면 외부 서비스의 API 키 · DSN 을 발급받아야 해요. 어디서 어떻게 받는지가 막히는 지점이라, 영역별로 문서가 나뉘어 있어요.
 
+<a id="41-소셜-로그인-auth_kit-쓸-때"></a>
+
 ### 4.1 소셜 로그인 (auth_kit 쓸 때)
 
 - **Google Sign In**: Google Cloud Console 에서 Client ID 발급
-- **Apple Sign In**: Apple Developer 에서 Bundle ID + Service ID 설정
-- 상세 절차는 [`auth_kit`](../features/auth-kit.md) 참고
+- **Apple Sign In**: Apple Developer 에서 Bundle ID 와 Sign in with Apple capability 를 설정해요. 현재 iOS identity token 검증 흐름에는 Service ID 가 필수가 아니에요.
+- 실제 콘솔·native 설정은 [Google/Apple 통합 가이드](../integrations/google-apple-auth.md) 에서 확인해요.
+
+<a id="42-관측성-observability_kit-쓸-때"></a>
 
 ### 4.2 관측성 (observability_kit 쓸 때)
 
 - **Sentry DSN**: [`observability_kit`](../features/observability-kit.md) → Sentry 프로젝트 생성 · DSN 복사 · 심볼 업로드 토큰 발급
 - **PostHog API Key**: 같은 문서의 PostHog 섹션
 
+<a id="43-푸시-알림-notifications_kit-쓸-때"></a>
+
 ### 4.3 푸시 알림 (notifications_kit 쓸 때)
 
-- **Firebase 프로젝트**: [`notifications_kit`](../features/notifications-kit.md) → `google-services.json` 다운로드 · `GoogleService-Info.plist` 다운로드
+- 원격 푸시를 쓸 때는 [FCM 통합 가이드](../integrations/fcm.md) 에 따라 Firebase 와 APNs 를 설정해요. `notifications_kit` 의 로컬 알림만 쓴다면 이 단계는 필요하지 않아요.
 
 각 발급 후 파생 레포의 `.env` 에 채워 넣거나, CI 배포 시엔 GitHub Actions Secrets 에 등록해요. 자세한 비밀 관리 규칙은 [`Secrets Management`](../infra/secrets-management.md) 를 참고해주세요.
 
 ---
+
+<a id="5-기능-조립은-어떻게--첫-화면--첫-기능-1--2시간"></a>
 
 ## 5. 기능 조립은 어떻게? — 첫 화면 & 첫 기능 (1 ~ 2시간)
 
@@ -117,7 +135,7 @@ dart run tool/configure_app.dart   # 정합성 검증
 
 읽을 문서:
 
-- [`build-first-app.md`](./build-first-app.md) — 완성까지 가는 12단계 walkthrough
+- [`build-first-app.md`](./build-first-app.md) — 목록 조회 기능을 만드는 단계별 예제
 - [`ViewModel + MVVM`](../conventions/viewmodel-mvvm.md) — `Notifier + ConsumerWidget` 패턴
 - [`Error Handling`](../conventions/error-handling.md) — ApiException 처리
 - [`Loading UX`](../conventions/loading-ux.md) — 로딩 UX 4가지 패턴
@@ -128,11 +146,13 @@ dart run tool/configure_app.dart   # 정합성 검증
 2. `<feature>_screen.dart` + `<feature>_view_model.dart` 작성
 3. ViewModel 에서 `ApiClient` · Repository 호출
 4. Screen 에서 `ref.watch()` 로 상태 구독
-5. 라우팅 추가 (`lib/common/router/app_router.dart`)
+5. 앱 조립 파일인 `lib/app.dart` 의 라우트 목록에 화면을 등록해요. 공통 라우터 구현은 `lib/common/router/app_router.dart` 에 있어요.
 
 여기까지 끝나면 본인 도메인의 첫 화면이 동작해요.
 
 ---
+
+<a id="6-배포-준비--android--ios-자격-증명-2시간"></a>
 
 ## 6. 배포 준비 — Android · iOS 자격 증명 (2시간)
 
@@ -153,7 +173,7 @@ dart run tool/configure_app.dart   # 정합성 검증
 # GOOGLE_SERVICES_JSON_PROD 도 수동 등록 (base64 -i android/app/src/prod/google-services.json | gh secret set GOOGLE_SERVICES_JSON_PROD)
 ```
 
-여기까지 마치면 `git tag v1.0.0 && git push --tags` 만으로 Play Internal 배포가 돌아가요.
+이 설정에 더해 Play Console 앱 등록과 최초 수동 업로드를 마치면, 태그로 Android 배포 워크플로우를 실행할 수 있어요. 다음 단계에서 이 조건을 확인해요.
 
 ---
 
@@ -174,13 +194,13 @@ git push --tags
 # GHA 가 자동으로 AAB 빌드 → Play Internal 업로드 → Sentry 심볼 업로드
 ```
 
-여기까지 끝나면 본인 앱이 내부 테스터에게 배포된 상태가 됩니다.
+워크플로우가 성공하면 Play Internal 에서 새 빌드를 확인하고 내부 테스터에게 안내해요. iOS 는 별도로 준비한 Fastlane lane 이나 Xcode 로 업로드해요.
 
 ---
 
 ## 깊이 있는 참조 (필요할 때 돌아오는 곳)
 
-위 책 본문에서는 "왜?" 를 자세히 다루지 않아요. 본문이 가볍게 흘러가게 하기 위함이에요. 깊이 들어가고 싶을 때 아래 문서들을 참고해주세요.
+설계 이유나 세부 계약이 필요하면 아래 문서로 이어서 읽어요.
 
 | 궁금한 것 | 문서 | 한 줄 설명 |
 |---|---|---|
@@ -202,7 +222,7 @@ git push --tags
 
 ## 이 책 다음에는?
 
-7단계까지 한 번 흐르고 나면 템플릿의 전체 사용 흐름이 머릿속에 잡혀요. 그다음은 **본인 앱의 도메인 로직을 만들어가는 것** 이 자연스러운 다음 단계예요.
+기본 설정과 첫 배포를 마쳤다면 앱 고유 기능을 확장해요. 작업 중 필요한 규약과 기능 설명은 아래 참조 문서에서 다시 찾을 수 있어요.
 
 진행하면서 막히는 부분이 있으면 위 "깊이 있는 참조" 의 해당 문서를 펼쳐보세요. 모든 문서는 서로 연결돼 있고, 어디로 가야 할지 막힌다면 이 책 목차로 다시 돌아오면 돼요.
 

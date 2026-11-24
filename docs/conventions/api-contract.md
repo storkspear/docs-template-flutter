@@ -1,155 +1,53 @@
+<a id="api-contract--백엔드-계약-요약"></a>
+
 # API Contract — 백엔드 계약 요약
 
-`template-spring` 백엔드와의 1:1 계약을 한눈에 요약한 문서예요. 상세는 [`docs/api-contract/`](../api-contract/) 의 7개 파일을 참조하세요.
-
-> 본 문서는 **conventions 영역의 진입점**이에요. "API 호출 코드 작성 시 따라야 할 것" 을 한 페이지로 요약하는 게 목적이라, 깊이 들어가려면 아래 cross-link 의 전용 문서로 가세요.
-
----
+이 문서의 설명은 주제별 가이드에 통합했어요. [API 계약](../api-contract/README.md)부터 확인하고, 이전 절은 아래 링크로 찾을 수 있어요.
 
 ## 핵심 5가지
 
+[통합한 설명 보기](../api-contract/README.md)
+
 ### 1. 응답 envelope: `{data, error}`
 
-```json
-// 성공
-{ "data": { ... }, "error": null }
+[통합한 설명 보기](../api-contract/response-schema.md)
 
-// 실패
-{ "data": null, "error": { "code": "ATH_001", "message": "...", "details": {} } }
-```
-
-`data` 와 `error` 는 **상호 배타** 라 동시에 존재하지 않아요. 상세는 [`response-schema.md`](../api-contract/response-schema.md) 에 있어요.
+<a id="2-에러-코드-도메인약어_번호-prefix"></a>
 
 ### 2. 에러 코드: `<도메인약어>_<번호>` prefix
 
-- `CMN_*` — 공통 (validation, not found, JWT access token 등)
-- `ATH_*` — 인증 도메인 (credentials, refresh token, social 등)
-- 클라 자체 코드 — `NETWORK_ERROR`, `TIMEOUT`, `UNKNOWN_ERROR`
-
-전체 매핑은 [`error-codes.md`](../api-contract/error-codes.md) 에 있어요.
+[통합한 설명 보기](../api-contract/error-codes.md)
 
 ### 3. 페이지네이션: `PageResponse<T>`
 
-```json
-{
-  "content": [...],
-  "page": 0,            // 0-based
-  "size": 20,
-  "totalElements": 153,
-  "totalPages": 8
-}
-```
+[통합한 설명 보기](../api-contract/response-schema.md#pageresponset)
 
-Spring `Page<T>` 와 1:1 로 대응해요. 상세는 [`response-schema.md`](../api-contract/response-schema.md) 에 있어요.
+<a id="4-인증-jwt-bearer--appslug-검증"></a>
 
 ### 4. 인증: JWT Bearer + appSlug 검증
 
-```text
-Authorization: Bearer <accessToken>
-URL: /api/apps/{appSlug}/...
-```
-
-- access token 만료 (`CMN_007`) → 인터셉터가 자동으로 refresh 해요
-- refresh 실패 (`ATH_002`/`003`) → ViewModel 이 signOut 을 호출해요
-- URL 의 `{appSlug}` 와 JWT payload 의 `appSlug` 는 백엔드에서 비교해요 (불일치 시 403)
-
-상세는 [`auth-flow.md`](../api-contract/auth-flow.md) 와 [`ADR-012`](../philosophy/adr-012-per-app-user.md) 에 있어요.
+[통합한 설명 보기](../api-contract/auth-flow.md)
 
 ### 5. 검색: `SearchRequest` DSL
 
-```dart
-final request = SearchRequestBuilder()
-  .eq('category', 'food')
-  .gte('amount', 1000)
-  .page(0, 20)
-  .sortBy('createdAt', SortDirection.desc)
-  .build();
-
-// path 는 base 만 — '/search' suffix 는 ApiClient 가 자동 append
-final result = await api.search<Expense>(
-  '/expenses',
-  request: request,
-  fromItem: Expense.fromJson,
-);
-```
-
-Flutter builder 가 노출하는 연산자는 11개 (`_eq`, `_ne`, `_gte`, `_lte`, `_gt`, `_lt`, `_like`, `_in`, `_notIn`, `_isNull`, `_isNotNull` — between 은 gte+lte 조합). 백엔드는 `_between` 등 추가 연산자도 인식해요. 상세는 [`search-request.md`](../api-contract/search-request.md) 에 있어요.
-
----
+[통합한 설명 보기](../api-contract/search-request.md)
 
 ## API 호출 패턴
 
-```dart
-// GET 단일 객체 — fromData 는 dynamic 을 받으므로 클로저로 캐스팅
-final user = await api.get<User>(
-  '/users/me',
-  fromData: (data) => User.fromJson(data as Map<String, dynamic>),
-);
-
-// GET 목록 (페이지네이션)
-final page = await api.get<PageResponse<Expense>>(
-  '/expenses',
-  queryParameters: {'page': 0, 'size': 20},
-  fromData: (data) =>
-      PageResponse.fromJson(data as Map<String, dynamic>, Expense.fromJson),
-);
-
-// POST 생성
-final created = await api.post<Expense>(
-  '/expenses',
-  data: {'amount': 1500, 'category': 'food'},
-  fromData: (data) => Expense.fromJson(data as Map<String, dynamic>),
-);
-
-// 검색 (path 는 base — ApiClient 가 '/search' suffix 자동 추가)
-final result = await api.search<Expense>(
-  '/expenses',
-  request: searchRequest,
-  fromItem: Expense.fromJson,
-);
-```
-
-`/api/apps/{appSlug}` prefix 는 `ApiClient` 가 자동으로 prepend 하니 상대 경로만 작성해요. 검색 호출 시 `'/search'` suffix 도 자동이에요 — `'/expenses/search'` 처럼 직접 적으면 `'/expenses/search/search'` 로 중복 호출돼요.
-
----
+[통합한 설명 보기](../features/backend-api-kit.md)
 
 ## 짝 동기화 매트릭스
 
-Flutter ↔ Spring 어느 한쪽을 바꾸면 반대쪽도 함께 바꿔야 하는 짝이에요:
-
-| Flutter 파일 | Spring 파일 | 동기화 의무 |
-|---|---|---|
-| `lib/kits/backend_api_kit/api_response.dart` | `common-web/.../ApiResponse.java`, `PageResponse.java` | 필드 추가/제거 시 양쪽 |
-| `lib/kits/backend_api_kit/error_code.dart` | `common-web/.../CommonError.java`, `core-auth-api/.../AuthError.java` | enum 추가/제거 시 양쪽 |
-| `lib/kits/backend_api_kit/api_endpoints.dart` | `common-web/.../ApiEndpoints.java` | 경로 변경 시 양쪽 |
-| `lib/kits/auth_kit/auth_service.dart` | `core-auth-impl/.../AuthController.java` | 인증 흐름 변경 시 양쪽 |
-
----
+[통합한 설명 보기](../api-contract/README.md#쌍-운영-규칙)
 
 ## 자주 빠지는 함정
 
-1. **응답 파싱**: `data['accessToken']` 같이 root 에서 추출했는데 실제는 nested (`data['tokens']['accessToken']`) 인 경우예요. [auth-flow.md](../api-contract/auth-flow.md) 의 nested 구조를 참조하세요
-2. **에러 코드 raw string 사용**: `if (e.code == 'INVALID_CREDENTIALS')` ❌ → `e.code == ErrorCode.invalidCredentials` ✓ (`'ATH_001'`)
-3. **페이지 0/1-based 혼동**: 우리는 **0-based** 예요. 첫 페이지가 `page: 0` 이에요
-4. **금액 부동소수점**: `double` 을 쓰면 정확도가 깨져요 — 항상 정수 (원 단위) 를 사용해요
-5. **날짜 timezone 누락**: 서버는 항상 UTC (`Z` 또는 `+00:00`) 로 내려줘요 — 클라에서 `DateTime.parse()` 후 필요시 `toLocal()` 을 호출해요
-6. **search 와 query 혼동**: 단순 GET 은 `queryParameters` 인자를 쓰고, 조건 검색은 `search()` + `SearchRequestBuilder` 를 써요
-
----
+[통합한 설명 보기](../api-contract/response-schema.md#필드-네이밍)
 
 ## 관련 문서 (api-contract/ 디렉토리)
 
-| 파일 | 다루는 것 |
-|---|---|
-| [`api-contract/README.md`](../api-contract/README.md) | 디렉토리 인덱스 |
-| [`api-contract/response-schema.md`](../api-contract/response-schema.md) | `{data, error}` · PageResponse · 필드 네이밍 |
-| [`api-contract/error-codes.md`](../api-contract/error-codes.md) | CMN_* / ATH_* 전체 매핑 + i18n 매핑 |
-| [`api-contract/auth-flow.md`](../api-contract/auth-flow.md) | 로그인 · refresh · withdraw 시퀀스 |
-| [`api-contract/search-request.md`](../api-contract/search-request.md) | SearchRequestBuilder + 11개 연산자 |
+[통합한 설명 보기](../api-contract/README.md)
 
 ## 관련 ADR
 
-- [`ADR-009 · Backend Contract`](../philosophy/adr-009-backend-contract.md) — `{data, error}` 설계 결정
-- [`ADR-010 · Queued Interceptor`](../philosophy/adr-010-queued-interceptor.md) — 401 자동 refresh
-- [`ADR-011 · Interceptor Chain`](../philosophy/adr-011-interceptor-chain.md) — Auth/Error/Logging 3층 인터셉터
-- [`ADR-012 · Per-App User`](../philosophy/adr-012-per-app-user.md) — appSlug 검증
+[통합한 설명 보기](../api-contract/README.md)

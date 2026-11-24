@@ -1,6 +1,6 @@
 # Kits 컨벤션
 
-FeatureKit 을 만들고 · 제거하고 · 동기화하는 방법을 다루는 가이드예요. 15개 기본 kit 에 적용되는 규칙과, 파생 레포에서 자체 kit 을 추가하는 워크플로우까지 담았어요.
+Kit를 추가하거나 제거할 때는 `main.dart`의 실제 조립과 `app_kits.yaml`의 선언을 함께 수정해요. 이 문서는 Kit의 의존성, provider 주입, 부팅 단계와 라우트 기여 규칙을 설명해요. 설정 검사 도구가 확인하는 범위와 사람이 대조해야 할 부분도 구분해요.
 
 > 빠른 인덱스: [15개 kit 목록 + 의존 관계도](../features/README.md). 본 문서는 **kit 을 만드는 사람** 입장의 컨벤션이에요.
 
@@ -8,13 +8,13 @@ FeatureKit 을 만들고 · 제거하고 · 동기화하는 방법을 다루는 
 
 ## 1. AppKit 계약 (5분 요약)
 
-`lib/core/kits/app_kit.dart` 에 정의된 추상 클래스. 모든 kit 이 이 contract 를 구현해요.
+`AppKit`은 `lib/core/kits/app_kit.dart`에 정의된 추상 클래스예요. 각 Kit는 필요한 메서드만 재정의해요. 아래는 계약을 설명하는 발췌이며, `Override` 타입은 `package:riverpod/misc.dart`에서 가져와요.
 
 ```dart
 abstract class AppKit {
   String get name;                              // 디버그/에러 메시지용
   List<Type> get requires => const [];          // 의존 Kit 타입
-  int get redirectPriority => 100;              // 라우터 redirect 우선순위 (낮을수록 강함)
+  int get redirectPriority => 100;              // 값이 작을수록 먼저 평가해요.
   List<Override> get providerOverrides => const [];
   List<RouteBase> get routes => const [];
   List<NavigatorObserver> get navigatorObservers => const [];
@@ -99,7 +99,7 @@ auth_kit  payment_kit  file_kit    (셋 다 requires: backend_api_kit)
 |---|---|---|
 | `kit_manifest.requires` 에 **선언한 kit** 의 **type import** | ✅ | `import '.../backend_api_kit/api_exception.dart'` 로 `ApiException` 사용 |
 | 다른 kit 의 **인스턴스 접근** | ❌ 직접 생성 금지<br>✅ provider 경유 | `ref.read(apiClientProvider)` (○) <br>`ApiClient(...)` 직접 생성 (✗) |
-| **미선언 kit** 의 cross-import (manifest `requires` 에 없는 kit) | ❌ **절대 금지** | `auth_kit` 이 manifest 선언 없이 `observability_kit/dogfooding_panel.dart` import → 그 recipe 에 observability 빠지면 컴파일 실패 |
+| **미선언 kit**의 cross-import (manifest `requires`에 없는 Kit) | ❌ 금지 | 의존성을 선언하지 않으면 해당 Kit의 파일·패키지를 제거할 때 import가 깨질 수 있어요. |
 | `core/` import (인터페이스/공용 위젯) | ✅ 항상 허용 | `core/storage/token_storage.dart`, `core/widgets/...` |
 | `common/providers.dart` import | ✅ **허용 예외 (이 한 파일만)** | `import '.../common/providers.dart'` 로 전역 Provider 읽기. `BootStep` 은 `core/kits/boot_step.dart` 에서 import (`core/` 라 항상 허용) |
 | 그 밖의 `common/` import (`router/`, `splash/splash_controller.dart` 등) | ❌ 금지 | 조립 지점은 kit 이 몰라야 해요 — 반대로 `common/` 이 kit 을 조립하는 방향이 정상 |
@@ -123,21 +123,17 @@ try {
 }
 ```
 
-이래야 `requires` 가 진실의 출처 — manifest 만 보면 누가 누구에게 의존하는지 명확하고, recipe 조합 시 빠진 kit 이 자동으로 install 단계에서 잡혀요.
+이 규칙을 지키면 manifest에서 Kit 간 의존 관계를 확인할 수 있어요. `tool/configure_app.dart`는 YAML과 manifest를 검사하고, `AppKits.install`은 Dart의 `requires` getter를 검사해요. 도구가 두 선언의 일치나 실제 import 전체를 검사하지는 않으므로 함께 수정해야 해요.
 
 ### 3-3. 미선언 cross-import 가 위험한 이유
 
-manifest `requires` 에 적지 않은 kit 을 import 하면 **다른 recipe 로 출발한 파생 레포에서 컴파일이 실패해요**.
+manifest에 적지 않은 Kit를 import하면 선언만 보고는 의존 관계를 알 수 없어요. 예를 들어 `auth_kit/ui/login/login_screen.dart`에서 `observability_kit/dogfooding_panel.dart`를 가져오면서 의존성을 선언하지 않은 경우예요.
 
-규칙이 깨지면 이렇게 터져요 — `auth_kit/ui/login/login_screen.dart` 가 `observability_kit/dogfooding_panel.dart` 를 `kDebugMode` 가드 안에서 직접 import 한다고 해볼게요.
+- `backend-auth-app.yaml`은 ObservabilityKit을 활성화하지 않지만, 현재 설정 도구는 Kit 파일이나 pubspec 의존성을 자동 삭제하지 않아요. 따라서 recipe를 선택했다는 이유만으로 곧바로 컴파일이 실패하지는 않아요.
+- 파생 앱에서 불필요한 Kit의 파일이나 패키지를 제거하면 남은 import 때문에 컴파일이 실패할 수 있어요.
+- `kDebugMode`는 컴파일 시 결정되는 상수여도 import 해석을 생략하는 장치는 아니에요. 호출부에 이 조건을 붙여 숨은 의존성을 해결할 수는 없어요.
 
-- `auth_kit/kit_manifest.yaml` 의 `requires` 에는 `backend_api_kit` 만 있고 observability 는 없어요
-- recipe `backend-auth-app.yaml` (observability 미포함) 로 출발한 파생 레포는 즉시 컴파일 실패해요
-- `kDebugMode` 가드는 **런타임** 분기라 import 자체는 남아요 — 컴파일 실패를 막아주지 못해요
-
-그래서 디버그 도구는 `observability_kit` 을 `requires` 에 선언한 화면 한 곳에서만 노출해요.
-
-이 규칙이 깨지면 사이즈 영향, 의존 관계 캐스케이드, 테스트 격리, recipe 호환성 모두에 문제가 생겨요. 자세한 근거는 [`ADR-002 · Layered Modules`](../philosophy/adr-002-layered-modules.md), [`ADR-003 · FeatureKit Registry`](../philosophy/adr-003-featurekit-registry.md).
+디버그 도구를 노출하는 Kit는 의존성을 선언하고, 실제 인스턴스는 provider로 받아요. 이 규칙은 불필요한 의존성이 남거나 recipe 조합과 테스트가 서로 영향을 주는 일을 줄이기 위한 거예요. 근거는 [ADR-002](../philosophy/adr-002-layered-modules.md)와 [ADR-003](../philosophy/adr-003-featurekit-registry.md)에 있어요.
 
 ---
 
@@ -160,6 +156,8 @@ lib/kits/location_kit/
     └── location_history_view_model.dart
 ```
 
+<a id="4-2-kit_manifestyaml-표준-양식"></a>
+
 ### 4-2. `kit_manifest.yaml` 표준 양식
 
 ```yaml
@@ -173,20 +171,27 @@ requires:
 
 > `requires` 는 **두 곳에서 기계 검증**돼요 — manifest 쪽은 `tool/configure_app.dart` 가 (`--audit` 시 불일치 `exit 1`), Dart 쪽 `AppKit.requires` getter 는 install 시점에 `AppKits` 가 검증. 두 곳을 일치시켜요.
 
+<a id="4-3-location_kitdart-골격"></a>
+
 ### 4-3. `location_kit.dart` 골격
+
+다음 코드는 위 디렉토리의 서비스·화면을 파생 앱에서 구현했다는 전제예요. `LocationService`, `DebugLocationService`, `GeolocatorLocationService`, `LocationHistoryScreen`은 템플릿에 있는 클래스가 아니에요. 위치 스트림처럼 정리가 필요한 자원을 추가하면 생성한 인스턴스의 수명과 정리 방법도 함께 설계해요.
 
 ```dart
 import 'package:app_template/core/kits/app_kit.dart';
 import 'package:app_template/kits/backend_api_kit/backend_api_kit.dart';
+import 'package:app_template/kits/location_kit/debug_location_service.dart';
+import 'package:app_template/kits/location_kit/geolocator_location_service.dart';
 import 'package:app_template/kits/location_kit/location_service.dart';
+import 'package:app_template/kits/location_kit/ui/location_history_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 export 'location_service.dart';
 
-/// Provider — Debug 폴백이 default. LocationKit 이 실구현으로 override.
 final locationServiceProvider = Provider<LocationService>(
-  (_) => DebugLocationService(),  // 실구현 미주입 시 콘솔 로그만
+  (_) => DebugLocationService(),
 );
 
 class LocationKit extends AppKit {
@@ -213,12 +218,6 @@ class LocationKit extends AppKit {
       builder: (_, __) => const LocationHistoryScreen(),
     ),
   ];
-
-  @override
-  Future<void> onInit() async {
-    // 위치 스트림 준비 등 kit 전역 초기화
-    await GeolocatorLocationService.warmUp();
-  }
 }
 ```
 
@@ -232,8 +231,8 @@ class LocationKit extends AppKit {
 한 줄 요약 + 의존 kit 명시.
 
 ## 개요
-- 핵심 기능 4~5개 bullet
-- 의존성 패키지 1~2개
+- 제공하는 핵심 기능
+- 필요한 패키지와 의존 Kit
 
 ## 활성화
 - app_kits.yaml + main.dart 코드 예시 2개
@@ -297,10 +296,10 @@ class LocationKit extends AppKit {
 - [ ] **import** 정리 — IDE 가 unused 표시
 - [ ] **Provider 사용처** — 해당 kit 이 export 했던 provider 를 쓰던 코드 정리
 - [ ] **권한** — `AndroidManifest.xml`, `Info.plist` 의 해당 kit 전용 권한 제거 (예: ads_kit 의 ATT)
-- [ ] **매니페스트 컴포넌트** — kit 플러그인을 가리키는 `<receiver>`·`<service>` 제거 (예: notifications_kit 의 `ScheduledNotificationReceiver`·`ScheduledNotificationBootReceiver`. 플러그인을 빼고 남기면 클래스를 못 찾아 죽음)
+- [ ] **매니페스트 컴포넌트** — 플러그인을 제거하면 해당 `<receiver>`·`<service>`도 정리해요. 예를 들어 알림 플러그인의 예약 알림 receiver를 남기면 호출 시 클래스를 찾지 못할 수 있어요.
 - [ ] **i18n** — 해당 kit UI 가 썼던 ARB 키 정리
 - [ ] **pubspec.yaml** — 해당 kit 만 쓰던 의존성 제거 (다른 kit 도 쓰면 유지)
-  - ⚠️ pubspec 에 남겨두면 native 플러그인 .aar 이 APK 에 그대로 포함돼요 ([features/README.md tree-shaking 주의 참조](../features/README.md))
+  - Dart 코드에서 쓰지 않아도 플랫폼 코드·리소스가 빌드에 남을 수 있어요([tree-shaking 주의](../features/README.md)).
 - [ ] `dart run tool/configure_app.dart` → `Status: OK`
 - [ ] `flutter analyze` warning 0 건
 - [ ] `flutter test` 그린
@@ -309,20 +308,22 @@ class LocationKit extends AppKit {
 
 ---
 
+<a id="6-라우팅--redirect-규칙-작성"></a>
+
 ## 6. 라우팅 / Redirect 규칙 작성
 
 `buildRedirect()` 가 라우터 게이트의 핵심.
 
 ### 6-1. priority 정책
 
-낮을수록 먼저 평가 = 더 강한 차단. 기본값 `100`.
+값이 작을수록 먼저 평가하고, 처음으로 경로를 반환한 규칙을 적용해요. 기본값은 `100`이며 같은 값이면 설치 순서를 따라요. `buildRedirect()`가 `null`인 Kit는 평가 대상에 포함되지 않아요.
 
-| priority | 사용처 |
+| priority | 현재 사용처 |
 |---|---|
-| `1` | UpdateKit (강제 업데이트) — 다른 모든 게이트 위에 |
-| `10` | AuthKit (미인증 시 `/login`) |
-| `50` | OnboardingKit (첫 실행 시 `/onboarding`) |
-| `100` | 기본 (대부분 kit) |
+| `1` | UpdateKit에 선언된 값이에요. 현재 리다이렉트 규칙은 없고, `app.dart`의 `_ForceUpdateGate`가 업데이트 다이얼로그를 표시해요. |
+| `10` | AuthKit의 인증 상태에 따른 경로 전환이에요. |
+| `50` | OnboardingKit의 첫 실행 안내예요. |
+| `100` | 별도로 지정하지 않은 Kit의 기본값이에요. |
 
 새 게이트를 추가할 때는 충돌이 없도록 우선순위를 신중히 정해요. 상세는 [`ADR-018 · Redirect Priority`](../philosophy/adr-018-redirect-priority.md).
 
@@ -337,25 +338,24 @@ typedef RedirectRule = String? Function(BuildContext context, GoRouterState stat
 
 ### 6-3. 예시
 
+다음은 실제 `AuthKit`의 메서드 발췌예요. `computeRedirect`는 인증 상태가 아직 정해지지 않은 경우, 로그인·비밀번호 찾기·이메일 인증·2FA 경로를 각각 처리해요. 단순히 `/login` 접두사만 검사하면 필요한 인증 경로까지 막을 수 있어요.
+
 ```dart
 @override
-RedirectRule? buildRedirect() {
-  return (context, state) {
-    final container = AppKits.maybeContainer;
-    if (container == null) return null;  // 부팅 중
-
-    final auth = container.read(authStreamProvider);
-    return auth.maybeWhen(
-      data: (s) {
-        if (s.isUnauthenticated && !state.matchedLocation.startsWith('/login')) {
-          return '/login';
-        }
-        return null;
-      },
-      orElse: () => null,
-    );
-  };
-}
+RedirectRule? buildRedirect() => (ctx, state) {
+  final container = AppKits.maybeContainer ?? ProviderScope.containerOf(ctx);
+  final status = container.read(authStateProvider).current.status;
+  return computeRedirect(
+    status: status,
+    path: state.matchedLocation,
+    loginPath: loginPath,
+    homePath: homePath,
+    splashPath: splashPath,
+    forgotPasswordPath: forgotPasswordPath,
+    verifyEmailPath: verifyEmailPath,
+    twoFactorLoginPath: twoFactorLoginPath,
+  );
+};
 ```
 
 ### 6-4. refreshListenable
@@ -373,7 +373,7 @@ Listenable? get refreshListenable => _bridge ??= _AuthRefreshBridge(/* ... */);
 
 ## 7. BootStep 작성
 
-스플래시 단계에서 순차 실행돼요. 실패해도 앱 부팅은 막지 않는 걸 권장해요 (필수 단계는 main.dart 에서 직접 await 해요).
+`BootStep`은 `runApp` 전에 순서대로 실행해요. 선택 기능의 실패가 부팅을 막지 않도록 처리하는 것을 권장해요. 필수 초기화는 `main.dart`에서 직접 기다리고, 실패 시 어떻게 처리할지도 정해요. 예외를 처리하지 않은 BootStep이 실패하면 `SplashController`는 뒤의 단계를 실행하지 않고 오류 결과를 반환해요. 현재 `main.dart`는 그 오류를 보고한 뒤 `runApp`으로 진행해요.
 
 ```dart
 class _MyKitInitStep implements BootStep {
@@ -386,7 +386,7 @@ class _MyKitInitStep implements BootStep {
   @override
   Future<void> execute() async {
     await _service.init();
-    // 실패해도 좋다면 try/catch 로 swallow
+    // 선택 기능의 실패를 허용한다면 이 안에서 오류를 처리하고 기록해요.
   }
 }
 ```
@@ -401,9 +401,9 @@ CLAUDE.md §7 의 함정과 동일해요. 본 문서에서 강조하는 것:
 
 1. **`AppKits.install` 누락** — 새 kit 만들고 main.dart 에 안 끼우면 모든 라우트/provider 가 사라진 듯 보여요
 2. **`AppKits.attachContainer` 호출 순서** — ProviderContainer 생성 직후 호출해야 bootStep 내부에서 `container.read` 가 가능해요
-3. **미선언 kit cross-import** — manifest `requires` 에 없는 kit 의 import 는 다른 recipe 채택 시 컴파일이 실패해요. 선언한 kit 의 type import 는 OK, 인스턴스는 provider 경유 (§3 참고)
-4. **`tool/configure_app.dart --audit`** 안 돌리고 커밋 — 의존성 누락이 런타임에야 발견돼요
-5. **proguard-rules.pro 갱신 누락** — kit 추가 시 native 의존이 있으면 release 빌드에서 `NoClassDefFoundError` 가 나요
+3. **미선언 Kit import** — 의존성을 숨긴 채 파일·패키지를 제거하면 컴파일이 실패할 수 있어요. 타입 import는 선언한 Kit에 한해 허용하고 인스턴스는 provider로 받아요.
+4. **설정 검사 누락** — `dart run tool/configure_app.dart --audit`로 YAML·manifest의 의존성을 검사해요. 이 검사가 `main.dart`와 Dart getter의 일치까지 확인하지는 않아요.
+5. **플랫폼별 설정 누락** — SDK를 추가하면 해당 SDK에 필요한 Manifest·Info.plist·ProGuard 설정을 확인해요. 필요한 keep 규칙이 누락되면 release 빌드에서만 오류가 날 수도 있어요.
 6. **i18n 누락** — kit UI 가 새 문자열을 쓰면 ko/en ARB 양쪽에 추가하고 `flutter gen-l10n` 을 돌려요
 
 ---
@@ -417,5 +417,5 @@ CLAUDE.md §7 의 함정과 동일해요. 본 문서에서 강조하는 것:
 - [`ADR-004 · Manual Sync + CI Audit`](../philosophy/adr-004-manual-sync-ci-audit.md) — yaml↔dart 동기화 전략
 - [`ADR-008 · Boot Step`](../philosophy/adr-008-boot-step.md) — 부팅 단계 추상화
 - [`ADR-018 · Redirect Priority`](../philosophy/adr-018-redirect-priority.md) — 라우팅 우선순위
-- [`architecture.md`](./architecture.md) — MVVM, 모듈 의존 방향, 에러 처리
+- [`architecture.md`](viewmodel-mvvm.md) — MVVM, 모듈 의존 방향, 에러 처리
 - [`naming.md`](./naming.md) — 파일/클래스/Provider 명명 규칙

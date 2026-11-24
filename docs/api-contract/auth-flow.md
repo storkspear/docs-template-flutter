@@ -72,6 +72,9 @@
 
 ---
 
+<a id="토큰-만료--자동-refresh-adr-010philosophyadr-010-queued-interceptormd"></a>
+<a id="토큰-만료--자동-refresh-adr-010"></a>
+
 ## 토큰 만료 → 자동 refresh ([`ADR-010`](../philosophy/adr-010-queued-interceptor.md))
 
 ```text
@@ -117,7 +120,7 @@
 
 ### 동시 401 처리
 
-**동시에 401 이 터져도 refresh 는 1번만 실행돼요.** 두 장치가 함께 일해요.
+여러 요청이 동시에 401을 받으면 `QueuedInterceptor`가 오류 처리를 순서대로 진행해요. 먼저 처리한 요청의 갱신이 성공해 저장된 access token이 바뀌었으면, 뒤의 요청은 다시 갱신하지 않고 새 토큰으로 재시도해요. 갱신 실패로 토큰이 바뀌지 않았다면 뒤의 요청도 갱신을 시도할 수 있어요.
 
 1. `QueuedInterceptor` 가 `onError` 를 한 줄로 세워요 — 첫 401 이 refresh 를 끝낼 때까지 나머지 401 은 큐에서 기다려요.
 2. 큐에서 나온 401 은 **회전 감지**를 해요 — "이 요청이 들고 나간 토큰" 과 "지금 저장된 토큰" 이 다르면 이미 다른 401 이 refresh 를 끝낸 거라, refresh 없이 새 토큰으로 재시도만 해요.
@@ -136,6 +139,9 @@
 **Flutter 측 처리**: `AuthService._handleAuthResponse()` 가 두 형태 모두 **관대하게 파싱**해요 (`tokens.accessToken` 우선, 없으면 root `accessToken` fallback). 그래서 호출 측은 동일 메서드로 두 응답을 처리할 수 있어요.
 
 ---
+
+<a id="2fa-totp-로그인-auth_serviceloginwith2facodelibkitsauth_kitauth_servicedart"></a>
+<a id="2fa-totp-로그인-auth_serviceloginwith2facode"></a>
 
 ## 2FA TOTP 로그인 ([`auth_service.loginWith2faCode`](../../lib/kits/auth_kit/auth_service.dart))
 
@@ -190,6 +196,8 @@
 (라우터 경로) 로 push → `TwoFactorLoginScreen` 이 `loginWith2faCode` 를 호출해요. `/login/2fa` 는
 `computeRedirect` 화이트리스트에 있어 **미인증 pending 상태에서도 접근** 가능해요. 이 수용 로직은
 **서버 결정**이라 `AuthKit(twoFactorEnabled:)` 관리 플래그와 무관하게 항상 동작해요.
+
+<a id="totp-등록--해제--백업코드-재발급-설정--보안"></a>
 
 ### TOTP 등록 · 해제 · 백업코드 재발급 (설정 > 보안)
 
@@ -254,6 +262,8 @@ POST /auth/logout { refreshToken }  ← best-effort, 최대 5초
 
 ---
 
+<a id="비밀번호-재설정-requestpasswordreset--confirmpasswordreset"></a>
+
 ## 비밀번호 재설정 (requestPasswordReset → confirmPasswordReset)
 
 ```text
@@ -272,6 +282,8 @@ POST /auth/logout { refreshToken }  ← best-effort, 최대 5초
 오답 한도(5회째)에 걸리면 같은 코드를 맞게 넣어도 ATH_003 이에요 — 코드 입력 단계의 "코드 다시 받기" 로 ① 부터 다시 받아요.
 
 ---
+
+<a id="refresh-실패--signout"></a>
 
 ## Refresh 실패 → signOut
 
@@ -314,7 +326,7 @@ false 면 원 401 을 그대로 전파할 뿐 세션을 직접 정리하지 않�
 
 거절이 아닌 실패에서 `/login` 으로 보내면 "온라인 복귀 후 다음 401 에서 재시도" 가 성립하지 않아요 — 로그인 화면에선 401 이 올 일이 없으니, 멀쩡한 refresh token 을 두고도 재로그인을 강요하게 돼요. 그래서 세션을 유지한 채 열고, 온라인이 되면 첫 401 이 평소의 자동 refresh 경로를 타요. 오프라인 동안의 API 호출은 401 이 아니라 네트워크 오류로 실패하므로 세션이 정리되지 않아요.
 
-"거절" 의 기준은 `refreshToken()` 과 같아요 — ATH_002 / ATH_003 / HTTP 401 만이에요. 그 밖의 응답(다른 4xx, 계약 밖 2xx+error 등)은 거절인지 판정할 수 없어 보존 쪽으로 분류돼요. 그런 상태로 부팅한 뒤 온라인에서도 refresh 가 계속 실패하면, 첫 401 을 받은 ViewModel 의 `signOut()` 경로(error-handling.md "401 자동 refresh")로 로그인 화면에 가요. 만료 토큰으로는 서버 자원에 접근할 수 없으니 보안 차이는 없고, 홈을 한 번 거친다는 UX 차이만 있어요.
+`refreshToken()`은 `ATH_002`, `ATH_003` 또는 HTTP 401을 서버의 갱신 거절로 판단해요. 그 밖의 실패에서는 토큰을 보존해요. 이후에도 갱신이 실패하면 해당 API 요청의 오류를 화면에서 처리해요. 현재 ViewModel에는 원래 요청의 401만 보고 일괄 로그아웃하는 경로가 없어요.
 
 ---
 
@@ -334,7 +346,7 @@ false 면 원 401 을 그대로 전파할 뿐 세션을 직접 정리하지 않�
 }
 ```
 
-> Spring `JwtService` 가 발급해요. Flutter 측에서는 `CurrentUser.fromJwtPayload` 가 `sub` 을 `int.parse` 해 `userId` 로 추출해요. JWT 표준 (RFC 7519) 의 `sub` 클레임을 쓰는 게 권장돼요.
+> Spring의 `JwtService`가 JWT를 발급해요. Flutter의 `CurrentUser.fromJwtPayload`는 `sub`이 정수이거나 정수로 해석할 수 있는 문자열이면 `userId`로 사용해요. 이 로컬 파싱은 서버의 서명 검증을 대신하지 않아요.
 
 ### Refresh Token Payload
 
@@ -364,6 +376,8 @@ access token 과는 별도 구조예요. 보통 opaque random token (DB 저장) 
 
 ---
 
+<a id="oauth-20-인증-흐름-google--apple--kakao--naver"></a>
+
 ## OAuth 2.0 인증 흐름 (Google · Apple · Kakao · Naver)
 
 각 provider 의 SDK 가 클라이언트에서 토큰을 받아오면 백엔드의 **provider 별 endpoint** 로 전송해요. 백엔드는 provider 공식 endpoint 로 토큰을 재검증한 후 우리 JWT 를 발급해요. 짝 백엔드 ADR 은 [`template-spring ADR-017 · OAuth 2.0 통합`](https://github.com/storkspear/template-spring/blob/main/docs/philosophy/adr-017-oauth-integration.md) 이에요.
@@ -380,6 +394,8 @@ access token 과는 별도 구조예요. 보통 opaque random token (DB 저장) 
 6. 클라이언트: 토큰 저장 → 이후는 일반 로그인과 동일
 ```
 
+<a id="provider-별-토큰--endpoint"></a>
+
 ### Provider 별 토큰 / Endpoint
 
 | Provider | Endpoint | Body 필드 | 검증 방식 (백엔드) |
@@ -391,7 +407,9 @@ access token 과는 별도 구조예요. 보통 opaque random token (DB 저장) 
 
 ### Apple "Hide My Email" 처리
 
-Apple 사용자가 "Hide My Email" 을 선택하면 첫 로그인 후 identity token 에 email claim 이 빠져요. 클라이언트는 **첫 로그인 시 받은 email** 을 `AppleSignInRequest.email` 에 fallback 으로 전달해요. 백엔드는 token email > request email 우선순위로 사용해요.
+현재 Flutter의 `signInWithApple`은 서버에 `identityToken`만 보내요. 서버 요청 DTO에는 이름·이메일 같은 선택 필드도 있지만, 현재 클라이언트가 그 필드를 전달한다고 해석하면 안 돼요. 이메일 제공 여부와 서버의 fallback 처리 조건은 Apple 응답과 서버 구현을 함께 확인해요.
+
+<a id="kakao--naver-이메일-동의"></a>
 
 ### Kakao / Naver 이메일 동의
 

@@ -1,3 +1,5 @@
+<a id="notifications_kit"></a>
+
 # notifications_kit
 
 로컬 예약 알림 (특정 시각 · 매일 반복) 과 타임존 처리를 담당하는 kit 이에요. FCM 푸시가 필요하면 `NotificationService` 인터페이스를 파생 레포에서 구현해 통합해요.
@@ -6,7 +8,7 @@
 
 ## 개요
 
-로컬 알림은 `flutter_local_notifications` 기반으로 앱 내부에서 예약하고, `timezone` 패키지로 DST · 지역 시간대를 정확히 처리해요. FCM 통합은 옵션이에요 — `NotificationService` 인터페이스를 파생 레포에서 구현하고, 백엔드 device 등록은 `backend_api_kit` 의 `DeviceRegistration` 을 사용해요. 알림 권한이 없거나 설정 전엔 Debug 폴백으로 콘솔 로그만 남기고, `permissions_kit` 을 함께 쓰면 권한 요청 UI 가 자동으로 붙어요.
+로컬 예약 알림은 `flutter_local_notifications`와 `timezone`을 사용해요. 초기화할 때 기기 시간대를 읽고, 읽지 못하면 `Asia/Seoul`을 사용해요. 권한이 없다고 Debug 구현으로 자동 전환되거나 `PermissionsKit` 설치만으로 요청 UI가 붙지는 않아요. 파생 앱에서 권한 요청을 연결해야 해요. FCM을 사용할 때도 Firebase 초기화, 토큰 등록·갱신과 수신 처리를 별도로 구성해요.
 
 ---
 
@@ -79,11 +81,13 @@ await ref.read(scheduledAlertServiceProvider).cancelAll();
 ```dart
 // 토큰 등록 (로그인 시)
 final token = await FirebaseMessaging.instance.getToken();
-await ref.read(deviceRegistrationProvider).register(pushToken: token!);
+if (token != null && token.isNotEmpty) {
+  await ref.read(deviceRegistrationProvider).register(pushToken: token);
+}
 
 // 포그라운드 메시지 수신
 FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-  // notification_service 가 로컬 알림으로 재전시
+  // 필요한 foreground 표시를 파생 앱에서 구현해요. 자동 재표시는 제공하지 않아요.
 });
 ```
 
@@ -100,9 +104,8 @@ FirebaseMessaging.onMessage.listen((RemoteMessage message) {
 
 - [ ] [Firebase Console](https://console.firebase.google.com) 프로젝트 생성
 - [ ] iOS: `ios/Runner/Info.plist` 의 `UIBackgroundModes` 에 `remote-notification` 추가 (백그라운드 푸시 수신 시 — 로컬 예약 알림만 쓰면 불필요)
-- [ ] Android: `google-services.json` → `android/app/`
-- [ ] iOS: `GoogleService-Info.plist` → `ios/Runner/`, APNs key 업로드
-- [ ] 백엔드 `core-device-impl` 에 FCM 서버 키 설정
+- [ ] Android·iOS 의 dev/prod 설정 파일과 Firebase 초기화를 확인해요.
+- [ ] iOS APNs 설정과 백엔드의 FCM 인증 설정을 [FCM 통합 가이드](../integrations/fcm.md) 에 맞춰 준비해요.
 - [ ] `NotificationService` 구현체 (FirebaseMessaging 기반) 작성 후 `notificationServiceProvider` override
 
 ### 타임존

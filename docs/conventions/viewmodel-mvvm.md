@@ -1,6 +1,8 @@
+<a id="viewmodel--mvvm-패턴"></a>
+
 # ViewModel + MVVM 패턴
 
-Screen 은 UI 만, ViewModel 은 로직만 맡아요. 상태 관리는 `Notifier<TState>` + `ConsumerWidget` 조합 하나로 통일해요. 이 규약의 근거는 [`ADR-005 · Riverpod + MVVM`](../philosophy/adr-005-riverpod-mvvm.md) 를 참조하세요.
+ViewModel은 `Notifier<TState>`로 화면 상태와 서비스 호출을 관리해요. 화면은 `ref.watch`로 상태를 읽고 사용자 입력을 ViewModel에 전달해요. 단순 화면은 `ConsumerWidget`, 컨트롤러나 초기화 수명이 필요한 화면은 `ConsumerStatefulWidget`을 사용해요. 비동기 작업 뒤에는 provider나 위젯이 아직 살아 있는지 확인해요.
 
 ---
 
@@ -17,12 +19,12 @@ features/<domain>/
 
 ## State 클래스
 
-불변 데이터 클래스예요. `copyWith` 로 갱신해요.
+불변 데이터 클래스이며 `copyWith`로 갱신해요. 아래는 오류 상태와 로그인 모드만 보여주는 축약 예제예요. 실제 `LoginState`에는 회원가입 단계(`signupStage`), 개발용 코드(`devCode`), 2FA 전환 신호(`twoFactorRequired`)도 있어요. `LoginMode`는 같은 파일에 정의된 `signIn`·`signUp` 열거형이에요.
 
 ```dart
 class LoginState {
   final bool isLoading;
-  final String? errorCode;     // ← i18n 키 or ErrorCode 상수
+  final String? errorCode;     // 서버 오류 코드 또는 AuthLocalErrorCode 같은 로컬 코드
   final String? errorMessage;  // ← 서버 제공 메시지 (nullable)
   final LoginMode mode;
 
@@ -59,7 +61,7 @@ errorMessage: errorMessage ?? this.errorMessage
 errorMessage: errorMessage
 ```
 
-이유는 `copyWith(errorMessage: null)` 로 에러 state 를 clear 하는 게 관용적이기 때문이에요. 기본값 폴백을 넣으면 이 시나리오가 안 돼요. 모든 nullable 필드는 this 폴백 없이 그대로 받아요.
+오류 메시지는 상태가 바뀔 때 지울 수 있어야 해요. 반면 인증 코드나 2FA 비밀값처럼 다음 단계에서도 필요한 nullable 필드는 기존 값을 유지해야 할 수 있어요. 모든 nullable 필드에 같은 `copyWith` 규칙을 적용하지 말고, 각 필드의 초기화·유지·삭제 시점을 정해요.
 
 ---
 
@@ -67,59 +69,47 @@ errorMessage: errorMessage
 
 `Notifier<TState>` 를 상속해요. 초기 상태는 `build()` 가 돌려주고, `Ref` 는 베이스 클래스가 `ref` 로 제공해요.
 
+아래는 실제 `LoginViewModel`의 이메일 로그인 메서드와 공통 후처리를 발췌한 예제예요. 클래스의 `build()`, 회원가입·소셜 로그인·2FA 제출 메서드는 생략했어요. `build()`와 모드 전환에서는 `_clearPending()`으로 이전 인증 정보를 지워요.
+
 ```dart
-class LoginViewModel extends Notifier<LoginState> {
-  @override
-  LoginState build() => const LoginState();
-
-  Ref get _ref => ref;
-
-  Future<void> signInWithEmail(String email, String password) async {
-    // 1. 로딩 시작 + 이전 에러 clear
+Future<void> signInWithEmail(String email, String password) async {
+  state = state.copyWith(isLoading: true);
+  try {
+    final twoFactorToken = await ref
+        .read(authServiceProvider)
+        .signInWithEmail(email: email, password: password);
+    _completeSignIn(twoFactorToken);
+  } catch (e) {
+    if (!ref.mounted) return;
     state = state.copyWith(
-      isLoading: true,
-      errorCode: null,
-      errorMessage: null,
-    );
-
-    try {
-      // 2. Service 호출
-      await _ref.read(authServiceProvider).signInWithEmail(
-        email: email,
-        password: password,
-      );
-      if (!ref.mounted) return;
-      // 3. 성공 → 로딩 해제
-      state = state.copyWith(isLoading: false);
-    } catch (e) {
-      if (!ref.mounted) return;
-      // 4. 실패 → code + message 저장
-      state = state.copyWith(
-        isLoading: false,
-        errorCode: safeErrorCode(e, fallbackCode: 'LOGIN_FAILED'),
-        errorMessage: safeErrorMessage(e),
-      );
-    }
-  }
-
-  void toggleMode() {
-    state = state.copyWith(
-      mode: state.mode == LoginMode.signIn ? LoginMode.signUp : LoginMode.signIn,
-      errorCode: null,
-      errorMessage: null,
+      isLoading: false,
+      errorCode: safeErrorCode(e, fallbackCode: AuthLocalErrorCode.login),
+      errorMessage: safeErrorMessage(e),
     );
   }
 }
+
+void _completeSignIn(String? twoFactorToken) {
+  if (!ref.mounted) return;
+  if (twoFactorToken != null) {
+    _pendingTwoFactorToken = twoFactorToken;
+    state = state.copyWith(isLoading: false, twoFactorRequired: true);
+    return;
+  }
+  state = state.copyWith(isLoading: false);
+}
 ```
+
+2FA가 필요하면 임시 토큰은 ViewModel의 private 필드에 보관하고, 화면에는 `twoFactorRequired`만 알려요. 이 단계에서는 아직 로그인 완료 상태를 알리지 않아요.
 
 ### ViewModel 규칙
 
 - **비동기 완료 후 화면 수명을 확인해요** — 성공과 catch 모두 `state`를 읽기 전에 `ref.mounted`를 검사해요. 화면 종료가 서비스의 토큰 저장이나 이미 시작한 가입 처리를 취소한다는 뜻은 아니에요.
 
 - **`BuildContext` 를 받지 않아요** — UI 의존 금지예요. `S.of(context)` 도 금지고, i18n 은 Screen 에서 해요
-- **`try/catch` 로 에러를 처리해요** — `safeErrorCode` · `safeErrorMessage` 로 안전하게 추출해요 ([`ADR-009`](../philosophy/adr-009-backend-contract.md))
-- **외부 서비스는 `_ref.read` 로 조회해요** — 상태 변경 시점에만 읽어요 ([`ADR-007`](../philosophy/adr-007-late-binding.md))
-- **`_ref.watch` 는 지양해요** — ViewModel 내부에서 watch 를 쓰면 재생성 체인이 복잡해져요
+- **`try/catch`로 오류 상태를 갱신해요** — `safeErrorCode`와 `safeErrorMessage`는 지원하는 예외에서 값을 꺼내요. 메시지의 민감 정보를 제거하는 함수는 아니에요([오류 처리 규칙](./error-handling.md)).
+- **외부 서비스는 호출 시점에 `ref.read`로 조회해요** — ViewModel이 사용하는 서비스 인스턴스를 필드에 고정하지 않아요([ADR-007](../philosophy/adr-007-late-binding.md)).
+- **ViewModel 내부의 `ref.watch`는 신중히 사용해요** — 의존 상태가 바뀔 때 ViewModel이 다시 초기화되는 흐름까지 의도한 경우에 사용해요.
 
 ---
 
@@ -131,17 +121,14 @@ class LoginViewModel extends Notifier<LoginState> {
 final NotifierProvider<LoginViewModel, LoginState> loginViewModelProvider =
     NotifierProvider<LoginViewModel, LoginState>(
   LoginViewModel.new,
-  // 화면 단위 ViewModel 은 필수. 기본값이 non-autoDispose 라 빼면 화면을 떠나도 상태가 남는다.
+  // 화면의 마지막 구독이 사라지면 정리되도록 설정해요.
   isAutoDispose: true,
 );
 ```
 
 ### autoDispose 를 명시하는 이유
 
-riverpod 3 의 provider 는 기본이 non-autoDispose 라, 화면 단위 ViewModel 에는 `isAutoDispose: true` 를 명시해야 이렇게 동작해요.
-
-- 화면 이탈 시 자동으로 정리돼요 → 메모리 누수를 방지해요
-- 재진입 시 **초기 상태로 시작해요** → 예전 에러 · 로딩이 남아있는 걸 방지해요
+화면 단위 ViewModel에는 `isAutoDispose: true`를 명시해요. 마지막 구독이 사라지면 provider가 정리 대상이 되고, 정리된 뒤 다시 구독하면 `build()`에서 초기 상태를 만들어요. 화면 위에 다른 경로를 `push`해 기존 화면의 구독이 남아 있거나 다른 곳에서도 구독 중이면 즉시 정리되지 않아요. 따라서 화면 전환 자체가 상태 초기화를 보장하지는 않아요.
 
 ### autoDispose 예외 (전역 수명)
 
@@ -160,7 +147,7 @@ final authStateProvider = Provider<AuthStateNotifier>((ref) {
 
 ## Screen 구조
 
-`ConsumerWidget` 이 기본이에요. `ref.watch` 로 상태를 구독하고, `ref.read` 로 액션을 호출해요. 아래 예시는 `TextEditingController` 가 필요해서 `ConsumerStatefulWidget` 이에요 (아래 Screen 규칙 4번).
+`ConsumerWidget`이 기본이에요. `ref.watch`로 상태를 구독하고, `ref.read`로 액션을 호출해요. 아래 예시는 컨트롤러의 수명이 필요한 `ConsumerStatefulWidget`에서 이메일 로그인 부분을 간소화한 거예요. 실제 화면은 가입 단계·소셜 로그인도 제공해요. `resolveAuthErrorText`는 `kits/auth_kit/ui/auth_error_text.dart`에서 가져와요.
 
 ```dart
 class LoginScreen extends ConsumerStatefulWidget {
@@ -186,16 +173,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final state = ref.watch(loginViewModelProvider);
     final vm = ref.read(loginViewModelProvider.notifier);
     final s = S.of(context);
+    final errorText = resolveAuthErrorText(
+      state.errorMessage,
+      state.errorCode,
+      s,
+    );
+    ref.listen(loginViewModelProvider, (previous, next) {
+      if (!(previous?.twoFactorRequired ?? false) && next.twoFactorRequired) {
+        context.push('/login/2fa');
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(title: Text(s.login)),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.screenPadding,
         child: Column(
           children: [
-            // 에러 배너
-            if (state.errorCode != null)
-              ErrorBanner(message: _localizedError(context, state.errorCode!)),
+            if (errorText != null)
+              Text(
+                errorText,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
 
             // 입력 필드
             AppTextField(controller: _emailController, labelText: s.email),
@@ -205,7 +204,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               obscureText: true,
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
 
             // 버튼 (로딩 상태 전달)
             PrimaryButton(
@@ -221,17 +220,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
-
-  String _localizedError(BuildContext context, String code) {
-    final s = S.of(context);
-    switch (code) {
-      case 'LOGIN_FAILED':
-      case 'ATH_001':                                      // ErrorCode.invalidCredentials
-        return s.loginFailed;
-      case 'NETWORK_ERROR': return s.errorNetworkUnavailable;
-      default: return s.errorUnknown;
-    }
-  }
 }
 ```
 
@@ -239,8 +227,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
 - **`ref.watch` = 상태 구독이에요** — 값이 변경되면 리빌드돼요
 - **`ref.read` = 단발성 호출이에요** — `.notifier` 로 ViewModel 메서드를 호출할 때 써요
-- **`if (mounted)` 체크는 필요 없어요** — StatelessWidget 이라 life cycle 간섭이 없어요
-- **`StatefulWidget` 은 `TextEditingController` 등 controller 가 필요할 때만 써요** — 그 외엔 `ConsumerWidget` 을 써요
+- 위젯 종류와 관계없이 `await` 뒤에 `BuildContext`를 쓰면 `context.mounted`를 확인해요. ViewModel에서 비동기 작업 뒤 상태를 바꿀 때는 `ref.mounted`를 확인해요.
+- **화면 수명을 관리해야 하면 `ConsumerStatefulWidget`을 써요** — 컨트롤러, `initState`·`dispose`, 수명에 묶인 구독 등이 필요한 경우예요. 그 밖에는 `ConsumerWidget`을 사용해요.
 
 ---
 
@@ -248,40 +236,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
 ViewModel 이 의존하는 로직이에요. `lib/core/` 또는 `lib/kits/<kit>/` 에 정의해요.
 
+아래는 실제 `AuthService`의 메서드 발췌예요. 생성자와 내부 헬퍼는 같은 파일에 있어요.
+
 ```dart
-// lib/kits/auth_kit/auth_service.dart 개요
-class AuthService {
-  final ApiClient _apiClient;
-  final TokenStorage _tokenStorage;
-  final AuthStateNotifier _authState;
-
-  AuthService({
-    required ApiClient apiClient,
-    required TokenStorage tokenStorage,
-    required AuthStateNotifier authState,
-  }) : _apiClient = apiClient,
-       _tokenStorage = tokenStorage,
-       _authState = authState;
-
-  Future<void> signInWithEmail({required String email, required String password}) async {
-    // 실제 구현은 lib/kits/auth_kit/auth_service.dart 참조 — 여기는 패턴 예시
-    final response = await _apiClient.postRaw(
-      ApiEndpoints.emailSignIn,  // '/api/apps/{slug}/auth/email/signin'
-      data: {'email': email, 'password': password},
-    );
-    // Spring AuthResponse 구조: { user, tokens: { accessToken, refreshToken } }
-    final data = response.data as Map<String, dynamic>;
-    final tokens = (data['tokens'] as Map<String, dynamic>?) ?? data;
-    await _tokenStorage.saveTokens(
-      accessToken: tokens['accessToken'] as String,
-      refreshToken: tokens['refreshToken'] as String,
-    );
-    _authState.emit(AuthState.authenticated(/* CurrentUser.fromJwt */));
-  }
-
-  // ...
+Future<String?> signInWithEmail({
+  required String email,
+  required String password,
+}) async {
+  final response = await _apiClient.postRaw(
+    ApiEndpoints.emailSignIn,
+    data: {'email': email, 'password': password},
+  );
+  _ensureSuccess(response);
+  return _handleAuthResponse(response.data as Map<String, dynamic>);
 }
 ```
+
+`_ensureSuccess`는 실패 응답을 오류로 처리해요. `_handleAuthResponse`는 2FA 대기 응답이면 임시 토큰을 반환해요. 일반 로그인 성공이면 `tokens` 안의 토큰을 저장하고 인증 상태를 알린 뒤 `null`을 반환해요. 따라서 호출자는 반환값을 확인해야 해요.
 
 Service 는 **Provider 를 몰라요** — 생성자로 의존성을 주입받을 뿐이에요. Provider 설정은 `providers.dart` 에서 해요:
 
@@ -300,34 +271,26 @@ final authServiceProvider = Provider<AuthService>((ref) {
 
 ## 전체 흐름 예시 (로그인)
 
+기본 경로를 기준으로 한 흐름이에요. 파생 앱에서 `AuthKit`의 경로 인자를 바꾸면 목적지도 달라져요.
+
 ```text
-LoginScreen 의 PrimaryButton onPressed
+LoginScreen의 버튼 → LoginViewModel.signInWithEmail()
+  ↓ isLoading: true → 버튼 스피너
+AuthService → ApiClient.postRaw(ApiEndpoints.emailSignIn, ...)
+  ├─ 일반 성공: 토큰 저장 → 인증 상태 알림 → 라우터가 기본 홈 /로 이동
+  └─ 2FA 대기: 임시 토큰 반환 → ViewModel에 보관
+       → twoFactorRequired: true → 화면의 ref.listen이 /login/2fa로 이동
   ↓
-ref.read(loginViewModelProvider.notifier).signInWithEmail(...)
-  ↓
-LoginViewModel.signInWithEmail()
-  ↓ state = copyWith(isLoading: true)
-  ↓ UI 자동 리빌드 → 버튼 스피너 표시
-  ↓
-_ref.read(authServiceProvider).signInWithEmail(email, password)
-  ↓
-AuthService → ApiClient.postRaw(ApiEndpoints.emailSignIn, ...) → JWT 토큰 저장 → authState.emit(authenticated)
-  ↓ (authState 변화 → go_router refreshListenable 트리거 → /home 으로 이동)
-  ↓
-LoginViewModel 로 복귀 → state = copyWith(isLoading: false)
+ViewModel이 아직 살아 있으면 로딩 상태 해제
 ```
 
-에러가 나면 이렇게 흘러요:
-```text
-AuthService 가 ApiException(code: 'ATH_001') throw  ← Spring AuthError.INVALID_CREDENTIALS
-  ↓
-LoginViewModel catch → state = copyWith(errorCode: 'ATH_001', errorMessage: '...')
-  ↓ UI 리빌드 → ErrorBanner 표시 + 스피너 해제
-```
+오류가 나면 ViewModel이 `safeErrorCode`와 `safeErrorMessage`로 상태를 갱신해요. 화면은 `resolveAuthErrorText`로 표시할 문구를 정하고 스피너를 해제해요. 이때도 상태 갱신 전에 `ref.mounted`를 확인해요.
 
 ---
 
 ## 자주 하는 실수
+
+<a id="-viewmodel-에서-buildcontext-쓰기"></a>
 
 ### ❌ ViewModel 에서 BuildContext 쓰기
 
@@ -340,7 +303,9 @@ class BadViewModel extends Notifier<...> {
 }
 ```
 
-**올바르게**: ViewModel 은 state 에 `showSnackbar: true` 같은 플래그만 세팅해요. Screen 이 watch 해서 SnackBar 를 띄워요.
+**올바르게**: ViewModel은 작업 결과를 상태로 알려요. Screen은 `ref.listen`에서 필요한 상태 전이를 확인해 `AppSnackBar.show`를 호출해요. `ref.watch`로 만드는 UI의 빌드 과정에서 스낵바를 띄우지 않아요.
+
+<a id="-viewmodel-이-직접-apiclient--securestorage-생성"></a>
 
 ### ❌ ViewModel 이 직접 ApiClient · SecureStorage 생성
 
@@ -352,9 +317,13 @@ class BadViewModel extends Notifier<...> {
 }
 ```
 
-**올바르게**: 의존성은 `_ref.read` 또는 생성자 주입으로 받아요.
+**올바르게**: ViewModel은 `ref.read`로 서비스를 읽고, 서비스가 필요한 다른 의존성은 생성자로 받아요.
+
+<a id="-copywith-에-nullable-폴백"></a>
 
 ### ❌ copyWith 에 nullable 폴백
+
+오류 필드처럼 새 작업에서 지워야 하는 값에 `?? this.errorMessage`를 쓰면 이전 오류가 남아요. 다음 단계까지 유지할 nullable 필드는 앞의 [copyWith 설명](#copywith-의-nullable-관용)처럼 별도로 판단해요.
 
 ```dart
 // 금지 — 에러를 clear 할 수 없음
@@ -363,6 +332,8 @@ state = state.copyWith(errorMessage: errorMessage ?? this.errorMessage);
 // 올바르게
 state = state.copyWith(errorMessage: errorMessage);  // null 도 값으로 받음
 ```
+
+<a id="-screen-에서-viewmodel-메서드-직접-정의"></a>
 
 ### ❌ Screen 에서 ViewModel 메서드 직접 정의
 

@@ -1,12 +1,14 @@
+<a id="local_db_kit"></a>
+
 # local_db_kit
 
-Drift (SQLite ORM) 데이터베이스와 마이그레이션 BootStep 을 제공하는 kit 이에요. 로컬 전용 앱 · 오프라인 우선 앱의 핵심이에요.
+파생 앱의 Drift 데이터베이스를 provider로 제공하고 부팅 시 초기화를 확인해요. 테이블과 마이그레이션은 파생 앱의 `AppDatabase`에서 정의해요. Kit에 데이터베이스 팩터리를 넘기면 provider와 부팅 단계가 같은 인스턴스를 재사용해요.
 
 ---
 
 ## 개요
 
-Drift 는 SQLite 를 Dart ORM 으로 다루는 라이브러리라 타입 안전한 쿼리를 쓸 수 있어요. DAO · 테이블 클래스는 `build_runner` 코드 생성으로 만들어요. 마이그레이션은 `DbMigrationStep` (BootStep) 이 버전 업 시 자동 실행해요 (Drift schema fingerprint 테스트는 템플릿에 없어서, 필요하면 파생 레포가 추가해요). 플랫폼은 sqlite3 (3.x) 기반이라 Android · iOS · macOS · Windows · Linux 를 지원해요.
+Drift 로 테이블과 쿼리를 Dart 에서 정의하고 build_runner 로 필요한 코드를 생성해요. DbMigrationStep 은 DB 를 열어 초기화를 확인하며, 스키마 생성·갱신은 파생 앱의 AppDatabase 에 정의한 Drift 마이그레이션이 처리해요. 템플릿에는 DB 스키마 회귀 테스트가 없어요. 라이브러리의 지원 플랫폼과 이 템플릿이 검증한 Android·iOS 범위는 구분해요.
 
 ---
 
@@ -28,7 +30,7 @@ await AppKits.install([
 ]);
 ```
 
-> `database` 인자는 **인스턴스가 아닌 팩토리 함수** 예요 (`GeneratedDatabase Function()`). BootStep 에서 한 번만 호출해 캐싱해요.
+> `database`에는 `GeneratedDatabase Function()` 팩터리를 넘겨요. provider를 처음 읽거나 부팅 단계가 실행될 때 인스턴스를 만들고 캐시하므로 두 경로가 같은 DB를 사용해요.
 
 ---
 
@@ -64,6 +66,12 @@ class Expenses extends Table {
 
 ```dart
 // lib/database/app_database.dart
+import 'package:drift/drift.dart';
+import 'package:app_template/kits/local_db_kit/db_paths.dart';
+import 'tables/expenses.dart';
+
+part 'app_database.g.dart';
+
 @DriftDatabase(tables: [Expenses])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(lazyNativeDatabase('app.sqlite'));
@@ -74,11 +82,7 @@ class AppDatabase extends _$AppDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
-    onUpgrade: (m, from, to) async {
-      if (from < 2) {
-        await m.addColumn(expenses, expenses.category);
-      }
-    },
+    // schemaVersion 1에서는 onCreate로 테이블을 만들어요.
   );
 
   Future<List<Expense>> allExpenses() => select(expenses).get();
@@ -92,7 +96,7 @@ class AppDatabase extends _$AppDatabase {
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-생성 파일은 `app_database.g.dart` 예요.
+생성 파일은 `app_database.g.dart` 예요. 예제의 `package:app_template/` 는 rename 후 `pubspec.yaml` 에 지정된 Dart 패키지명으로 바꿔요.
 
 ### 4. Provider 접근
 

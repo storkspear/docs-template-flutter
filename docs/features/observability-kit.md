@@ -1,12 +1,14 @@
+<a id="observability_kit"></a>
+
 # observability_kit
 
-Sentry 크래시 리포팅과 PostHog 사용자 분석을 묶은 kit 이에요. DSN · API Key 주입이 없으면 Debug 폴백으로 동작하니 키가 없어도 앱은 정상 부팅해요.
+Sentry 오류 보고와 PostHog 이벤트 분석을 묶어요. 각 서비스의 키가 없으면 해당 Debug 구현체를 사용해요. 관측성 키가 없어도 호출할 수 있다는 뜻이며, 앱의 다른 부팅·native 설정 조건까지 없어지는 것은 아니에요.
 
 ---
 
 ## 개요
 
-Sentry 는 크래시 · 에러 리포트 · 트레이싱 · 심볼 복원을, PostHog 는 이벤트 분석 · 화면 추적을 담당해요 (세션 리플레이는 템플릿에 없어요 — 필요하면 파생 레포에서 옵션을 활성화해요). DSN 이 없으면 Debug 폴백으로 콘솔 출력만 해요 ([`ADR-006`](../philosophy/adr-006-debug-fallback.md)). 화면 추적은 `AnalyticsNavigatorObserver` 가 go_router 경로를 감지해 자동으로 처리해요.
+Sentry 는 오류 보고와 설정된 트레이싱을, PostHog 는 이벤트·화면 기록을 담당해요. 세션 리플레이는 현재 연결되어 있지 않아요. 화면 기록은 AnalyticsNavigatorObserver 가 연결된 Navigator 의 이름 있는 라우트를 관찰해요. Sentry DSN 과 PostHog 키는 각각의 구현체 선택에 사용되므로 한쪽 키가 없다고 다른 서비스까지 꺼지지는 않아요.
 
 ---
 
@@ -29,7 +31,7 @@ await AppKits.install([
 ### 환경 변수 주입 (운영)
 
 ```bash
-flutter run \
+<repo> dev start \
   --dart-define=SENTRY_DSN=https://xxx@sentry.io/yyy \
   --dart-define=POSTHOG_KEY=phc_xxx \
   --dart-define=POSTHOG_HOST=https://us.i.posthog.com
@@ -37,7 +39,7 @@ flutter run \
 
 > `POSTHOG_HOST` 는 생략 가능해요 — 미주입 시 기본값이 `https://us.i.posthog.com` 이에요 (`observability_env.dart` 의 `defaultValue`). EU 프로젝트만 `https://eu.i.posthog.com` 으로 주입해요.
 
-**없으면** Debug 구현체로 동작해요 — 콘솔 로그만 남기고, 앱은 정상 부팅해요.
+키가 없는 서비스는 Debug 구현을 사용해요. DebugAnalyticsService 의 출력은 assert, DebugCrashService 의 출력은 kDebugMode 조건을 따르므로 release 에서 콘솔에 반드시 보인다고 가정하지 않아요.
 
 ---
 
@@ -79,10 +81,12 @@ await ref.read(analyticsProvider).trackEvent(
 
 ### 유저 식별
 
+이메일 같은 추가 속성이 필요하면 앱의 수집 목적과 동의 범위를 확인한 뒤 traits 또는 email 인자로 전달해요. `sendDefaultPii: false` 가 수동 전달값까지 정제하지는 않아요.
+
 ```dart
-// 로그인 시
-await ref.read(analyticsProvider).identify(userId, traits: {'email': email});
-await ref.read(crashServiceProvider).setUser(userId, email: email);
+// 로그인 시 — 기본 예제는 내부 식별자만 전달해요.
+await ref.read(analyticsProvider).identify(userId);
+await ref.read(crashServiceProvider).setUser(userId);
 
 // 로그아웃 시
 await ref.read(analyticsProvider).reset();
@@ -110,6 +114,8 @@ await ref.read(crashServiceProvider).addBreadcrumb(
 
 ### main.dart 의 조건부 래핑
 
+아래는 조건 분기만 보여주는 발췌예요. 실제 main.dart 는 Flutter 바인딩과 AppConfig 등을 먼저 초기화한 뒤 이 분기를 실행해요.
+
 ```dart
 void main() async {
   if (ObservabilityEnv.isSentryEnabled) {
@@ -118,7 +124,7 @@ void main() async {
       options.environment = AppConfig.instance.environment.name;
       options.release = AppConfig.instance.appVersion;
       options.tracesSampleRate = 0.2;
-      options.sendDefaultPii = false;  // ← IP · 쿠키 자동 수집 차단
+      options.sendDefaultPii = false;  // SDK의 기본 PII 전송 옵션을 꺼요. 수동 데이터 정제는 별도예요.
     }, appRunner: _bootstrap);
   } else {
     await _bootstrap();  // Debug 폴백
@@ -167,7 +173,7 @@ end
 
 ### 자동 화면 추적
 
-`AnalyticsNavigatorObserver` 가 go_router 의 NavigatorObserver 로 설치돼서, 모든 경로 변경 시 `trackScreen` 이 자동 호출돼요.
+`AnalyticsNavigatorObserver`는 연결된 Navigator에서 이름이 있는 라우트의 push·replace·pop을 관찰해 화면 이벤트를 보내요. 이름이 없는 라우트나 별도 셸 Navigator의 탭 전환까지 모두 추적하는 것은 아니에요. 실제 이벤트가 필요한 화면에서 라우트 이름과 observer 연결을 확인해요.
 
 ```dart
 // AppRouter 내부 (자동)
@@ -236,5 +242,5 @@ flutter run \
 ## 관련 문서
 
 - [`ADR-006 · Debug 폴백`](../philosophy/adr-006-debug-fallback.md)
-- [`ADR-019 · 솔로 친화적 운영`](../philosophy/adr-019-solo-friendly.md) — 관리형 서비스 선호
+- [`ADR-019 · 솔로 친화적 운영`](../philosophy/adr-019-solo-friendly.md) — 관측 서비스를 선택할 때 비교하는 운영 부담과 비용
 - [`ADR-020 · 보안 방어선`](../philosophy/adr-020-security-hardening.md) — 심볼 업로드

@@ -1,6 +1,6 @@
 # Naming Conventions
 
-파일 · 클래스 · 변수 · Provider · i18n 키 · JSON 필드명 모두 **일관된 명명 규칙** 을 적용해요. IDE 자동완성이 잘 동작하고, `grep` · `git log` 추적이 쉬워지려면 이 관용이 절대적이에요.
+파일·클래스·변수·provider·번역 키는 역할이 드러나는 이름으로 지어요. 같은 개념에는 같은 표현을 사용하고, Dart 식별자와 파일 이름의 관계를 맞춰 검색과 변경 이력을 따라가기 쉽게 해요. 아래 규칙은 새 코드를 작성하거나 기존 이름을 바꿀 때 적용해요.
 
 ---
 
@@ -46,6 +46,8 @@
 
 ---
 
+<a id="변수--provider-명명"></a>
+
 ## 변수 · Provider 명명
 
 Dart 관용은 `lowerCamelCase` 예요. Provider 는 접미사로 종류를 표시해요.
@@ -70,7 +72,7 @@ Dart 관용은 `lowerCamelCase` 예요. Provider 는 접미사로 종류를 표�
 
 ```text
 lib/
-├── core/             # 모든 앱 필수 기반 (47 파일)
+├── core/             # 모든 앱이 공유하는 기반
 │   ├── analytics/    # AnalyticsService · CrashService 추상 + Debug
 │   ├── cache/        # CacheStore · CachedRepository
 │   ├── config/       # AppConfig
@@ -80,7 +82,7 @@ lib/
 │   ├── storage/      # SecureStorage · PrefsStorage · TokenStorage
 │   ├── theme/        # AppPalette · 디자인 토큰
 │   ├── utils/        # 순수 헬퍼
-│   └── widgets/      # PrimaryButton · AppTextField 등 12개
+│   └── widgets/      # PrimaryButton · AppTextField 등 공통 위젯
 │
 ├── kits/             # 선택 Kit 15개
 │   └── {kit_name}/
@@ -89,10 +91,10 @@ lib/
 │       ├── README.md             # Kit 자체 문서
 │       └── ui/                   # (UI 있는 Kit)
 │
-├── common/           # 점진 이관 잔여
+├── common/           # 앱의 DI·라우터·부팅 조립
 │   ├── providers.dart        # 전역 DI
 │   ├── router/               # GoRouter + Kit redirect 합성
-│   └── splash/               # BootStep 인터페이스 · SplashController
+│   └── splash/               # SplashController (BootStep 계약은 core/kits/)
 │
 ├── features/         # 파생 레포 도메인 영역 (템플릿은 스텁만)
 │   ├── home/
@@ -104,9 +106,9 @@ lib/
 
 **의존 방향** (ADR-002):
 - `features → common → kits → core`
-- `core/` 는 Flutter SDK + 외부 패키지만 import 해요
+- `core/`는 core 내부와 Flutter SDK·외부 패키지를 참조해요. 상위 계층인 `kits/`, `common/`, `features/`를 import하지 않아요.
 - `kits/` 간 의존: **type import** 는 `kit_manifest.requires` 선언 시 허용돼요 (`ApiException` 같은 타입은 provider 로 접근할 수 없어서예요). **인스턴스 접근** 은 provider 를 경유하고, 미선언 cross-import 는 절대 금지예요. 상세 룰은 [`conventions/kits.md` §3](./kits.md) 과 [`ADR-003`](../philosophy/adr-003-featurekit-registry.md) 에 있어요
-- `features/` 간 직접 import 는 **최소화** 해요 — 라우터로 느슨하게 연결해요
+- 다른 feature로 이동할 때는 라우터를 사용해요. 여러 feature가 함께 쓰는 로직은 역할에 맞는 core·Kit로 옮겨 직접 의존을 피해요. [모듈 의존 규칙](../architecture/module-dependencies.md)을 따라요.
 
 ---
 
@@ -127,7 +129,7 @@ lib/
 
 ## JSON 필드명
 
-백엔드 응답과 **완전 동일** 하게 camelCase 를 사용해요. 자세한 건 [`ADR-009 · 백엔드 계약`](../philosophy/adr-009-backend-contract.md) 에 있어요.
+DTO 필드는 백엔드 계약의 camelCase 이름을 그대로 사용해요. 아래 `Expense`는 파생 앱의 가상 모델이며 템플릿에 정의된 API는 아니에요. 실제 필드와 타입은 해당 백엔드 계약에 맞춰요. 자세한 기준은 [ADR-009](../philosophy/adr-009-backend-contract.md)에 있어요.
 
 ```dart
 factory Expense.fromJson(Map<String, dynamic> json) => Expense(
@@ -142,6 +144,8 @@ factory Expense.fromJson(Map<String, dynamic> json) => Expense(
 - **날짜는 ISO 8601 UTC** 예요 — `DateTime.parse()` 로 파싱하고, 로컬 시간대 변환은 UI 에서 해요.
 
 ---
+
+<a id="파일--클래스-명명의-관용-예시"></a>
 
 ## 파일 · 클래스 명명의 관용 예시
 
@@ -159,7 +163,7 @@ debug_crash_service.dart → class DebugCrashService implements CrashService
 LoginScreen.dart         → 파일명이 PascalCase (관용 위반)
 login_vm.dart            → 축약 ViewModel → ViewModel 로 풀어쓰기
 auth.dart                → 뭐에 대한 파일인지 불명확
-AuthenticationService.dart → 클래스는 OK 지만 파일은 auth_service.dart
+AuthenticationService.dart → 클래스가 AuthenticationService라면 파일은 authentication_service.dart
 MyAuthService.dart       → 접두사 My 불필요
 ```
 

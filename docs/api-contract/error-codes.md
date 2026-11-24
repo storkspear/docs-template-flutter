@@ -12,6 +12,8 @@
 
 ## 전체 코드
 
+<a id="공통--cmn_-commonerror"></a>
+
 ### 공통 — `CMN_*` (CommonError)
 
 도메인에 속하지 않는 범용 에러예요. JWT access token 관련도 여기에 포함돼요 (common-security 가 core-auth-api 에 의존할 수 없는 모듈 구조 때문).
@@ -31,6 +33,8 @@
 | `CMN_400` | 400 | (클라 미매핑) | 요청 본문(JSON) 파싱 불가 — 깨진 JSON·형식 오류. 정상 클라가 만들지 않는 요청이라 분기 없이 기본 에러 메시지로 노출돼요 |
 | `CMN_413` | 413 | (클라 미매핑) | 요청 본문이 크기 상한 초과. 본문 파싱 전에 필터가 조기 거부해요. 파일 업로드는 presigned 경로라 이 상한과 무관 |
 | `CMN_429` | 429 | `ErrorCode.rateLimitExceeded` | Rate limit 초과. `Retry-After` 헤더 + `details.limit/window` |
+
+<a id="인증-도메인--ath_-autherror"></a>
 
 ### 인증 도메인 — `ATH_*` (AuthError)
 
@@ -63,6 +67,8 @@
 > - `ATH_002` = refresh token 만료 → 더 이상 갱신 불가, signOut 필요
 > Flutter 측 `ApiException.isAccessTokenExpired` 와 `isRefreshTokenExpired` getter 가 분리된 이유예요.
 
+<a id="유저-도메인--usr_-usererror"></a>
+
 ### 유저 도메인 — `USR_*` (UserError)
 
 유저 엔티티 조회·등록 관련 에러예요.
@@ -71,6 +77,8 @@
 |------|------|---------|------|
 | `USR_001` | 404 | `ErrorCode.userNotFound` | 유저 미존재. `details.id` 권장 |
 | `USR_002` | 409 | `ErrorCode.emailAlreadyExists` | 이미 사용 중인 이메일 — 이메일 가입 중복과 **소셜 최초 가입이 기존 이메일 계정과 겹칠 때**(서버는 자동 연결하지 않음) 공통. 기존 계정이 이메일인지 다른 소셜인지 서버가 구분해 주지 않으므로 화면은 `errorEmailAlreadyRegistered`("전에 쓰던 방법으로 로그인해 주세요") 로 안내 |
+
+<a id="스토리지-도메인--stg_-storageerror"></a>
 
 ### 스토리지 도메인 — `STG_*` (StorageError)
 
@@ -91,6 +99,8 @@ S3/Cloud Storage 어댑터 호출 관련 에러예요. 파생 레포가 첨부�
 
 > 서버엔 추가로 `STG_011` (500, copy failed) 이 있어요 — 클라엔 아직 미매핑이에요.
 
+<a id="첨부파일-도메인--atc_-attachmenterror"></a>
+
 ### 첨부/파일 도메인 — `ATC_*` (AttachmentError)
 
 앱 파일 업로드·조회 API (`file_kit`) 의 에러예요. 티켓 발급 검증과 presigned GET 인가 위반을 매핑해요. 자세한 흐름은 [`file-api.md`](./file-api.md) 를 참고하세요.
@@ -103,6 +113,8 @@ S3/Cloud Storage 어댑터 호출 관련 에러예요. 파생 레포가 첨부�
 | `ATC_004` | 422 | `ErrorCode.attachmentAssociationInvalid` | 게시물 `attachmentKeys` 연관 검증 위반 (타인 업로드·미존재·비ACTIVE 등) |
 
 > **`ATC_001` 은 존재 은닉 코드**: 미존재·검역(QUARANTINED)·삭제·타인 소유·비공개 게시물 첨부를 **모두 404 로 통일**해요 (비추측 storageKey 정책과 일관 — 어느 사유인지 클라에 노출하지 않아요).
+
+<a id="결제-도메인--bil_-billingerror"></a>
 
 ### 결제 도메인 — `BIL_*` (BillingError)
 
@@ -248,7 +260,7 @@ String _localizedError(BuildContext context, String code) {
 
 ## 새 ErrorCode 추가 워크플로우
 
-1. **Spring**: 도메인에 따라 `CommonError.java` (범용) 또는 `XxxError.java` (도메인별 — auth/user/device 등) 에 enum 을 추가해요. code 형식은 `<3자약어>_<번호>` 예요 (예: `EXP_001` for expense 도메인).
+1. **Spring**: 도메인에 따라 `CommonError.java` (범용) 또는 `XxxError.java` (도메인별 — auth/user/device 등) 에 enum 을 추가해요. code 형식은 `<도메인약어>_<번호>`예요. `EMAIL_001`처럼 약어 길이가 다를 수 있어요 (예: `EXP_001` for expense 도메인).
 2. **Flutter**: `lib/kits/backend_api_kit/error_code.dart` 에 상수를 추가해요. **이 파일 docstring 에 명시된 동기화 의무를 지켜요**.
 3. **i18n**: `lib/core/i18n/app_ko.arb` + `app_en.arb` 양쪽에 새 키 추가 → `flutter gen-l10n` 을 실행해요.
 4. **Screen**: `_localizedError` (또는 동등 함수) switch 에 case 를 추가해요.

@@ -1,6 +1,6 @@
 # Migration from Template
 
-이 문서는 템플릿 원본의 개선을 파생 레포로 가져오는 **cherry-pick 워크플로우** 를 다뤄요. 근거는 [`ADR-001 · GitHub Template + cherry-pick`](../philosophy/adr-001-template-cherry-pick.md) 에 있어요.
+템플릿의 공통 개선을 파생 레포에 가져오는 cherry-pick 절차를 설명해요. 변경 내용과 의존 커밋을 먼저 검토하고, 파생 앱에 적용한 뒤 관련 동작을 확인해요. 선택 이유는 [ADR-001](../philosophy/adr-001-template-cherry-pick.md)에 있어요.
 
 ---
 
@@ -35,6 +35,8 @@ git remote -v
 git fetch template
 git log template/main --oneline --not main
 ```
+
+`git log ... --not main`은 커밋의 관계를 비교해요. Template로 만든 독립 레포와 원본은 이력이 다르고, cherry-pick하면 새 해시가 생기므로 이 명령만으로 미반영 패치를 확정할 수는 없어요. 원본 기준 커밋과 반영 이력을 함께 기록하고 실제 diff를 확인하세요.
 
 예시 출력:
 

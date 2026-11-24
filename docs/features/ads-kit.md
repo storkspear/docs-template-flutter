@@ -1,12 +1,14 @@
+<a id="ads_kit"></a>
+
 # ads_kit
 
-AdMob 배너 광고를 붙이고, UMP 동의 폼과 ATT 요청 (iOS 14+) 까지 함께 처리해 주는 kit 이에요. 광고 자체보다 까다로운 게 동의 절차인데, 활성화만 하면 그 UX 가 부트 단계에서 자동으로 흘러가요.
+AdMob 배너 광고와 광고 동의 절차를 제공해요. Kit의 부팅 단계에서 iOS ATT 요청과 UMP 동의 상태를 처리하고 광고 SDK를 초기화해요. 다이얼로그가 실제로 표시되는지는 플랫폼, 기존 권한과 동의 상태에 따라 달라요. 플랫폼 키와 광고 ID는 파생 앱에서 설정해야 해요.
 
 ---
 
 ## 개요
 
-배너 배치는 `BannerAdWidget` 한 줄로 끝나요. GDPR 적용 지역에서는 UMP (User Messaging Platform) 동의 폼을, iOS 14+ 에서는 ATT (App Tracking Transparency) 시스템 다이얼로그를 kit 이 BootStep 으로 알아서 띄워 줘요. 개발 중엔 `AdConfig.testIds` 를 명시적으로 전달하고 (`config` 는 필수 인자예요), 출시 전엔 반드시 실제 AdMob ID 로 교체해야 해요.
+`BannerAdWidget` 으로 배너를 배치해요. BootStep 이 ATT 요청과 UMP 동의 상태를 처리하지만, 실제 화면 표시는 플랫폼·기존 권한·동의 상태에 따라 달라요. 개발·테스트에서는 필수 인자인 `config` 에 `AdConfig.testIds` 를 전달하고, 출시할 때 실제 광고 ID 와 플랫폼 설정을 확인해요.
 
 ---
 
@@ -62,10 +64,10 @@ Scaffold(
 ## 파생 레포 체크리스트
 
 - [ ] [AdMob Console](https://apps.admob.com/) 앱 등록
-- [ ] 광고 단위 생성 (배너 · 전면 · 리워드)
+- [ ] 제공된 BannerAdWidget 에 사용할 배너 광고 단위를 생성해요. 전면·리워드 광고는 별도 구현이 필요해요.
 - [ ] Unit ID 복사 → `AdsKit(config: AdConfig(androidBannerUnitId: ..., iosBannerUnitId: ...))`
 - [ ] `android/app/src/main/AndroidManifest.xml` 의 `com.google.android.gms.ads.APPLICATION_ID` meta-data 업데이트 (기본값은 Google 테스트 ID 예요)
-- [ ] 같은 파일에서 광고 권한을 막아 둔 `tools:node="remove"` 줄 삭제 (`AD_ID` · `ACCESS_ADSERVICES_*` · `RECEIVE_BOOT_COMPLETED`) → [`ads_kit/README.md`](../../lib/kits/ads_kit/README.md) 의 "활성화 시 추가할 플랫폼 키"
+- [ ] Manifest 에서 사용 기능에 필요한 광고 권한의 `tools:node="remove"` 설정을 검토해요. `AD_ID` 와 `ACCESS_ADSERVICES_*` 는 광고 설정에 맞춰 결정하고, `RECEIVE_BOOT_COMPLETED` 는 재부팅 후 작업·알림 복원 요구와 구분해 확인해요.
 - [ ] Play Console 데이터 보안 양식에 광고 ID(`AD_ID`) 수집 선언
 - [ ] `ios/Runner/Info.plist` 의 `GADApplicationIdentifier` 업데이트 (기본값은 Google 테스트 ID 예요)
 - [ ] `ios/Runner/Info.plist` 에 `NSUserTrackingUsageDescription` · `SKAdNetworkItems` 추가 (템플릿엔 없어요 — kit 활성 시 넣어요)

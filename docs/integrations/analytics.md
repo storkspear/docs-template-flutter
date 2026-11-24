@@ -1,6 +1,6 @@
 # 분석 도구 선택 가이드
 
-> **목표**: 본 템플릿이 PostHog 를 default 로 채택한 이유, 다른 도구 (Mixpanel · Amplitude · Firebase Analytics · GA4) 와의 차이, 교체 방법.
+이 문서는 템플릿의 PostHog 연동 범위와 다른 분석 도구로 교체하는 방법을 설명해요.
 
 **관련 Kit**: [`observability_kit`](../features/observability-kit.md)
 
@@ -8,31 +8,29 @@
 
 ## 0. 본 템플릿의 기본값: PostHog
 
-**선정 이유** (Phase 1 관측성 도입 시점):
+`observability_kit` 은 PostHog 를 `AnalyticsService` 구현체로 제공해요. 앱에서는 화면 조회, 이벤트 기록, 사용자 식별, 식별 초기화 메서드를 호출하고, 어댑터가 PostHog SDK 에 전달해요.
 
-- **무료 플랜이 가장 관대** — 월 1M 이벤트 (Mixpanel 100K, Amplitude 10M but enterprise 좌절)
-- **Self-hostable** — 데이터 주권 / GDPR 우려 시 own infra 가능
-- **세션 리플레이 / Feature flag / A/B test** 통합 — 별도 도구 추가 없이
-- **API 단순함** — `track`, `identify`, `screen` 정도만 알면 충분
-
-**한계**:
-
-- iOS 기본 IDFA 미지원 → 광고 캠페인 attribution 어려움 (대신 `ads_kit` UMP 흐름 + AdMob attribution 사용)
-- 한국 시장 도구 (앱스플라이어 / Adjust) 와 직접 통합 어려움
+PostHog 가 제공하는 다른 제품 기능까지 템플릿에 연결된 것은 아니에요. 세션 리플레이, feature flag, A/B 테스트, 광고 유입 기여도 분석이 필요하다면 별도 설정과 구현 범위를 확인해요. 분석 키가 없을 때 사용하는 `DebugAnalyticsService` 는 외부로 전송하지 않고, assert 가 활성화된 실행에서만 콘솔에 출력해요.
 
 ---
 
 ## 1. 비교표
 
-| 도구 | 무료 quota | 강점 | 한계 |
-|---|---|---|---|
-| **PostHog** ✓ default | 1M 이벤트/월 | 통합형 (analytics + feature flag + replay), self-host | 광고 attribution 약함 |
-| Mixpanel | 100K 이벤트/월 | 고급 funnel / cohort 분석 UI | 무료 quota 작음 |
-| Amplitude | 10M 이벤트/월 (Starter) | enterprise 도구 만큼 강력 | 무료에서 일부 기능 잠금 |
-| Firebase Analytics | 무제한 (실시간 지연 있음) | Google 생태계 (Crashlytics 등) 매끄러움 | Flutter 통합 복잡, 데이터 export 비용 |
-| GA4 | 무제한 (10M 이벤트 후 sampling) | 웹 + 앱 통합 dashboard | 모바일 앱 UX 약함, sampling 이슈 |
+다른 도구를 검토할 때는 아래 항목을 비교해요. 무료 사용량과 가격은 바뀔 수 있으므로 도입 시점에 해당 서비스에서 확인해요.
+
+| 확인할 항목 | 판단 기준 |
+|---|---|
+| 이벤트 분석 | 필요한 화면·이벤트·전환 경로를 기록하고 조회할 수 있는지 확인해요 |
+| 데이터 처리 | 수집 항목, 보관 기간, 처리 지역, 내보내기 방법을 확인해요 |
+| 앱 통합 | 지원 플랫폼과 SDK 초기화, 사용자 식별·초기화 방식을 확인해요 |
+| 비용 | 실제 예상 이벤트 수와 추가 기능 비용으로 비교해요 |
+| 교체 비용 | 기존 이벤트 이름과 속성을 유지하고 데이터를 옮길 수 있는지 확인해요 |
+
+Mixpanel, Amplitude, Google Analytics 계열 도구를 검토할 수 있어요. Firebase Analytics 와 GA4 를 서로 무관한 별도 분석 체계로 가정해 중복 집계하지 않도록 연동 구조도 확인해요. 어떤 도구든 현재 템플릿에서 제공하는 PostHog 어댑터를 대신하려면 구현과 검증이 필요해요.
 
 ---
+
+<a id="2-교체-방법--analyticsservice-인터페이스-활용"></a>
 
 ## 2. 교체 방법 — `AnalyticsService` 인터페이스 활용
 
@@ -48,17 +46,13 @@ abstract class AnalyticsService {
 }
 ```
 
-다른 도구를 쓰려면:
-
-1. `MyToolAnalyticsService implements AnalyticsService` 작성
-2. `lib/main.dart` 또는 ObservabilityKit 안에서 `analyticsProvider` override
-3. (선택) `AnalyticsNavigatorObserver` 도 새 구현체와 호환 확인 — 인터페이스 그대로면 자동 작동
+다른 도구를 쓰려면 `AnalyticsService` 의 네 메서드를 구현해요. `main.dart` 의 Provider 조립이나 ObservabilityKit 에서 `analyticsProvider` 를 새 구현체로 바꾸고, `AnalyticsNavigatorObserver` 의 화면 기록도 확인해요. SDK 초기화·사용자 식별·로그아웃 시 초기화까지 검증해야 교체가 끝나요.
 
 ---
 
 ## 3. 여러 도구 동시 사용
 
-A/B 테스트 기간이나 마이그레이션 기간엔 fan-out 어댑터 패턴:
+마이그레이션 중 같은 이벤트를 두 도구에 보내야 한다면 여러 구현체에 위임하는 어댑터를 둘 수 있어요. 아래 코드는 `trackEvent` 만 보여주는 일부 예제이며 템플릿에는 포함되어 있지 않아요. 순서대로 `await` 하므로 앞 구현체가 예외를 던지면 뒤 구현체는 호출되지 않아요. 나머지 세 메서드와 실패 처리 방식은 앱의 요구에 맞게 구현해야 해요.
 
 ```dart
 class FanOutAnalyticsService implements AnalyticsService {
@@ -79,21 +73,23 @@ class FanOutAnalyticsService implements AnalyticsService {
 
 ## 4. 한국 시장 특화
 
-- **Adjust** / **Appsflyer**: 광고 attribution 이 핵심이면 추가해요 (PostHog 와 병렬). 둘 다 SDK 가 무거워 (~5MB) 광고 운영 안 하면 권하지 않아요.
-- **AceCounter** / **Naver Analytics**: 일반적이지 않아요. 굳이 안 써도 돼요.
-- **개인정보처리방침**: 어느 도구든 "수집 항목 + 보관 기간 + 위탁사 (PostHog Inc., 미국)" 명시가 필요해요.
+광고 유입 기여도 분석이 필요하면 Adjust 나 AppsFlyer 같은 별도 도구도 검토할 수 있어요. PostHog 와 함께 쓸지는 필요한 지표와 중복 수집 여부로 결정해요. AceCounter 나 Naver Analytics 역시 이름만으로 포함·제외하지 말고 앱 지원 범위와 실제 요구를 확인해요.
+
+분석 도구를 추가하면 실제 수집 항목, 보관 기간, 데이터 처리 주체와 지역을 개인정보처리방침 및 동의 흐름과 대조해요. SDK 크기나 정책 요건을 측정·확인 없이 고정값으로 가정하지 않아요.
 
 ---
 
 ## 5. 결정 가이드
 
+```text
+외부에 사용자 행동 데이터를 보내야 하나요?
+├── 아니요 → DebugAnalyticsService 를 유지해요
+└── 예 → 필요한 지표와 데이터 처리 조건을 정해요
+        ├── 현재 이벤트·화면 기록으로 충분해요 → PostHog 연동을 사용해요
+        └── 추가 지표나 광고 분석이 필요해요 → 기존 도구 확장·교체·병행을 비교해요
 ```
-이 앱은 백엔드 API + 사용자 행동 분석이 필요한가?
-├── No → DebugAnalyticsService 그대로 유지 (콘솔만)
-└── Yes → 광고 attribution 도 필요한가?
-        ├── No → PostHog (default) 유지
-        └── Yes → PostHog + Adjust/Appsflyer 병렬 (FanOut 패턴)
-```
+
+분석 도구를 사용하는 데 앱 자체의 백엔드 API 가 반드시 필요한 것은 아니에요.
 
 ---
 

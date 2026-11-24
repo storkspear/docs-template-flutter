@@ -1,12 +1,16 @@
+<a id="figma--flutter-디자인-핸드오프"></a>
+
 # Figma → Flutter 디자인 핸드오프
 
-디자이너의 Figma 디자인 토큰을 Flutter 의 `AppPalette` / `AppTypeface` / `AppSpacing` 으로 매핑하는 워크플로우예요.
+Figma의 색상·폰트·간격을 이 프로젝트의 `AppPalette`, `AppTypeface`, `AppSpacing`에 옮기는 방법을 다뤄요. 먼저 기존 토큰과 값이 맞는지 확인하고, 같은 의미의 토큰이 이미 있으면 재사용해요. 디자인 도구의 이름을 그대로 복사하는 것보다 실제 화면에서 의미와 값이 일치하는지가 중요해요.
 
 > 본 문서는 **자동 변환 도구를 강제하지 않아요**. 1-2 명 솔로 개발 환경에서 가장 가벼운 수동 매핑이 보통 가장 빠릅니다. 자동화는 팀이 5명+ / 디자인 토큰 50개+ 일 때 도입을 권장해요.
 
 **관련 문서**: [`theme-tokens.md`](./theme-tokens.md), [`ADR-015 · Palette Registry`](../philosophy/adr-015-palette-registry.md), [`ADR-023 · Typeface Registry`](../philosophy/adr-023-typeface-registry.md)
 
 ---
+
+<a id="1-figma-측-정리--디자이너-측-작업"></a>
 
 ## 1. Figma 측 정리 — 디자이너 측 작업
 
@@ -56,6 +60,8 @@ Label/Medium        Pretendard 12px Medium
 
 > Material 3 의 `TextTheme` 와 1:1 매핑되도록 이름 정해두면 좋아요 (`displayLarge`, `headlineLarge`, `bodyLarge` 등).
 
+<a id="1-3-spacing--radius"></a>
+
 ### 1-3. Spacing / Radius
 
 Figma 의 **Local variables → Number** 에 정의해요:
@@ -77,7 +83,11 @@ radius/full    9999
 
 ---
 
+<a id="2-flutter-매핑--개발자-측-작업"></a>
+
 ## 2. Flutter 매핑 — 개발자 측 작업
+
+<a id="2-1-색상--apppalette"></a>
 
 ### 2-1. 색상 → AppPalette
 
@@ -120,6 +130,8 @@ class MyAppPalette extends AppPalette {
 ```dart
 AppPaletteRegistry.install(MyAppPalette());
 ```
+
+<a id="2-2-폰트--apptypeface"></a>
 
 ### 2-2. 폰트 → AppTypeface
 
@@ -236,6 +248,8 @@ final colors = Theme.of(context).extension<StateColors>()!;
 return Container(color: colors.success);
 ```
 
+<a id="2-4-spacing--appspacing"></a>
+
 ### 2-4. Spacing → AppSpacing
 
 `lib/core/theme/app_spacing.dart` 에 표준 토큰이 이미 있어요 — 새 클래스를 만들지 말고 Figma 토큰을 기존 상수에 매핑해요:
@@ -266,6 +280,8 @@ ClipRRect(borderRadius: BorderRadius.circular(AppSpacing.radiusMd), ...);
 ```
 
 ---
+
+<a id="3-figma--flutter-매핑-체크리스트"></a>
 
 ## 3. Figma → Flutter 매핑 체크리스트
 

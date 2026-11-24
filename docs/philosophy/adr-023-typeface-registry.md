@@ -1,10 +1,12 @@
+<a id="typeface_registry"></a>
+
 # Typeface_Registry
 
 **Status**: Accepted. 현재 유효. 2026-04-28 기준 `lib/core/theme/app_typeface.dart` (추상 + DefaultTypeface) + `app_typeface_registry.dart` (중앙 레지스트리 + ValueNotifier). `AppPalette` 패턴(ADR-015) 복제.
 
 ## 결론부터
 
-폰트는 **타이페이스 식별자 하나** (`AppTypeface.id`) 와 폰트 패밀리 (`fontFamily` + `fontFamilyFallback`) 만 선언하면 돼요. 사이즈/weight 스케일은 본 추상 클래스가 8 단계 기본 (`headlineLarge` … `labelLarge`) 으로 빌드해줘요. 여러 타이페이스를 `AppTypefaceRegistry` 에 등록하고 `ValueNotifier` 로 런타임 교체 가능. 파생 레포는 `MyAppTypeface` 하나만 정의 → `AppTypefaceRegistry.install(...)` 한 줄로 폰트 적용. 템플릿 기본값은 시스템 폰트 (`DefaultTypeface`) — 자산은 파생 레포가 결정.
+`AppTypeface`와 `AppTypefaceRegistry`로 폰트와 타이포그래피를 교체해요. 기본 구현은 시스템 폰트와 프로젝트가 정한 8개 텍스트 스타일을 사용해요. 파생 앱은 폰트 자산과 `pubspec.yaml` 등록을 준비한 뒤 타입페이스를 설치해요. 팔레트와 같은 등록·선택 API를 사용해 두 기능의 사용 방식을 맞췄어요.
 
 ## 왜 이런 고민이 시작됐나?
 
@@ -33,6 +35,8 @@
 
 ## 고민했던 대안들
 
+<a id="option-1--themeextension-flutter-공식"></a>
+
 ### Option 1 — `ThemeExtension` (Flutter 공식)
 
 `ThemeData.extensions` 에 타이포 토큰 클래스 등록 → `Theme.of(context).extension<MyType>()` 로 접근.
@@ -43,6 +47,8 @@
 - **단점 3**: `AppPalette` 와 패턴이 다름 → 학습 비용 두 배.
 - **탈락 이유**: ADR-015 의 결정 근거와 동일. 단순함 vs 공식성에서 단순함 선택.
 
+<a id="option-2--google_fonts-직접-사용"></a>
+
 ### Option 2 — `google_fonts` 직접 사용
 
 `google_fonts` 패키지로 런타임 다운로드. 폰트 패밀리 결정만 하면 자산 셋업 불필요.
@@ -52,6 +58,8 @@
 - **단점 2**: 프로덕션은 [`allowRuntimeFetching = false`](https://pub.dev/packages/google_fonts) 권장 → 결국 자산 번들 모드. 즉 패키지 1 개 의존성 + 같은 결정 부담.
 - **단점 3**: 추상화 부재. 앱별 폰트 분기를 어떻게 표현할지 별도 정책 필요.
 - **탈락 이유**: 추상화 자체를 우회하는 게 아니라 **자산 결정의 위치만** 옮기는 셈. 본 ADR 은 자산 결정을 파생 레포로 위임하므로 패키지 의존성을 강제할 필요 없음. 파생 레포가 원하면 자체 도입.
+
+<a id="option-3--apptypeface-추상--apptypefaceregistry--채택"></a>
 
 ### Option 3 — `AppTypeface` 추상 + `AppTypefaceRegistry` ★ (채택)
 
@@ -169,37 +177,32 @@ Material 3 / Apple HIG 의 사이즈 스케일이 산업 표준이고 앱별로 
 
 ### 긍정적 결과
 
-- **파생 레포 한 줄**: `AppTypefaceRegistry.install(MyAppTypeface())` 만. 나머지 자동.
-- **위젯 무수정**: `Theme.of(context).textTheme.*` 경로 그대로. 12 개 공통 위젯 모두 시그니처 변화 없음.
-- **테스트 격리**: `resetForTest()` 로 각 테스트가 독립 상태 (10 케이스 신규).
-- **자산 부담 0 으로 출발**: 템플릿이 시스템 폰트로 동작 → IPA 변화 없음.
-- **`AppPalette` 와 대칭 회복**: 색·폰트 두 토큰만 앱별 분기 라는 깔끔한 모델 (ADR-019 솔로 친화).
+폰트 설정을 등록하면 공통 textTheme 경로로 사용하는 위젯에 반영할 수 있어요. 기본값은 시스템 폰트이므로 템플릿에 특정 폰트 자산을 넣지 않아도 시작할 수 있어요. 색상 레지스트리와 비슷한 API 로 선택·교체하고 테스트에서 상태를 초기화해요. 자산 설정까지 한 줄로 끝나는 것은 아니에요.
 
 ### 부정적 결과
 
-- **`fontFamily` 변경 시 자산 별도 추가 필요**: `'Pretendard'` 라고 적었다고 폰트가 마법처럼 들어오지 않음. pubspec.yaml + assets/fonts/ 셋업 필요. 가이드는 [`docs/conventions/theme-tokens.md`](../conventions/theme-tokens.md) 의 "타이포 (폰트) 교체" 섹션 참조.
-- **사이즈 스케일은 통일**: 앱별 사이즈 다름이 진짜 필요해지면 `buildTextTheme()` override 로 가능하지만, 그 시점엔 디자인 시스템 자체 재고가 필요할 수도.
-- **Variable Font 미검증**: Flutter 모바일 채택률 25~35% (출처 §Prior Art). 본 ADR 은 Static 4 weight 기준. Variable 도입은 향후 별도 ADR.
+fontFamily 를 바꾸면 pubspec.yaml 과 실제 폰트 자산도 준비해야 해요. 자세한 절차는 [테마 토큰](../conventions/theme-tokens.md) 에서 확인해요. 앱별 크기 체계를 바꾸면 공통 디자인 규약과의 관계도 검토해요. Variable Font 는 이 ADR 에서 검증한 범위가 아니며 채택률 수치로 지원 여부를 판단하지 않아요.
 
 ## 교훈
 
-### 교훈 1 — 패턴 복제는 학습 비용을 0 으로 만든다
+<a id="교훈-1-패턴-복제는-학습-비용을-0-으로-만든다"></a>
+<a id="교훈-1--패턴-복제는-학습-비용을-0-으로-만든다"></a>
 
-`AppPalette` / `AppPaletteRegistry` 가 이미 자리잡은 상태에서 동일 시그니처 (`register / use / install / current`) 로 `AppTypeface` / `AppTypefaceRegistry` 를 만들었더니, 사용자가 새로 익힐 게 없음. 한 패턴이 검증되면 동일 형태로 확장.
+### 교훈 1 — 비슷한 역할에는 같은 API 형태를 사용해요
 
-**교훈**: 두 번째 추상화는 **첫 번째와 같은 모양으로**. 차이를 만들고 싶으면 진짜 다른 이유가 있을 때만.
+팔레트와 폰트의 register·use·install·current API 를 맞추면 비슷한 동작을 익히기 쉬워요. 학습 비용이 없어지는 것은 아니며, 폰트 자산과 텍스트 테마의 차이는 별도로 설명해야 해요.
+
+<a id="교훈-2--지금-자산-안-가지기-의-가치"></a>
 
 ### 교훈 2 — "지금 자산 안 가지기" 의 가치
 
-폰트 자산을 템플릿이 미리 결정해두면 cherry-pick 시 분쟁의 씨앗. `DefaultTypeface()` (시스템 폰트) 로 출발 + 자산은 파생 레포가 필요할 때 결정 — 이 게으른 디폴트가 ADR-019 (솔로 친화) 정신과 일치.
+기본값은 시스템 폰트로 두고 앱 고유 자산은 파생 레포가 선택해요. 이 선택은 특정 브랜드를 템플릿에 포함하지 않으려는 범위 결정이에요.
 
-**교훈**: 파생 레포가 결정해도 되는 것을 템플릿이 미리 박지 말 것. 추상 자리만 비워두면 됨.
+<a id="교훈-3--산업-표준은-따르되-자기-모델에-맞게-해석"></a>
 
 ### 교훈 3 — 산업 표준은 따르되, 자기 모델에 맞게 해석
 
-조사 결과 (Material 3 / Apple HIG / IBM Carbon / W3C DTCG) 는 "회사 통일 + 사이즈 변형" 패턴이 표준. 솔로 앱 공장은 "한 회사 N제품" 이 아니라 "독립 브랜드 N개" 라 색·폰트만 분기 + 구조 토큰 통일이라는 변형 모델 채택. 표준을 그대로 따르는 게 아니라 **자기 맥락에 맞춰 변형**.
-
-**교훈**: 산업 표준 = 권위가 아니라 데이터. 자기 모델의 가정 (예: N≤5 솔로 운영) 을 명시하고 그 위에서 표준을 변형.
+공통 구조 토큰은 유지하면서 앱마다 색과 폰트를 바꿀 수 있도록 구성했어요. 관련 디자인 시스템의 사례는 판단 자료로 참고하되, 모든 표준이 같은 브랜드 구조를 전제한다고 일반화하지 않아요.
 
 ## 관련 사례 (Prior Art)
 

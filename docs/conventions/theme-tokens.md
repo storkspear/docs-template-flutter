@@ -1,6 +1,6 @@
 # Theme Tokens 컨벤션
 
-새 위젯이나 화면을 만들 때 색·간격·타이포·아이콘을 **어디서 가져오는가** 의 규칙이에요. 위젯이 다크/라이트 자동 적응하고, 팔레트 교체 시 자동 리빌드되려면 출처 선택이 일관돼야 해요. 규약 근거는 [`ADR-015 · 팔레트 런타임 교체`](../philosophy/adr-015-palette-registry.md) 를 참조하세요.
+색상·간격·타이포그래피는 기존 디자인 토큰을 먼저 사용해요. 테마의 색과 글꼴을 한곳에서 조립하면 팔레트나 타이페이스를 바꿨을 때 화면에도 일관되게 반영할 수 있어요. 이 문서는 토큰을 읽는 방법과 파생 앱에서 브랜드 색상·폰트를 교체하는 절차를 다뤄요.
 
 ---
 
@@ -38,7 +38,7 @@ ColorScheme 외부의 색상을 **브랜드가 결정** 하는 경우에 한정�
 - **seed 직접**: 차트 라인 색, 네비 활성 표시 등 **브랜드 톤 그대로** 노출하려는 경우예요.
 - **accent / textMuted / border**: 디자인 시스템 외 보조 톤이에요.
 
-> ⚠️ 시맨틱 색상은 다크 변형이 없어요. **배경으로만** 쓰고 텍스트는 흰색 / 검은색 분기로 대비를 확보해요. 다크에서 가독성이 중요한 텍스트라면 `colorScheme.error` 같은 M3 톤이 우선이에요.
+> 시맨틱 색상은 다크 변형이 없으므로 배경에 사용해요. 현재 `AppSnackBar`는 그 위에 흰색 텍스트와 아이콘을 올려요. 파생 앱에서 팔레트를 바꾸면 실제 조합의 대비를 확인해야 해요. 텍스트·아이콘에 다크 모드 대응이 필요하면 `colorScheme.error` 같은 Material 색상을 먼저 사용해요.
 
 ---
 
@@ -51,7 +51,7 @@ backgroundColor: Theme.of(context).colorScheme.error,  // M3 톤 — 라이트/�
 
 ```dart
 // lib/core/widgets/error_view.dart 발췌
-Icon(AppIcons.error, size: 64, color: theme.colorScheme.error),  // 동일
+Icon(AppIcons.error, size: AppSpacing.iconSizeXl, color: theme.colorScheme.error),
 ```
 
 ```dart
@@ -61,6 +61,7 @@ return switch (type) {
   SnackBarType.success => (LucideIcons.circleCheck, p.success),
   SnackBarType.warning => (LucideIcons.triangleAlert, p.warning),
   SnackBarType.error   => (LucideIcons.circleX,      p.error),
+  SnackBarType.info    => (LucideIcons.info,         p.info),
 };
 ```
 
@@ -81,11 +82,13 @@ final color = lineColor ?? AppPaletteRegistry.current.seed;  // 브랜드 시드
 - [ ] 타이포는 `Theme.of(context).textTheme.*` . `TextStyle(fontSize: 14, ...)` 직접 작성 금지.
 - [ ] 아이콘은 `AppIcons.*` 참조 (Lucide 어댑터). raw `Icons.*` 금지.
 - [ ] 다크모드 분기를 직접 `Theme.of(context).brightness` 로 하기 전에, `Theme.of(context)` 게터가 자동 적응해주는 색이 있는지 먼저 확인.
-- [ ] 컴포넌트 크기 (`buttonHeight` , `iconSize*` , `avatarSize*`) 는 `AppSpacing` 의 정수 토큰 사용.
+- [ ] 컴포넌트 크기는 `AppSpacing.buttonHeight`, `iconSize*`, `avatarSize*` 등의 `double` 토큰을 사용해요. `screenPadding`은 `EdgeInsets`, `borderRadius*`는 `BorderRadius` 값이에요.
+
+<a id="예외--외부-브랜드-가이드라인-색"></a>
 
 ### 예외 — 외부 브랜드 가이드라인 색
 
-**Google · Apple · Kakao · Naver 같은 외부 social provider 의 브랜드 색**은 가이드라인이 hex 값을 강제해요 (Google `#1F1F1F`, Kakao `#FEE500`, Naver `#03C75A` 등). 그래서 `Color(0xFF...)` 직접 사용을 허용해요 (예: `lib/kits/auth_kit/ui/login/social_login_button.dart`). 이 경우는 brand identity 보존이 우선이라 theme tokens 추상화에서 제외해요.
+Google·Apple·Kakao·Naver 같은 외부 로그인 제공자의 버튼에는 브랜드별 색상을 직접 사용할 수 있어요. 현재 구현은 `lib/kits/auth_kit/ui/login/social_login_button.dart`에서 관리해요. 파생 앱에서 버튼을 바꿀 때는 해당 제공자의 최신 브랜드 지침을 확인하고, 앱 팔레트 변경으로 로고·버튼 색이 함께 바뀌지 않게 해요.
 
 ---
 
@@ -95,7 +98,7 @@ final color = lineColor ?? AppPaletteRegistry.current.seed;  // 브랜드 시드
 같은 빨강이지만 출처가 달라요. M3 톤이 자동 적응하므로 **텍스트 / 아이콘 색** 은 `colorScheme.error` 를, **알림 배경** 은 `palette.error` 를 써요.
 
 **(2) `Theme.of(context).primaryColor` 사용**  
-deprecated 예요. M3 에서는 `colorScheme.primary` 를 써요.
+이 프로젝트의 Material 3 테마에서는 `colorScheme.primary`를 사용해요.
 
 **(3) 카드 배경에 `cardBackground` 직접 참조**  
 `AppPalette.cardBackground` / `cardBackgroundDark` 는 **파생 레포 확장점** 으로만 살려두는 게터예요 (ADR-015 참조). 템플릿 위젯은 `colorScheme.surface*` 계열을 써요.
@@ -120,17 +123,17 @@ Widget build(BuildContext context) {
 1. **이름이 일관**: `AppSpacing.xs/sm/md/lg/xl/xxl` 같은 스케일을 깨지 마세요.
 2. **다크 변형 필요**: 변형이 다르면 게터 두 개 (`xxxLight` / `xxxDark`) 또는 `Theme.of(context).brightness` 로 분기해요.
 3. **palette 게터 추가는 신중**: 시맨틱이 명확하지 않으면 위젯 인자로 외부 주입하는 쪽이 나아요.
-4. **테스트**: `app_palette_registry_test.dart` 에 새 게터 기본값 검증 한 줄을 추가해요.
+4. **검증**: 토큰을 사용하는 위젯의 라이트·다크 화면과 팔레트 교체 동작을 확인해요. 레지스트리의 등록·선택·폴백 동작이 바뀌면 관련 테스트도 보완해요.
 
 ---
 
 ## 타이포 (폰트) 교체
 
-폰트 패밀리는 `AppTypeface` + `AppTypefaceRegistry` 로 앱별 분기해요 ([`ADR-023`](../philosophy/adr-023-typeface-registry.md)). 템플릿 기본은 시스템 폰트 (iOS=SF Pro, Android=Roboto) 라 자산 부담 0 으로 출발해요.
+폰트 패밀리는 `AppTypeface`와 `AppTypefaceRegistry`로 앱별로 설정해요([ADR-023](../philosophy/adr-023-typeface-registry.md)). 템플릿의 `DefaultTypeface`는 별도 폰트 자산을 등록하지 않고 시스템 기본 글꼴과 폴백을 사용해요.
 
 파생 레포가 자체 폰트로 교체하려면:
 
-1. **자산 추가**: `assets/fonts/` 디렉토리에 ttf 파일을 배치해요 (예: `Pretendard-Regular.ttf` 외 4 weight).
+1. **자산 추가**: 필요한 굵기의 폰트 파일을 `assets/fonts/`에 배치해요. 아래 예시는 Regular·Medium·Bold·Black 네 파일을 사용해요.
 2. **`pubspec.yaml`** 의 `flutter:` 섹션에 폰트를 등록해요.
    ```yaml
    flutter:
@@ -161,16 +164,13 @@ Widget build(BuildContext context) {
    AppTypefaceRegistry.install(MyAppTypeface());
    ```
 
-사이즈 / weight 스케일을 바꾸려면 `buildTextTheme()` 을 override 해요. 단 산업 표준 (Material 3 / Apple HIG) 에서 사이즈 스케일은 회사 통일이 일반적이라 신중하게 바꿔요.
+글자 크기·굵기 스케일을 바꾸려면 `buildTextTheme()`을 재정의해요. 화면 전체의 줄바꿈과 버튼 높이에 영향을 줄 수 있으므로 긴 번역 문구와 큰 글꼴 설정에서도 확인해요.
 
-### 한국어 무료 폰트 후보 (모두 SIL OFL 1.1)
+<a id="한국어-무료-폰트-후보-모두-sil-ofl-11"></a>
 
-| 폰트 | 4 weight 합 | Variable | 비고 |
-|---|---|---|---|
-| SUIT | ~680 KB | 1.5 MB (9 weight) | 최경량 |
-| Pretendard | ~1.5 MB | 6.5 MB (9 weight) | Inter 기반, 한국 인디 표준 |
-| Spoqa Han Sans Neo | ~1.8 MB | 미지원 | 클래식 |
-| Noto Sans KR | ~19.7 MB | △ (CJK) | 글리프 완전, subsetting 필요 |
+### 한국어 폰트 후보
+
+ADR-023에서 비교한 후보는 SUIT, Pretendard, Spoqa Han Sans Neo, Noto Sans KR이에요. 실제로 사용할 파일의 라이선스, 필요한 글리프와 굵기, 정적·가변 폰트 제공 여부를 확인한 뒤 선택해요. 자산 용량은 버전·굵기·서브셋에 따라 달라지므로 내려받은 파일과 실제 빌드 결과로 비교해요.
 
 자세한 비교 / 출처는 [`ADR-023`](../philosophy/adr-023-typeface-registry.md) §Prior Art 에 있어요.
 
@@ -178,14 +178,14 @@ Widget build(BuildContext context) {
 
 ## 이번에 안 한 것 (의도)
 
-다음은 의도적으로 도입하지 않았어요. 솔로 친화 (ADR-019) 와 산업 표준 데이터에 따른 결정이에요.
+다음 기능은 현재 템플릿에 도입하지 않았어요. 공통 기반을 작게 유지하고, 파생 앱에서 필요성이 확인되면 추가한다는 ADR-019의 기준을 따라요.
 
-- **`AppDimens` / 간격·radius·buttonHeight 추상화** — 산업 표준은 이런 구조 토큰을 회사 전체로 통일해요. 앱별 분기 빈도가 거의 없고 변경도 거의 없어 cherry-pick 부담이 극히 적어요. 진짜 필요해지면 그때 ADR 로 추가해요.
-- **컴포넌트 사이즈 변형 (`size: sm/md/lg`)** — Carbon/Polaris 패턴이지만 12 개 위젯 시그니처를 바꾸게 돼 cherry-pick 안전성이 떨어져요. 실증 후 재고해요.
-- **Variable Font 도입** — Flutter 모바일 채택률 25~35% 에 본 레포에선 검증되지 않았어요. Static 4 weight 가 실무 안전망이에요.
-- **Storybook (Widgetbook)** — 위젯 12 개 규모에 카탈로그 인프라는 과해요.
-- **Dark/Light별 폰트 분기** — brightness 와 폰트는 무관해요.
-- **다국어 폰트 자동 분기 (KR vs EN)** — 한국어 폰트가 라틴 글리프를 보유해요.
+- **별도 `AppDimens` 추상화** — 간격·라운딩·컴포넌트 크기는 `AppSpacing`에서 관리해요. 앱마다 별도 체계가 필요해지면 ADR로 검토해요.
+- **컴포넌트 크기 변형(`size: sm/md/lg`)** — 현재 공통 위젯에 이 인자를 일괄 추가하지 않았어요. 실제 사용 사례가 생기면 영향받는 위젯부터 검토해요.
+- **가변 폰트 기본 탑재** — 템플릿에 폰트 자산을 넣지 않았어요. 파생 앱에서 가변 폰트를 선택하면 대상 기기의 표시와 빌드 결과를 확인해요.
+- **Widgetbook** — 현재 별도 위젯 카탈로그를 운영하지 않아요. 화면 확인 비용이 커지면 도입을 검토해요.
+- **라이트·다크별 폰트 분기** — 현재는 같은 타이페이스를 사용하고 색상 테마를 바꿔요.
+- **언어별 폰트 자동 분기** — 현재는 지정한 폰트와 폴백에 맡겨요. 파생 앱에서 지원할 언어의 글리프를 확인해요.
 
 ---
 
