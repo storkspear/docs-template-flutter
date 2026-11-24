@@ -72,6 +72,8 @@ await ref.read(scheduledAlertServiceProvider).cancelAll();
 
 > Android 12+ 에서 정시 알람 (`exactTiming: true`) 을 쓰려면 `SCHEDULE_EXACT_ALARM` 권한이 필요해요. 자세한 옵션은 `ScheduledAlertService` 인터페이스 dartdoc 을 참조하세요.
 
+`scheduleDaily`는 다음 날짜를 달력 기준으로 계산해 일광절약시간 전환 전후에도 지정한 현지 시각을 유지해요. 존재하지 않는 시각이나 중복되는 시각의 실제 발화는 플랫폼 정책을 따라요. 테스트에서는 `LocalScheduledAlertService(now: ...)`로 기준 시각을 주입할 수 있어요.
+
 ### FCM 푸시 (선택)
 
 ```dart

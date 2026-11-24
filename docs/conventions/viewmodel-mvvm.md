@@ -88,9 +88,11 @@ class LoginViewModel extends Notifier<LoginState> {
         email: email,
         password: password,
       );
+      if (!ref.mounted) return;
       // 3. 성공 → 로딩 해제
       state = state.copyWith(isLoading: false);
     } catch (e) {
+      if (!ref.mounted) return;
       // 4. 실패 → code + message 저장
       state = state.copyWith(
         isLoading: false,
@@ -111,6 +113,8 @@ class LoginViewModel extends Notifier<LoginState> {
 ```
 
 ### ViewModel 규칙
+
+- **비동기 완료 후 화면 수명을 확인해요** — 성공과 catch 모두 `state`를 읽기 전에 `ref.mounted`를 검사해요. 화면 종료가 서비스의 토큰 저장이나 이미 시작한 가입 처리를 취소한다는 뜻은 아니에요.
 
 - **`BuildContext` 를 받지 않아요** — UI 의존 금지예요. `S.of(context)` 도 금지고, i18n 은 Screen 에서 해요
 - **`try/catch` 로 에러를 처리해요** — `safeErrorCode` · `safeErrorMessage` 로 안전하게 추출해요 ([`ADR-009`](../philosophy/adr-009-backend-contract.md))
